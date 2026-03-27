@@ -1,4 +1,4 @@
-# TurboPush 官方网站
+# TurboPush 官方网站 | [MCP服务,对接AI大模型或龙虾](https://github.com/xueyc1f/turbopush-mcp)
 
 <div align="center">
 
