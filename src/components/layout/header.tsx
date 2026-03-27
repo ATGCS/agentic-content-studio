@@ -30,6 +30,11 @@ const navigationItems: NavigationItem[] = [
     href: 'https://fcn02uha9bv6.feishu.cn/wiki/C3YDwRja9iEzw5kW5vicfkebnoe?from=from_copylink',
     external: true,
   },
+  {
+    label: 'MCP',
+    href: 'https://github.com/xueyc1f/turbopush-mcp',
+    external: true,
+  },
 ];
 
 function Header({
