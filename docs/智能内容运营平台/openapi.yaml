@@ -1,0 +1,593 @@
+openapi: 3.0.3
+info:
+  title: Agentic Content Studio API
+  version: 1.0.0
+  description: 基于 TurboPush 二开的 AI 内容运营中台第一阶段 API
+
+servers:
+  - url: http://localhost:3001/api
+    description: 本地开发
+
+tags:
+  - name: Auth
+  - name: Users
+  - name: Accounts
+  - name: Topics
+  - name: Contents
+  - name: Versions
+  - name: Agents
+  - name: Prompts
+  - name: IMA
+  - name: Reviews
+  - name: Publishing
+  - name: Analytics
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+        message:
+          type: string
+          example: success
+        data:
+          nullable: true
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    TopicCreate:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        targetPlatforms:
+          type: array
+          items:
+            type: string
+            enum: [WECHAT, XIAOHONGSHU, DOUYIN, VIDEO_CHANNEL, BILIBILI, ZHIHU, OTHER]
+        source:
+          type: string
+          default: manual
+
+    ContentCreate:
+      type: object
+      required: [title]
+      properties:
+        topicId:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+
+    ContentGenerate:
+      type: object
+      properties:
+        accountId:
+          type: string
+        steps:
+          type: array
+          items:
+            type: string
+
+    VersionsGenerate:
+      type: object
+      properties:
+        platforms:
+          type: array
+          items:
+            type: string
+        accountIds:
+          type: array
+          items:
+            type: string
+
+    AgentTitleRun:
+      type: object
+      required: [contentId]
+      properties:
+        contentId:
+          type: string
+        accountId:
+          type: string
+        count:
+          type: integer
+          default: 5
+
+    AgentRewriteRun:
+      type: object
+      required: [contentId, platform]
+      properties:
+        contentId:
+          type: string
+        platform:
+          type: string
+        accountId:
+          type: string
+
+    ImaSearch:
+      type: object
+      required: [query, contentId]
+      properties:
+        query:
+          type: string
+        contentId:
+          type: string
+        limit:
+          type: integer
+          default: 10
+
+    ReviewCreate:
+      type: object
+      required: [contentId]
+      properties:
+        contentId:
+          type: string
+        versionId:
+          type: string
+
+    ReviewReject:
+      type: object
+      properties:
+        comment:
+          type: string
+
+    PublishingTaskCreate:
+      type: object
+      required: [versionId, accountId]
+      properties:
+        versionId:
+          type: string
+        accountId:
+          type: string
+        scheduledAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    AnalyticsSync:
+      type: object
+      required: [publishRecordId]
+      properties:
+        publishRecordId:
+          type: string
+
+    ReportGenerate:
+      type: object
+      required: [contentId]
+      properties:
+        contentId:
+          type: string
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      security: []
+      summary: 登录
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: 当前用户
+      responses:
+        '200':
+          description: OK
+
+  /topics:
+    get:
+      tags: [Topics]
+      summary: 选题列表
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Topics]
+      summary: 创建选题
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TopicCreate'
+      responses:
+        '200':
+          description: OK
+
+  /topics/{id}:
+    get:
+      tags: [Topics]
+      summary: 选题详情
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+    patch:
+      tags: [Topics]
+      summary: 更新选题
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+
+  /contents:
+    get:
+      tags: [Contents]
+      summary: 内容列表
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Contents]
+      summary: 创建内容
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentCreate'
+      responses:
+        '200':
+          description: OK
+
+  /contents/{id}:
+    get:
+      tags: [Contents]
+      summary: 内容详情
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+    patch:
+      tags: [Contents]
+      summary: 更新内容
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+
+  /contents/{id}/generate:
+    post:
+      tags: [Contents]
+      summary: 编排生成主内容
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentGenerate'
+      responses:
+        '200':
+          description: OK
+
+  /contents/{id}/versions:
+    get:
+      tags: [Contents]
+      summary: 版本列表
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+
+  /contents/{id}/versions/generate:
+    post:
+      tags: [Contents]
+      summary: 批量生成平台版本
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionsGenerate'
+      responses:
+        '200':
+          description: OK
+
+  /versions/{versionId}:
+    patch:
+      tags: [Versions]
+      summary: 更新平台版本
+      parameters:
+        - name: versionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+
+  /agents/title/run:
+    post:
+      tags: [Agents]
+      summary: 运行标题 Agent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentTitleRun'
+      responses:
+        '200':
+          description: OK
+
+  /agents/rewrite/run:
+    post:
+      tags: [Agents]
+      summary: 运行平台改写 Agent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentRewriteRun'
+      responses:
+        '200':
+          description: OK
+
+  /agents/review/run:
+    post:
+      tags: [Agents]
+      summary: 运行审核辅助 Agent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                versionId:
+                  type: string
+      responses:
+        '200':
+          description: OK
+
+  /agent-runs:
+    get:
+      tags: [Agents]
+      summary: Agent 执行记录
+      parameters:
+        - name: contentId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+
+  /ima/search:
+    post:
+      tags: [IMA]
+      summary: IMA 搜索
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImaSearch'
+      responses:
+        '200':
+          description: OK
+
+  /reviews:
+    get:
+      tags: [Reviews]
+      summary: 审核列表
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Reviews]
+      summary: 提交审核
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewCreate'
+      responses:
+        '200':
+          description: OK
+
+  /reviews/{id}/approve:
+    post:
+      tags: [Reviews]
+      summary: 审核通过
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+
+  /reviews/{id}/reject:
+    post:
+      tags: [Reviews]
+      summary: 审核驳回
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewReject'
+      responses:
+        '200':
+          description: OK
+
+  /publishing/tasks:
+    get:
+      tags: [Publishing]
+      summary: 发布任务列表
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Publishing]
+      summary: 创建发布任务
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishingTaskCreate'
+      responses:
+        '200':
+          description: OK
+
+  /publishing/tasks/{id}:
+    get:
+      tags: [Publishing]
+      summary: 发布任务详情
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+
+  /publishing/tasks/{id}/publish:
+    post:
+      tags: [Publishing]
+      summary: 执行发布
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+
+  /analytics/sync:
+    post:
+      tags: [Analytics]
+      summary: 同步平台数据
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalyticsSync'
+      responses:
+        '200':
+          description: OK
+
+  /analytics/reports/generate:
+    post:
+      tags: [Analytics]
+      summary: 生成复盘报告
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportGenerate'
+      responses:
+        '200':
+          description: OK
+
+  /analytics/reports/{id}:
+    get:
+      tags: [Analytics]
+      summary: 复盘报告详情
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
