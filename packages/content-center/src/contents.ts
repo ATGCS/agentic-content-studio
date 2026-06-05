@@ -1,0 +1,153 @@
+import { prisma, type ContentStatus, type Platform } from '@acs/db';
+import {
+  AppError,
+  ErrorCodes,
+  parsePagination,
+  type AuthUser,
+} from '@acs/core';
+import { assertTransition } from './status-machine.js';
+
+export async function listContents(
+  user: AuthUser,
+  query: { status?: string; topicId?: string; page?: string; pageSize?: string }
+) {
+  const { page, pageSize, skip } = parsePagination(query);
+  const where: {
+    status?: ContentStatus;
+    topicId?: string;
+    createdBy?: string;
+  } = {};
+  if (query.status) where.status = query.status as ContentStatus;
+  if (query.topicId) where.topicId = query.topicId;
+  if (user.role === 'OPERATOR') where.createdBy = user.id;
+
+  const [items, total] = await Promise.all([
+    prisma.content.findMany({
+      where,
+      skip,
+      take: pageSize,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        topic: true,
+        versions: { select: { id: true, platform: true, status: true } },
+      },
+    }),
+    prisma.content.count({ where }),
+  ]);
+  return { items, total, page, pageSize };
+}
+
+export async function createContent(
+  user: AuthUser,
+  data: { title: string; topicId?: string; summary?: string }
+) {
+  return prisma.content.create({
+    data: {
+      title: data.title,
+      topicId: data.topicId,
+      summary: data.summary,
+      createdBy: user.id,
+    },
+  });
+}
+
+export async function getContent(id: string) {
+  const content = await prisma.content.findUnique({
+    where: { id },
+    include: {
+      topic: true,
+      versions: true,
+      agentRuns: { orderBy: { startedAt: 'desc' }, take: 10 },
+      imaSearchLogs: { orderBy: { createdAt: 'desc' }, take: 5 },
+    },
+  });
+  if (!content)
+    throw new AppError(ErrorCodes.CONTENT_NOT_FOUND, 'content not found', 404);
+  return content;
+}
+
+export async function updateContent(
+  id: string,
+  data: Partial<{
+    title: string;
+    summary: string;
+    body: string;
+    coverText: string;
+    status: ContentStatus;
+  }>
+) {
+  const existing = await getContent(id);
+  if (data.status && data.status !== existing.status) {
+    assertTransition(existing.status, data.status);
+  }
+  return prisma.content.update({ where: { id }, data });
+}
+
+export async function generateVersions(
+  contentId: string,
+  platforms: Platform[],
+  accountIds?: string[]
+) {
+  const content = await getContent(contentId);
+  const versions = [];
+  for (let i = 0; i < platforms.length; i++) {
+    const platform = platforms[i];
+    const accountId = accountIds?.[i] ?? accountIds?.[0];
+    const v = await prisma.contentVersion.create({
+      data: {
+        contentId,
+        platform,
+        accountId,
+        title: content.title,
+        body: content.body ?? '',
+        status: 'DRAFT',
+      },
+    });
+    versions.push(v);
+  }
+  return versions;
+}
+
+export async function updateVersion(
+  versionId: string,
+  data: Partial<{
+    title: string;
+    body: string;
+    coverText: string;
+    tags: string[];
+    status: ContentStatus;
+  }>
+) {
+  const version = await prisma.contentVersion.findUnique({
+    where: { id: versionId },
+  });
+  if (!version)
+    throw new AppError(ErrorCodes.NOT_FOUND, 'version not found', 404);
+  if (data.status && data.status !== version.status) {
+    assertTransition(version.status, data.status);
+  }
+  return prisma.contentVersion.update({
+    where: { id: versionId },
+    data: {
+      ...data,
+      tags: data.tags,
+    },
+  });
+}
+
+export async function getVersion(versionId: string) {
+  const version = await prisma.contentVersion.findUnique({
+    where: { id: versionId },
+    include: { content: true, account: true },
+  });
+  if (!version)
+    throw new AppError(ErrorCodes.NOT_FOUND, 'version not found', 404);
+  return version;
+}
+
+export async function listVersions(contentId: string) {
+  return prisma.contentVersion.findMany({
+    where: { contentId },
+    orderBy: { createdAt: 'desc' },
+  });
+}

@@ -1,0 +1,34 @@
+{
+  "name": "@acs/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@acs/account-profile": "workspace:*",
+    "@acs/analytics-center": "workspace:*",
+    "@acs/content-center": "workspace:*",
+    "@acs/core": "workspace:*",
+    "@acs/db": "workspace:*",
+    "@acs/ai-runtime": "workspace:*",
+    "@acs/ima-provider": "workspace:*",
+    "@acs/review-center": "workspace:*",
+    "@acs/turbopush-adapter": "workspace:*",
+    "@fastify/cors": "^11.0.1",
+    "@fastify/jwt": "^9.1.0",
+    "bcryptjs": "^3.0.2",
+    "dotenv": "^16.5.0",
+    "fastify": "^5.3.3",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20.17.57",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}

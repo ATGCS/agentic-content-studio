@@ -1,0 +1,35 @@
+{
+  "name": "@acs/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "db:generate": "prisma generate",
+    "db:migrate": "cross-env DATABASE_URL=file:./dev.db prisma migrate dev",
+    "db:seed": "cross-env DATABASE_URL=file:./dev.db tsx prisma/seed.ts",
+    "db:push": "cross-env DATABASE_URL=file:./dev.db prisma db push"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.9.0"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "prisma": "^6.9.0",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3",
+    "bcryptjs": "^3.0.2",
+    "@types/bcryptjs": "^2.4.6"
+  }
+}

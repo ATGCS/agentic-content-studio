@@ -4,11 +4,11 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-| | |
-| --- | --- |
-| **仓库** | [github.com/ATGCS/agentic-content-studio](https://github.com/ATGCS/agentic-content-studio) |
-| **中文名** | 智能内容运营工作台 |
-| **状态** | 设计文档阶段，Monorepo 待搭建 |
+|            |                                                                                            |
+| ---------- | ------------------------------------------------------------------------------------------ |
+| **仓库**   | [github.com/ATGCS/agentic-content-studio](https://github.com/ATGCS/agentic-content-studio) |
+| **中文名** | 智能内容运营工作台                                                                         |
+| **状态**   | 设计文档阶段，Monorepo 待搭建                                                              |
 
 ## 核心闭环
 
@@ -27,9 +27,27 @@
 - Agent Runtime、TurboPush 二开方案
 - 权限模型、开发规范与 Sprint 排期
 
-## 技术栈（规划）
+## 启动中台（Monorepo）
 
-Next.js · Node.js · TypeScript · Prisma · SQLite · 自研 Agent Runtime · IMA · TurboPush Adapter
+```bash
+pnpm install
+pnpm db:setup
+pnpm dev:studio
+```
+
+- 中台 Web：http://localhost:3001
+- API：http://localhost:3002
+- 默认账号：`admin@acs.local` / `admin123`
+
+官网（仓库根目录，独立端口）：
+
+```bash
+pnpm dev:website
+```
+
+## 技术栈
+
+Next.js · Fastify · TypeScript · Prisma · SQLite · 自研 Agent Runtime · IMA · TurboPush Adapter
 
 ## License
 

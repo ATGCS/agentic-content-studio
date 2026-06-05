@@ -1,19 +1,25 @@
 {
-  "name": "turbopush-website",
+  "name": "agentic-content-studio",
   "version": "0.1.0",
   "private": true,
   "license": "MIT",
   "scripts": {
     "dev": "next dev --turbopack",
+    "dev:website": "next dev --turbopack",
+    "dev:api": "pnpm --filter @acs/api dev",
+    "dev:web": "pnpm --filter @acs/web dev",
+    "build:packages": "pnpm -r --filter \"./packages/**\" run build",
+    "dev:studio": "pnpm build:packages && pnpm --filter @acs/api --filter @acs/web --parallel run dev",
+    "db:generate": "pnpm --filter @acs/db db:generate",
+    "db:push": "pnpm --filter @acs/db db:push",
+    "db:seed": "pnpm --filter @acs/db db:seed",
+    "db:setup": "pnpm db:push && pnpm db:seed",
+    "test:packages": "pnpm -r --filter \"./packages/**\" run test",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "lint:fix": "next lint --fix",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "prepare": "husky",
-    "seo:check": "node scripts/seo-check.js",
-    "seo:report": "npm run seo:check && echo '📊 SEO 报告已生成，请查看 seo-report.json 文件'"
+    "prepare": "husky"
   },
   "dependencies": {
     "@radix-ui/react-dropdown-menu": "^2.1.15",
@@ -51,5 +57,6 @@
     "*.{json,css,md}": [
       "prettier --write"
     ]
-  }
+  },
+  "packageManager": "pnpm@9.15.0"
 }

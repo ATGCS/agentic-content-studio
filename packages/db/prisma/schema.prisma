@@ -1,0 +1,410 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  OPERATOR
+  REVIEWER
+  ANALYST
+}
+
+enum Platform {
+  WECHAT
+  XIAOHONGSHU
+  DOUYIN
+  VIDEO_CHANNEL
+  BILIBILI
+  ZHIHU
+  OTHER
+}
+
+enum ContentStatus {
+  DRAFT
+  PENDING_GENERATE
+  GENERATING
+  PENDING_REVIEW
+  REJECTED
+  APPROVED
+  PENDING_PUBLISH
+  PUBLISHING
+  PUBLISHED
+  FAILED
+  REVIEWED
+  ARCHIVED
+}
+
+enum AgentType {
+  TITLE
+  TAG
+  REWRITE
+  BODY
+  COVER_COPY
+  REVIEW
+  SUMMARY
+  TOPIC
+  IMAGE
+  VIDEO_SCRIPT
+  COMPETITOR
+}
+
+enum RunStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PublishStatus {
+  PENDING
+  PUBLISHING
+  SUCCESS
+  FAILED
+  CANCELLED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(OPERATOR)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  topics        Topic[]
+  contents      Content[]         @relation("ContentCreator")
+  reviewTasks   ReviewTask[]      @relation("Reviewer")
+  ownedAccounts PlatformAccount[] @relation("AccountOwner")
+
+  @@map("users")
+}
+
+model PlatformAccount {
+  id          String   @id @default(cuid())
+  platform    Platform
+  accountName String
+  accountType String?
+  authStatus  String   @default("pending")
+  ownerId     String
+  rawData     Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  owner           User              @relation("AccountOwner", fields: [ownerId], references: [id])
+  profile         AccountProfile?
+  contentVersions ContentVersion[]
+  publishingTasks PublishingTask[]
+  analyticsData   AnalyticsData[]
+
+  @@index([platform, authStatus])
+  @@index([ownerId])
+  @@map("platform_accounts")
+}
+
+model AccountProfile {
+  id              String   @id @default(cuid())
+  accountId       String   @unique
+  positioning     String?
+  targetAudience  Json?
+  contentStyle    String?
+  titlePreference String?
+  coverPreference String?
+  tone            String?
+  forbiddenWords  Json?
+  contentBoundary String?
+  publishStrategy String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  account PlatformAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@map("account_profiles")
+}
+
+model Topic {
+  id              String        @id @default(cuid())
+  title           String
+  description     String?
+  source          String        @default("manual")
+  targetPlatforms Json?
+  status          ContentStatus @default(DRAFT)
+  ownerId         String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  owner    User      @relation(fields: [ownerId], references: [id])
+  contents Content[]
+
+  @@index([ownerId, status, createdAt])
+  @@map("topics")
+}
+
+model Content {
+  id          String        @id @default(cuid())
+  topicId     String?
+  title       String
+  summary     String?
+  body        String?
+  coverText   String?
+  status      ContentStatus @default(DRAFT)
+  aiGenerated Boolean       @default(false)
+  createdBy   String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  topic            Topic?            @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  creator          User              @relation("ContentCreator", fields: [createdBy], references: [id])
+  versions         ContentVersion[]
+  materials        Material[]
+  agentRuns        AgentRun[]
+  imaSearchLogs    ImaSearchLog[]
+  reviewTasks      ReviewTask[]
+  publishingTasks  PublishingTask[]
+  analyticsReports AnalyticsReport[]
+  analyticsData    AnalyticsData[]
+
+  @@index([topicId, status, createdAt])
+  @@index([createdBy])
+  @@map("contents")
+}
+
+model ContentVersion {
+  id           String        @id @default(cuid())
+  contentId    String
+  platform     Platform
+  accountId    String?
+  title        String?
+  body         String?
+  coverText    String?
+  tags         Json?
+  formatConfig Json?
+  status       ContentStatus @default(DRAFT)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  content         Content          @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  account         PlatformAccount? @relation(fields: [accountId], references: [id])
+  agentRuns       AgentRun[]
+  reviewTasks     ReviewTask[]
+  publishingTasks PublishingTask[]
+  analyticsData   AnalyticsData[]
+
+  @@index([contentId, platform])
+  @@index([accountId, status])
+  @@map("content_versions")
+}
+
+model Material {
+  id        String   @id @default(cuid())
+  contentId String
+  type      String
+  name      String?
+  url       String?
+  localPath String?
+  source    String?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@index([contentId])
+  @@map("materials")
+}
+
+model Prompt {
+  id        String    @id @default(cuid())
+  name      String
+  agentType AgentType
+  version   String    @default("v1")
+  template  String
+  variables Json?
+  enabled   Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  agents Agent[]
+
+  @@index([agentType, enabled])
+  @@map("prompts")
+}
+
+model Agent {
+  id          String    @id @default(cuid())
+  name        String
+  type        AgentType
+  description String?
+  promptId    String
+  model       String    @default("deepseek-chat")
+  enabled     Boolean   @default(true)
+  config      Json?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  prompt    Prompt     @relation(fields: [promptId], references: [id])
+  agentRuns AgentRun[]
+
+  @@index([type, enabled])
+  @@map("agents")
+}
+
+model AgentRun {
+  id            String    @id @default(cuid())
+  agentId       String
+  contentId     String
+  versionId     String?
+  input         Json?
+  output        Json?
+  model         String?
+  promptVersion String?
+  status        RunStatus @default(PENDING)
+  error         String?
+  startedAt     DateTime  @default(now())
+  finishedAt    DateTime?
+
+  agent   Agent           @relation(fields: [agentId], references: [id])
+  content Content         @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  version ContentVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
+
+  @@index([contentId, status, startedAt])
+  @@index([agentId, startedAt])
+  @@map("agent_runs")
+}
+
+model ImaSearchLog {
+  id            String   @id @default(cuid())
+  contentId     String
+  query         String
+  resultSummary String?
+  rawResult     Json?
+  createdAt     DateTime @default(now())
+
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@index([contentId, createdAt])
+  @@map("ima_search_logs")
+}
+
+model ReviewTask {
+  id         String       @id @default(cuid())
+  contentId  String
+  versionId  String?
+  status     ReviewStatus @default(PENDING)
+  reviewerId String?
+  comment    String?
+  createdAt  DateTime     @default(now())
+  reviewedAt DateTime?
+
+  content  Content         @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  version  ContentVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
+  reviewer User?           @relation("Reviewer", fields: [reviewerId], references: [id])
+
+  @@index([status, createdAt])
+  @@index([reviewerId])
+  @@map("review_tasks")
+}
+
+model PublishingTask {
+  id          String        @id @default(cuid())
+  contentId   String
+  versionId   String
+  accountId   String
+  platform    Platform
+  status      PublishStatus @default(PENDING)
+  scheduledAt DateTime?
+  publishedAt DateTime?
+  error       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  content       Content         @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  version       ContentVersion  @relation(fields: [versionId], references: [id])
+  account       PlatformAccount @relation(fields: [accountId], references: [id])
+  publishRecord PublishRecord?
+
+  @@index([status, scheduledAt])
+  @@index([versionId])
+  @@map("publishing_tasks")
+}
+
+model PublishRecord {
+  id             String        @id @default(cuid())
+  taskId         String        @unique
+  platform       Platform
+  accountId      String
+  externalPostId String?
+  externalUrl    String?
+  status         PublishStatus @default(PENDING)
+  rawResult      Json?
+  createdAt      DateTime      @default(now())
+
+  task          PublishingTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  analyticsData AnalyticsData[]
+
+  @@index([accountId, createdAt])
+  @@map("publish_records")
+}
+
+model AnalyticsData {
+  id              String   @id @default(cuid())
+  publishRecordId String
+  contentId       String
+  versionId       String?
+  platform        Platform
+  accountId       String
+  views           Int      @default(0)
+  likes           Int      @default(0)
+  comments        Int      @default(0)
+  shares          Int      @default(0)
+  collects        Int      @default(0)
+  followersDelta  Int      @default(0)
+  rawData         Json?
+  collectedAt     DateTime @default(now())
+
+  publishRecord PublishRecord   @relation(fields: [publishRecordId], references: [id], onDelete: Cascade)
+  content       Content         @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  version       ContentVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
+  account       PlatformAccount @relation(fields: [accountId], references: [id])
+
+  @@index([publishRecordId, collectedAt])
+  @@index([contentId, platform])
+  @@map("analytics_data")
+}
+
+model AnalyticsReport {
+  id             String   @id @default(cuid())
+  contentId      String
+  reportType     String   @default("content")
+  summary        String?
+  insights       Json?
+  suggestions    Json?
+  createdByAgent Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@index([contentId, createdAt])
+  @@map("analytics_reports")
+}
+
+model SystemConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       Json
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("system_configs")
+}
