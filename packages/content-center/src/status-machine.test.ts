@@ -1,12 +1,42 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
+import type { ContentStatus } from '@acs/db';
 import { canTransitionContent } from './status-machine.js';
 
+const ALLOWED: [ContentStatus, ContentStatus][] = [
+  ['DRAFT', 'PENDING_GENERATE'],
+  ['DRAFT', 'ARCHIVED'],
+  ['PENDING_GENERATE', 'GENERATING'],
+  ['PENDING_GENERATE', 'DRAFT'],
+  ['GENERATING', 'PENDING_REVIEW'],
+  ['GENERATING', 'FAILED'],
+  ['PENDING_REVIEW', 'APPROVED'],
+  ['PENDING_REVIEW', 'REJECTED'],
+  ['REJECTED', 'PENDING_GENERATE'],
+  ['APPROVED', 'PENDING_PUBLISH'],
+  ['PENDING_PUBLISH', 'PUBLISHING'],
+  ['PUBLISHING', 'PUBLISHED'],
+  ['PUBLISHED', 'REVIEWED'],
+  ['FAILED', 'DRAFT'],
+];
+
+const DENIED: [ContentStatus, ContentStatus][] = [
+  ['DRAFT', 'PUBLISHED'],
+  ['DRAFT', 'APPROVED'],
+  ['ARCHIVED', 'DRAFT'],
+  ['PUBLISHED', 'DRAFT'],
+];
+
 describe('canTransitionContent', () => {
-  it('allows draft to pending_generate', () => {
-    assert.strictEqual(canTransitionContent('DRAFT', 'PENDING_GENERATE'), true);
-  });
-  it('disallows draft to published', () => {
-    assert.strictEqual(canTransitionContent('DRAFT', 'PUBLISHED'), false);
-  });
+  for (const [from, to] of ALLOWED) {
+    it(`allows ${from} -> ${to}`, () => {
+      assert.strictEqual(canTransitionContent(from, to), true);
+    });
+  }
+
+  for (const [from, to] of DENIED) {
+    it(`disallows ${from} -> ${to}`, () => {
+      assert.strictEqual(canTransitionContent(from, to), false);
+    });
+  }
 });

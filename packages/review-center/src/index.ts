@@ -1,4 +1,4 @@
-import { prisma } from '@acs/db';
+import { prisma, type PublishStatus } from '@acs/db';
 import {
   AppError,
   ErrorCodes,
@@ -15,7 +15,9 @@ export async function listReviews(
 ) {
   const { page, pageSize, skip } = parsePagination(query);
   const where: { status?: 'PENDING' | 'APPROVED' | 'REJECTED' } = {};
-  if (query.status) where.status = query.status as 'PENDING';
+  if (query.status) {
+    where.status = query.status as 'PENDING' | 'APPROVED' | 'REJECTED';
+  }
 
   const [items, total] = await Promise.all([
     prisma.reviewTask.findMany({
@@ -157,11 +159,19 @@ export async function createPublishingTask(data: {
 }
 
 export async function listPublishingTasks(query: { status?: string }) {
-  const where = query.status ? { status: query.status as 'PENDING' } : {};
+  const where: { status?: PublishStatus } = {};
+  if (query.status) {
+    where.status = query.status as PublishStatus;
+  }
   return prisma.publishingTask.findMany({
     where,
     orderBy: { createdAt: 'desc' },
-    include: { version: true, publishRecord: true },
+    include: {
+      content: true,
+      account: true,
+      version: true,
+      publishRecord: true,
+    },
   });
 }
 

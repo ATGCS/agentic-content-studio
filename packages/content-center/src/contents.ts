@@ -4,6 +4,7 @@ import {
   ErrorCodes,
   parsePagination,
   type AuthUser,
+  requireRoles,
 } from '@acs/core';
 import { assertTransition } from './status-machine.js';
 
@@ -26,10 +27,21 @@ export async function listContents(
       where,
       skip,
       take: pageSize,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { updatedAt: 'desc' },
       include: {
         topic: true,
-        versions: { select: { id: true, platform: true, status: true } },
+        creator: { select: { id: true, name: true, email: true } },
+        versions: {
+          select: {
+            id: true,
+            platform: true,
+            status: true,
+            account: {
+              select: { id: true, accountName: true, platform: true },
+            },
+          },
+          take: 3,
+        },
       },
     }),
     prisma.content.count({ where }),
@@ -41,6 +53,7 @@ export async function createContent(
   user: AuthUser,
   data: { title: string; topicId?: string; summary?: string }
 ) {
+  requireRoles(user, 'ADMIN', 'OPERATOR');
   return prisma.content.create({
     data: {
       title: data.title,
@@ -57,6 +70,7 @@ export async function getContent(id: string) {
     include: {
       topic: true,
       versions: true,
+      materials: { orderBy: { createdAt: 'desc' } },
       agentRuns: { orderBy: { startedAt: 'desc' }, take: 10 },
       imaSearchLogs: { orderBy: { createdAt: 'desc' }, take: 5 },
     },
@@ -111,11 +125,13 @@ export async function generateVersions(
 export async function updateVersion(
   versionId: string,
   data: Partial<{
-    title: string;
-    body: string;
-    coverText: string;
+    title: string | null;
+    body: string | null;
+    coverText: string | null;
     tags: string[];
+    formatConfig: Record<string, unknown>;
     status: ContentStatus;
+    accountId: string | null;
   }>
 ) {
   const version = await prisma.contentVersion.findUnique({
@@ -131,6 +147,7 @@ export async function updateVersion(
     data: {
       ...data,
       tags: data.tags,
+      formatConfig: data.formatConfig as object | undefined,
     },
   });
 }

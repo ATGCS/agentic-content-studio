@@ -22,7 +22,7 @@
 
 - 总体设计与模块依赖
 - 数据库（Prisma / SQLite）
-- API 与 [OpenAPI](./docs/智能内容运营平台/openapi.yaml)
+- API 与 [OpenAPI](./docs/智能内容运营平台/设计/设计细节/openapi.yaml)
 - 页面低保真原型
 - Agent Runtime、TurboPush 二开方案
 - 权限模型、开发规范与 Sprint 排期

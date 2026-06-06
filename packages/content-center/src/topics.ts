@@ -59,6 +59,7 @@ export async function getTopic(id: string) {
 }
 
 export async function updateTopic(
+  user: AuthUser,
   id: string,
   data: Partial<{
     title: string;
@@ -67,11 +68,20 @@ export async function updateTopic(
     targetPlatforms: string[];
   }>
 ) {
-  await getTopic(id);
+  requireRoles(user, 'ADMIN', 'OPERATOR');
+  const topic = await getTopic(id);
+  if (user.role === 'OPERATOR' && topic.ownerId !== user.id) {
+    throw new AppError(ErrorCodes.FORBIDDEN, 'forbidden', 403);
+  }
   return prisma.topic.update({ where: { id }, data });
 }
 
-export async function deleteTopic(id: string) {
+export async function deleteTopic(user: AuthUser, id: string) {
+  requireRoles(user, 'ADMIN', 'OPERATOR');
+  const topic = await getTopic(id);
+  if (user.role === 'OPERATOR' && topic.ownerId !== user.id) {
+    throw new AppError(ErrorCodes.FORBIDDEN, 'forbidden', 403);
+  }
   const count = await prisma.content.count({ where: { topicId: id } });
   if (count > 0)
     throw new AppError(ErrorCodes.BAD_REQUEST, 'topic has contents', 400);

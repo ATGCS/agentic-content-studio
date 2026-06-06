@@ -9,6 +9,9 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./test-env": {
+      "import": "./src/test-env.ts"
     }
   },
   "scripts": {
@@ -16,7 +19,9 @@
     "db:generate": "prisma generate",
     "db:migrate": "cross-env DATABASE_URL=file:./dev.db prisma migrate dev",
     "db:seed": "cross-env DATABASE_URL=file:./dev.db tsx prisma/seed.ts",
-    "db:push": "cross-env DATABASE_URL=file:./dev.db prisma db push"
+    "db:push": "cross-env DATABASE_URL=file:./dev.db prisma db push",
+    "db:test:push": "cross-env DATABASE_URL=file:./test.db prisma db push",
+    "db:test:seed": "cross-env DATABASE_URL=file:./test.db tsx prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.9.0"

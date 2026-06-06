@@ -80,18 +80,33 @@ export async function listReports(contentId?: string) {
 }
 
 export async function getDashboardStats() {
-  const [pendingReview, pendingPublish, publishedWeek] = await Promise.all([
-    prisma.reviewTask.count({ where: { status: 'PENDING' } }),
-    prisma.publishingTask.count({ where: { status: 'PENDING' } }),
-    prisma.publishRecord.count({
-      where: {
-        createdAt: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
-        status: 'SUCCESS',
-      },
+  const [
+    pendingGenerate,
+    generating,
+    pendingReview,
+    pendingPublish,
+    publishedTotal,
+    reviewed,
+  ] = await Promise.all([
+    prisma.content.count({
+      where: { status: { in: ['DRAFT', 'PENDING_GENERATE'] } },
     }),
+    prisma.content.count({ where: { status: 'GENERATING' } }),
+    prisma.content.count({ where: { status: 'PENDING_REVIEW' } }),
+    prisma.content.count({
+      where: { status: { in: ['APPROVED', 'PENDING_PUBLISH'] } },
+    }),
+    prisma.content.count({
+      where: { status: { in: ['PUBLISHED', 'PUBLISHING'] } },
+    }),
+    prisma.content.count({ where: { status: 'REVIEWED' } }),
   ]);
-  const pendingGenerate = await prisma.content.count({
-    where: { status: { in: ['DRAFT', 'PENDING_GENERATE'] } },
-  });
-  return { pendingGenerate, pendingReview, pendingPublish, publishedWeek };
+  return {
+    pendingGenerate,
+    generating,
+    pendingReview,
+    pendingPublish,
+    publishedTotal,
+    reviewed,
+  };
 }

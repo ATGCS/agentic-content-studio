@@ -46,8 +46,9 @@ export async function topicRoutes(app: FastifyInstance) {
       const body = request.body as Record<string, unknown>;
       return reply.success(
         await topics.updateTopic(
+          getUser(request),
           id,
-          body as Parameters<typeof topics.updateTopic>[1]
+          body as Parameters<typeof topics.updateTopic>[2]
         )
       );
     }
@@ -58,7 +59,7 @@ export async function topicRoutes(app: FastifyInstance) {
     { onRequest: [app.authenticate] },
     async (request, reply) => {
       const { id } = request.params as { id: string };
-      await topics.deleteTopic(id);
+      await topics.deleteTopic(getUser(request), id);
       return reply.success(null);
     }
   );

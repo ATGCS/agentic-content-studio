@@ -1,89 +1,442 @@
-'use client';
+﻿'use client';
 
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { PlatformIcon, platformIconMeta, type PlatformIconKey } from '@/components/platform-icon';
+import { CreateAccountDialog } from '@/components/dialogs/create-account-dialog';
+import {
+  Bell,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  HelpCircle,
+  MoreHorizontal,
+  Plus,
+  Search,
+  User,
+} from 'lucide-react';
 import { StudioLayout } from '@/components/StudioLayout';
+import {
+  PageContainer,
+  PageHeader,
+} from '@/components/layout/page-container';
+import { StudioCard } from '@/components/studio/studio-card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { api } from '@/lib/api';
+import { navigateToAuthorization } from '@/lib/oauth';
+import { cn } from '@/lib/utils';
 
-type Account = {
+
+type AccountCard = {
   id: string;
-  accountName: string;
-  platform: string;
+  platform: PlatformIconKey;
+  tag: string;
+  name: string;
+  code: string;
+  owner: string;
   authStatus: string;
+  accountType: string;
+  externalAccountId?: string | null;
+  avatarUrl?: string | null;
+  scopes?: unknown;
+  lastSyncAt?: string | null;
+  lastError?: string | null;
+  boundAt?: string | null;
+  revokedAt?: string | null;
+  health: 'active' | 'authorizing' | 'expired' | 'need_reauth' | 'revoked' | 'error' | 'created';
 };
 
-export default function AccountsPage() {
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [selected, setSelected] = useState('');
-  const [positioning, setPositioning] = useState('');
+type ApiAccount = {
+  id: string;
+  platform: string;
+  accountName: string;
+  accountType?: string | null;
+  authStatus: string;
+  externalAccountId?: string | null;
+  avatarUrl?: string | null;
+  scopes?: unknown;
+  lastSyncAt?: string | null;
+  lastError?: string | null;
+  boundAt?: string | null;
+  revokedAt?: string | null;
+  owner?: { name?: string | null; email?: string | null } | null;
+};
 
-  async function load() {
-    const res = await api<Account[]>('/api/accounts');
-    setAccounts(res.data);
-    if (res.data[0]) setSelected(res.data[0].id);
-  }
+const platformMap: Record<string, PlatformIconKey> = {
+  WECHAT: 'wechat',
+  XIAOHONGSHU: 'xiaohongshu',
+  DOUYIN: 'douyin',
+  VIDEO_CHANNEL: 'shipinhao',
+  BILIBILI: 'bilibili',
+  ZHIHU: 'zhihu',
+  KUAISHOU: 'kuaishou',
+  OTHER: 'wechat',
+};
 
-  useEffect(() => {
-    load().catch(console.error);
-  }, []);
+const platformTagMap: Record<string, string> = {
+  WECHAT: '公众号',
+  XIAOHONGSHU: '小红书',
+  DOUYIN: '抖音',
+  VIDEO_CHANNEL: '视频号',
+  BILIBILI: 'B站',
+  ZHIHU: '知乎',
+  KUAISHOU: '快手',
+  OTHER: '其他',
+};
 
-  async function sync() {
-    await api('/api/accounts/sync', { method: 'POST' });
-    await load();
-  }
+const authStatusLabel: Record<string, string> = {
+  active: '已授权',
+  authorizing: '授权中',
+  created: '未绑定',
+  token_expired: 'Token 过期',
+  need_reauth: '需重新授权',
+  revoked: '已解绑',
+  error: '授权错误',
+  pending: '待授权',
+};
 
-  async function saveProfile() {
-    await api(`/api/account-profiles/${selected}`, {
-      method: 'PUT',
-      body: JSON.stringify({ positioning, contentStyle: '专业、清晰' }),
-    });
-    alert('画像已保存');
-  }
+function mapApiAccount(account: ApiAccount): AccountCard {
+  return {
+    id: account.id,
+    platform: platformMap[account.platform] ?? 'wechat',
+    tag: platformTagMap[account.platform] ?? account.platform,
+    name: account.accountName,
+    code: account.externalAccountId ?? account.id.slice(0, 8),
+    owner: account.owner?.name ?? account.owner?.email ?? '未分配',
+    authStatus: account.authStatus,
+    accountType: account.accountType ?? '未设置',
+    externalAccountId: account.externalAccountId,
+    avatarUrl: account.avatarUrl,
+    scopes: account.scopes,
+    lastSyncAt: account.lastSyncAt,
+    lastError: account.lastError,
+    boundAt: account.boundAt,
+    revokedAt: account.revokedAt,
+    health: account.authStatus as AccountCard['health'],
+  };
+}
+
+const statusStyles: Record<string, string> = {
+  active: 'bg-[#E8FFEA] text-[#00B42A]',
+  authorizing: 'bg-[#FFF7E6] text-[#FF7D00]',
+  created: 'bg-[#F2F3F5] text-[#86909C]',
+  token_expired: 'bg-[#FFF1F0] text-[#F53F3F]',
+  need_reauth: 'bg-[#FFF7E6] text-[#FF7D00]',
+  revoked: 'bg-[#F2F3F5] text-[#86909C]',
+  error: 'bg-[#FFF1F0] text-[#F53F3F]',
+  pending: 'bg-[#F2F3F5] text-[#86909C]',
+};
+
+function PlatformLogo({ platform }: { platform: PlatformIconKey }) {
+  const meta = platformIconMeta[platform];
 
   return (
-    <StudioLayout>
-      <h1>账号画像</h1>
-      <button className="btn" onClick={sync}>
-        同步 TurboPush 账号
-      </button>
-      <table className="table card" style={{ marginTop: 16 }}>
-        <thead>
-          <tr>
-            <th></th>
-            <th>名称</th>
-            <th>平台</th>
-            <th>授权</th>
-          </tr>
-        </thead>
-        <tbody>
-          {accounts.map((a) => (
-            <tr key={a.id}>
-              <td>
-                <input
-                  type="radio"
-                  checked={selected === a.id}
-                  onChange={() => setSelected(a.id)}
-                />
-              </td>
-              <td>{a.accountName}</td>
-              <td>{a.platform}</td>
-              <td>{a.authStatus}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <div className="card" style={{ marginTop: 16 }}>
-        <label>
-          账号定位
-          <textarea
-            value={positioning}
-            onChange={(e) => setPositioning(e.target.value)}
-            style={{ width: '100%', marginTop: 4 }}
-          />
-        </label>
-        <button className="btn" style={{ marginTop: 12 }} onClick={saveProfile}>
-          保存画像
-        </button>
+    <div
+      className="flex h-11 w-11 items-center justify-center rounded-xl text-sm font-semibold shadow-sm"
+      style={{ backgroundColor: meta.bg, color: meta.color }}
+    >
+      {meta.icon ? <PlatformIcon icon={meta.icon} size={24} /> : meta.short}
+    </div>
+  );
+}
+
+function AccountItem({ account, onReauthorize }: { account: AccountCard; onReauthorize: (id: string) => void }) {
+  const statusLabel = authStatusLabel[account.authStatus] ?? account.authStatus;
+
+  return (
+    <StudioCard contentClassName="p-4" className="border-[#EDF0F7] shadow-[0_8px_24px_rgba(29,33,41,0.04)]">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <Link href={`/accounts/${account.id}`}>
+            <PlatformLogo platform={account.platform} />
+          </Link>
+          <div className="min-w-0">
+            <div className="mb-1 flex items-center gap-2">
+              <span className="rounded bg-[#E8F3FF] px-1.5 py-0.5 text-[10px] text-[#1664FF]">
+                {account.tag}
+              </span>
+            </div>
+            <Link
+              href={`/accounts/${account.id}`}
+              className="truncate text-sm font-semibold text-[#1D2129] hover:text-[#1664FF]"
+            >
+              {account.name}
+            </Link>
+            <div className="mt-1 text-[11px] text-[#4E5969]">
+              外部 ID：{account.code}
+            </div>
+            <div className="mt-1 text-[11px] text-[#4E5969]">
+              负责人：{account.owner}
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <Link href={`/accounts/${account.id}`}>
+            <Button variant="outline" size="sm" className="h-7 w-7 rounded-md p-0 text-[#86909C]">
+              <MoreHorizontal className="size-4" />
+            </Button>
+          </Link>
+          <span className={cn('rounded px-2 py-0.5 text-[11px]', statusStyles[account.authStatus])}>
+            {statusLabel}
+          </span>
+        </div>
       </div>
+
+      <div className="space-y-3 text-[11px]">
+        <div className="grid grid-cols-[64px_1fr] items-center gap-2">
+          <span className="text-[#86909C]">账号类型</span>
+          <span className="text-[#4E5969]">{account.accountType}</span>
+        </div>
+        {account.boundAt && (
+          <div className="grid grid-cols-[64px_1fr] items-center gap-2">
+            <span className="text-[#86909C]">绑定时间</span>
+            <span className="text-[#4E5969]">{new Date(account.boundAt).toLocaleString('zh-CN')}</span>
+          </div>
+        )}
+        {account.lastSyncAt && (
+          <div className="grid grid-cols-[64px_1fr] items-center gap-2">
+            <span className="text-[#86909C]">最近同步</span>
+            <span className="text-[#4E5969]">{new Date(account.lastSyncAt).toLocaleString('zh-CN')}</span>
+          </div>
+        )}
+        {account.lastError && (
+          <div className="grid grid-cols-[64px_1fr] items-center gap-2">
+            <span className="text-[#86909C]">最近错误</span>
+            <span className="text-[#F53F3F]">{account.lastError}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-4 flex items-center justify-between border-t border-[#F2F3F5] pt-3 text-[11px]">
+        {(account.authStatus === 'need_reauth' || account.authStatus === 'token_expired') && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-[10px]"
+            onClick={() => onReauthorize(account.id)}
+          >
+            重新授权
+          </Button>
+        )}
+        <span className={cn('rounded-full px-2 py-0.5', statusStyles[account.authStatus])}>
+          {account.authStatus === 'active' ? '● 正常' : statusLabel}
+        </span>
+      </div>
+    </StudioCard>
+  );
+}
+
+export default function AccountsPage() {
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [accounts, setAccounts] = useState<AccountCard[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [platformFilter, setPlatformFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
+
+  const loadAccounts = (platform?: string, authStatus?: string) => {
+    const params = new URLSearchParams();
+    if (platform && platform !== 'all-platforms') params.set('platform', platform);
+    if (authStatus && authStatus !== 'all-auth') params.set('authStatus', authStatus);
+    const qs = params.toString();
+    api<ApiAccount[]>(`/api/accounts${qs ? '?' + qs : ''}`)
+      .then((res) => {
+        setAccounts(res.data.map(mapApiAccount));
+        setLoadError(null);
+      })
+      .catch((error) => {
+        console.error(error);
+        setLoadError('账号加载失败，请稍后重试');
+      })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadAccounts(platformFilter, statusFilter);
+  }, []);
+
+  const handleReauthorize = async (id: string) => {
+    try {
+      const res = await api<{ authorizationUrl: string }>(`/api/accounts/${id}/reauthorize`, {
+        method: 'POST',
+      });
+      if (res.data?.authorizationUrl) {
+        navigateToAuthorization(res.data.authorizationUrl);
+      }
+    } catch (error) {
+      console.error('reauthorize error', error);
+    }
+  };
+
+  return (
+    <>
+      <CreateAccountDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onSuccess={() => loadAccounts(platformFilter, statusFilter)}
+      />
+    <StudioLayout>
+      <PageContainer>
+        <div className="mb-2 text-xs text-[#86909C]">
+          平台账号 / <span className="text-[#4E5969]">账号管理</span>
+        </div>
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <PageHeader
+            title="平台账号管理"
+            description="管理多平台账号授权、绑定、同步与数据"
+          />
+          <div className="flex items-center gap-4">
+            <div className="relative hidden lg:block">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#A9AEB8]" />
+              <Input
+                className="h-9 w-[280px] rounded-lg border-[#E5E8EF] bg-white pl-9 text-xs"
+                placeholder="搜索账号名称、平台、负责人..."
+              />
+            </div>
+            <div className="relative text-[#4E5969]">
+              <Bell className="size-5" />
+              <span className="absolute -right-1 -top-1 rounded-full bg-[#F53F3F] px-1 text-[9px] text-white">
+                12
+              </span>
+            </div>
+            <HelpCircle className="size-5 text-[#4E5969]" />
+            <div className="flex items-center gap-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1D2129] text-white">
+                <User className="size-4" />
+              </div>
+              <div className="hidden text-xs md:block">
+                <div className="font-medium text-[#1D2129]">张晓彤</div>
+                <div className="text-[#86909C]">运营管理员</div>
+              </div>
+              <ChevronDown className="size-4 text-[#86909C]" />
+            </div>
+          </div>
+        </div>
+
+        <div className="mb-5 flex flex-wrap items-center gap-3">
+          <Button
+            className="h-9 bg-[#1664FF] px-5 text-xs text-white hover:bg-[#0E52D9]"
+            onClick={() => setCreateDialogOpen(true)}
+          >
+            <Plus className="size-4" />
+            新增账号
+          </Button>
+          <Select defaultValue="all-platforms" onValueChange={(v) => { const p = v === 'all-platforms' ? '' : v; setPlatformFilter(p); loadAccounts(p, statusFilter); }}>
+            <SelectTrigger className="h-9 w-[150px] bg-white text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all-platforms">全部平台</SelectItem>
+              <SelectItem value="WECHAT">公众号</SelectItem>
+              <SelectItem value="XIAOHONGSHU">小红书</SelectItem>
+              <SelectItem value="DOUYIN">抖音</SelectItem>
+              <SelectItem value="KUAISHOU">快手</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select defaultValue="all-auth" onValueChange={(v) => { setStatusFilter(v === 'all-auth' ? '' : v); loadAccounts(platformFilter, v === 'all-auth' ? '' : v); }}>
+            <SelectTrigger className="h-9 w-[170px] bg-white text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all-auth">全部授权状态</SelectItem>
+              <SelectItem value="active">已授权</SelectItem>
+              <SelectItem value="authorizing">授权中</SelectItem>
+              <SelectItem value="need_reauth">需重新授权</SelectItem>
+              <SelectItem value="token_expired">Token 过期</SelectItem>
+              <SelectItem value="revoked">已解绑</SelectItem>
+              <SelectItem value="error">授权错误</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" className="h-9 px-4 text-xs" onClick={() => { setPlatformFilter(''); setStatusFilter(''); loadAccounts(); }}>
+            重置
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {loading ? (
+            <StudioCard contentClassName="p-5" className="border-[#EDF0F7]">
+              <p className="text-xs text-[#86909C]">账号加载中…</p>
+            </StudioCard>
+          ) : loadError ? (
+            <StudioCard contentClassName="p-5" className="border-[#EDF0F7]">
+              <p className="text-xs text-[#F53F3F]">{loadError}</p>
+            </StudioCard>
+          ) : accounts.length === 0 ? (
+            <StudioCard contentClassName="p-5" className="border-[#EDF0F7]">
+              <p className="text-xs text-[#86909C]">暂无账号，请先同步或新增平台账号</p>
+            </StudioCard>
+          ) : (
+            accounts.map((account) => (
+              <AccountItem key={account.id} account={account} onReauthorize={handleReauthorize} />
+            ))
+          )}
+          <button
+            type="button"
+            onClick={() => setCreateDialogOpen(true)}
+            className="min-h-[218px] rounded-xl border border-dashed border-[#C9D8FF] bg-white text-center transition-colors hover:bg-[#FAFBFF]"
+          >
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#F0F5FF] text-[#1664FF]">
+              <Plus className="size-6" />
+            </div>
+            <div className="text-sm font-semibold text-[#1D2129]">新增平台账号</div>
+            <div className="mt-2 text-xs leading-5 text-[#86909C]">
+              支持快速授权
+              <br />
+              多平台管理
+            </div>
+          </button>
+        </div>
+
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-xs text-[#4E5969]">
+          <span>共 {accounts.length} 个账号</span>
+          <div className="flex items-center gap-3">
+            <Select defaultValue="12">
+              <SelectTrigger className="h-8 w-[92px] bg-white text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="12">12条/页</SelectItem>
+                <SelectItem value="24">24条/页</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+              <ChevronLeft className="size-4" />
+            </Button>
+            {[1, 2, 3].map((page) => (
+              <Button
+                key={page}
+                variant={page === 1 ? 'default' : 'ghost'}
+                size="sm"
+                className={cn(
+                  'h-8 w-8 p-0 text-xs',
+                  page === 1 && 'bg-[#1664FF] text-white hover:bg-[#0E52D9]'
+                )}
+              >
+                {page}
+              </Button>
+            ))}
+            <span className="px-1 text-[#86909C]">...</span>
+            <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+              <ChevronRight className="size-4" />
+            </Button>
+            <Button variant="outline" size="sm" className="h-8 px-4 text-xs">
+              下一页
+            </Button>
+            <Button variant="outline" size="sm" className="h-8 px-4 text-xs">
+              尾页
+            </Button>
+          </div>
+        </div>
+      </PageContainer>
     </StudioLayout>
+    </>
   );
 }

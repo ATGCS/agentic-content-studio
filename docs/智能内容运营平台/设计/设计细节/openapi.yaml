@@ -1,0 +1,2568 @@
+openapi: 3.0.3
+info:
+  title: Agentic Content Studio API
+  version: 1.0.0
+  description: 智能内容运营平台 API，覆盖账号、选题、内容、Agent、审核、发布和数据复盘主流程。
+
+servers:
+  - url: http://localhost:3002/api
+    description: 本地 API 服务
+
+tags:
+  - name: Auth
+  - name: Dashboard
+  - name: Accounts
+  - name: AccountProfiles
+  - name: Topics
+  - name: Contents
+  - name: Versions
+  - name: Materials
+  - name: IMA
+  - name: Agents
+  - name: AgentRuns
+  - name: Prompts
+  - name: Reviews
+  - name: Publishing
+  - name: Analytics
+  - name: MaterialLibrary
+  - name: Integration
+  - name: Settings
+  - name: Users
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+    ContentIdPath:
+      name: contentId
+      in: path
+      required: true
+      schema:
+        type: string
+    VersionIdPath:
+      name: versionId
+      in: path
+      required: true
+      schema:
+        type: string
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        default: 1
+    PageSize:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        default: 20
+
+  responses:
+    Ok:
+      description: OK
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+    NotFound:
+      description: Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiResponse'
+
+  schemas:
+    ApiResponse:
+      type: object
+      required: [code, message, data]
+      properties:
+        code:
+          type: integer
+          example: 0
+        message:
+          type: string
+          example: success
+        data:
+          nullable: true
+
+    PageResult:
+      type: object
+      properties:
+        items:
+          type: array
+          items: {}
+        total:
+          type: integer
+        page:
+          type: integer
+        pageSize:
+          type: integer
+
+    UserRole:
+      type: string
+      enum: [ADMIN, OPERATOR, REVIEWER, ANALYST]
+    Platform:
+      type: string
+      enum: [WECHAT, XIAOHONGSHU, DOUYIN, VIDEO_CHANNEL, BILIBILI, ZHIHU, OTHER]
+    ContentStatus:
+      type: string
+      enum: [DRAFT, PENDING_GENERATE, GENERATING, PENDING_REVIEW, REJECTED, APPROVED, PENDING_PUBLISH, PUBLISHING, PUBLISHED, FAILED, REVIEWED, ARCHIVED]
+    AgentType:
+      type: string
+      enum: [TITLE, TAG, REWRITE, BODY, COVER_COPY, REVIEW, SUMMARY, TOPIC, IMAGE, VIDEO_SCRIPT, COMPETITOR]
+    RunStatus:
+      type: string
+      enum: [PENDING, RUNNING, SUCCESS, FAILED]
+    ReviewStatus:
+      type: string
+      enum: [PENDING, APPROVED, REJECTED]
+    PublishStatus:
+      type: string
+      enum: [PENDING, PUBLISHING, SUCCESS, FAILED, CANCELLED]
+    MaterialType:
+      type: string
+      enum: [IMAGE, VIDEO, AUDIO, FILE]
+    MaterialRole:
+      type: string
+      enum: [COVER, BODY, ATTACHMENT]
+    MaterialAssetStatus:
+      type: string
+      enum: [ENABLED, REVIEWING, DISABLED]
+
+    UserPublic:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    LoginResponseData:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: '#/components/schemas/UserPublic'
+
+    PlatformAccount:
+      type: object
+      properties:
+        id:
+          type: string
+        platform:
+          $ref: '#/components/schemas/Platform'
+        accountName:
+          type: string
+        accountType:
+          type: string
+          nullable: true
+        authStatus:
+          type: string
+        ownerId:
+          type: string
+        rawData:
+          type: object
+          nullable: true
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AccountProfile:
+      type: object
+      properties:
+        id:
+          type: string
+        accountId:
+          type: string
+        positioning:
+          type: string
+          nullable: true
+        targetAudience:
+          type: object
+          nullable: true
+          additionalProperties: true
+        contentStyle:
+          type: string
+          nullable: true
+        titlePreference:
+          type: string
+          nullable: true
+        coverPreference:
+          type: string
+          nullable: true
+        tone:
+          type: string
+          nullable: true
+        forbiddenWords:
+          type: array
+          nullable: true
+          items:
+            type: string
+        contentBoundary:
+          type: string
+          nullable: true
+        publishStrategy:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AccountProfileUpsert:
+      type: object
+      properties:
+        positioning:
+          type: string
+        targetAudience:
+          type: object
+          additionalProperties: true
+        contentStyle:
+          type: string
+        titlePreference:
+          type: string
+        coverPreference:
+          type: string
+        tone:
+          type: string
+        forbiddenWords:
+          type: array
+          items:
+            type: string
+        contentBoundary:
+          type: string
+        publishStrategy:
+          type: string
+
+    Topic:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        source:
+          type: string
+        targetPlatforms:
+          type: array
+          nullable: true
+          items:
+            $ref: '#/components/schemas/Platform'
+        status:
+          $ref: '#/components/schemas/ContentStatus'
+        ownerId:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    TopicCreate:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        targetPlatforms:
+          type: array
+          items:
+            $ref: '#/components/schemas/Platform'
+        source:
+          type: string
+          default: manual
+
+    Content:
+      type: object
+      properties:
+        id:
+          type: string
+        topicId:
+          type: string
+          nullable: true
+        title:
+          type: string
+        summary:
+          type: string
+          nullable: true
+        body:
+          type: string
+          nullable: true
+        coverText:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/ContentStatus'
+        aiGenerated:
+          type: boolean
+        createdBy:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ContentCreate:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+        topicId:
+          type: string
+        summary:
+          type: string
+
+    ContentPatch:
+      type: object
+      properties:
+        title:
+          type: string
+        summary:
+          type: string
+        body:
+          type: string
+        coverText:
+          type: string
+        status:
+          $ref: '#/components/schemas/ContentStatus'
+
+    ContentGenerate:
+      type: object
+      properties:
+        accountId:
+          type: string
+        platforms:
+          type: array
+          items:
+            $ref: '#/components/schemas/Platform'
+
+    ContentVersion:
+      type: object
+      properties:
+        id:
+          type: string
+        contentId:
+          type: string
+        platform:
+          $ref: '#/components/schemas/Platform'
+        accountId:
+          type: string
+          nullable: true
+        title:
+          type: string
+          nullable: true
+        body:
+          type: string
+          nullable: true
+        coverText:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          nullable: true
+          items:
+            type: string
+        formatConfig:
+          type: object
+          nullable: true
+          additionalProperties: true
+        status:
+          $ref: '#/components/schemas/ContentStatus'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ContentVersionPatch:
+      type: object
+      properties:
+        accountId:
+          type: string
+        title:
+          type: string
+        body:
+          type: string
+        coverText:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        formatConfig:
+          type: object
+          additionalProperties: true
+        status:
+          $ref: '#/components/schemas/ContentStatus'
+
+    VersionsGenerate:
+      type: object
+      required: [platforms]
+      properties:
+        platforms:
+          type: array
+          items:
+            $ref: '#/components/schemas/Platform'
+        accountIds:
+          type: array
+          items:
+            type: string
+
+    Material:
+      type: object
+      properties:
+        id:
+          type: string
+        contentId:
+          type: string
+        type:
+          $ref: '#/components/schemas/MaterialType'
+        role:
+          $ref: '#/components/schemas/MaterialRole'
+        name:
+          type: string
+          nullable: true
+        url:
+          type: string
+          nullable: true
+        localPath:
+          type: string
+          nullable: true
+        source:
+          type: string
+          nullable: true
+        meta:
+          type: object
+          nullable: true
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MaterialInput:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/MaterialType'
+        role:
+          $ref: '#/components/schemas/MaterialRole'
+        name:
+          type: string
+        url:
+          type: string
+        localPath:
+          type: string
+        source:
+          type: string
+        meta:
+          type: object
+          additionalProperties: true
+
+    Prompt:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        agentType:
+          $ref: '#/components/schemas/AgentType'
+        version:
+          type: string
+        template:
+          type: string
+        variables:
+          type: object
+          nullable: true
+          additionalProperties: true
+        enabled:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PromptCreate:
+      type: object
+      required: [name, agentType, template]
+      properties:
+        name:
+          type: string
+        agentType:
+          $ref: '#/components/schemas/AgentType'
+        template:
+          type: string
+        version:
+          type: string
+
+    Agent:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          $ref: '#/components/schemas/AgentType'
+        description:
+          type: string
+          nullable: true
+        promptId:
+          type: string
+        model:
+          type: string
+        enabled:
+          type: boolean
+        config:
+          type: object
+          nullable: true
+          additionalProperties: true
+        prompt:
+          $ref: '#/components/schemas/Prompt'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    AgentRun:
+      type: object
+      properties:
+        id:
+          type: string
+        agentId:
+          type: string
+        contentId:
+          type: string
+        versionId:
+          type: string
+          nullable: true
+        input:
+          type: object
+          nullable: true
+          additionalProperties: true
+        output:
+          type: object
+          nullable: true
+          additionalProperties: true
+        model:
+          type: string
+          nullable: true
+        promptVersion:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/RunStatus'
+        error:
+          type: string
+          nullable: true
+        startedAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        durationMs:
+          type: integer
+          nullable: true
+          description: 执行耗时（毫秒），规划字段，V1.1 实现
+        agent:
+          $ref: '#/components/schemas/Agent'
+        content:
+          $ref: '#/components/schemas/Content'
+        version:
+          $ref: '#/components/schemas/ContentVersion'
+
+    AgentBodyRun:
+      type: object
+      required: [contentId]
+      properties:
+        contentId:
+          type: string
+        accountId:
+          type: string
+
+    AgentTitleRun:
+      type: object
+      required: [contentId]
+      properties:
+        contentId:
+          type: string
+        accountId:
+          type: string
+        count:
+          type: integer
+
+    AgentRewriteRun:
+      type: object
+      required: [contentId, platform]
+      properties:
+        contentId:
+          type: string
+        platform:
+          $ref: '#/components/schemas/Platform'
+        accountId:
+          type: string
+
+    AgentReviewRun:
+      type: object
+      required: [versionId]
+      properties:
+        versionId:
+          type: string
+
+    ImaConfigPublic:
+      type: object
+      properties:
+        clientId:
+          type: string
+          nullable: true
+        baseUrl:
+          type: string
+          nullable: true
+        useMock:
+          type: boolean
+        hasApiKey:
+          type: boolean
+
+    ImaConfigUpdate:
+      type: object
+      properties:
+        clientId:
+          type: string
+        apiKey:
+          type: string
+        baseUrl:
+          type: string
+        useMock:
+          type: boolean
+
+    ImaKnowledgeBase:
+      type: object
+      properties:
+        id:
+          type: string
+        externalId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        enabled:
+          type: boolean
+        isDefault:
+          type: boolean
+        rawData:
+          type: object
+          nullable: true
+          additionalProperties: true
+        syncedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ImaSearch:
+      type: object
+      required: [query, contentId]
+      properties:
+        query:
+          type: string
+        contentId:
+          type: string
+        limit:
+          type: integer
+        knowledgeBaseId:
+          type: string
+
+    ReviewTask:
+      type: object
+      properties:
+        id:
+          type: string
+        contentId:
+          type: string
+        versionId:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/ReviewStatus'
+        reviewerId:
+          type: string
+          nullable: true
+        comment:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        reviewedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    ReviewCreate:
+      type: object
+      required: [contentId]
+      properties:
+        contentId:
+          type: string
+        versionId:
+          type: string
+
+    ReviewReject:
+      type: object
+      properties:
+        comment:
+          type: string
+
+    PublishingTask:
+      type: object
+      properties:
+        id:
+          type: string
+        contentId:
+          type: string
+        versionId:
+          type: string
+        accountId:
+          type: string
+        platform:
+          $ref: '#/components/schemas/Platform'
+        status:
+          $ref: '#/components/schemas/PublishStatus'
+        scheduledAt:
+          type: string
+          format: date-time
+          nullable: true
+        publishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        error:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        content:
+          $ref: '#/components/schemas/Content'
+        version:
+          $ref: '#/components/schemas/ContentVersion'
+        account:
+          $ref: '#/components/schemas/PlatformAccount'
+        publishRecord:
+          $ref: '#/components/schemas/PublishRecord'
+
+    PublishingSummary:
+      type: object
+      description: 发布管理页统计卡，规划字段
+      properties:
+        pendingCount:
+          type: integer
+        draftSyncCount:
+          type: integer
+        packageRedCount:
+          type: integer
+        packageDouyinCount:
+          type: integer
+        publishedTodayCount:
+          type: integer
+
+    PublishingTaskCreate:
+      type: object
+      required: [versionId, accountId]
+      properties:
+        versionId:
+          type: string
+        accountId:
+          type: string
+        scheduledAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    PublishRecord:
+      type: object
+      properties:
+        id:
+          type: string
+        taskId:
+          type: string
+        platform:
+          $ref: '#/components/schemas/Platform'
+        accountId:
+          type: string
+        externalPostId:
+          type: string
+          nullable: true
+        externalUrl:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/PublishStatus'
+        rawResult:
+          type: object
+          nullable: true
+          additionalProperties: true
+        createdAt:
+          type: string
+          format: date-time
+
+    AnalyticsData:
+      type: object
+      properties:
+        id:
+          type: string
+        publishRecordId:
+          type: string
+        contentId:
+          type: string
+        versionId:
+          type: string
+          nullable: true
+        platform:
+          $ref: '#/components/schemas/Platform'
+        accountId:
+          type: string
+        views:
+          type: integer
+        likes:
+          type: integer
+        comments:
+          type: integer
+        shares:
+          type: integer
+        collects:
+          type: integer
+        followersDelta:
+          type: integer
+        rawData:
+          type: object
+          nullable: true
+          additionalProperties: true
+        collectedAt:
+          type: string
+          format: date-time
+
+    AnalyticsReport:
+      type: object
+      properties:
+        id:
+          type: string
+        contentId:
+          type: string
+        reportType:
+          type: string
+        summary:
+          type: string
+          nullable: true
+        insights:
+          type: object
+          nullable: true
+          additionalProperties: true
+        suggestions:
+          type: object
+          nullable: true
+          additionalProperties: true
+        createdByAgent:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    AnalyticsSync:
+      type: object
+      required: [publishRecordId]
+      properties:
+        publishRecordId:
+          type: string
+
+    ReportGenerate:
+      type: object
+      required: [contentId]
+      properties:
+        contentId:
+          type: string
+
+    DashboardStats:
+      type: object
+      description: V1 已实现扁平计数；alerts / publishedWeek 为 V1.1 规划
+      required:
+        - pendingGenerate
+        - generating
+        - pendingReview
+        - pendingPublish
+        - publishedTotal
+        - reviewed
+      properties:
+        pendingGenerate:
+          type: integer
+          description: 待生成（DRAFT + PENDING_GENERATE）
+        generating:
+          type: integer
+          description: 生成中
+        pendingReview:
+          type: integer
+          description: 待审核
+        pendingPublish:
+          type: integer
+          description: 待发布（APPROVED + PENDING_PUBLISH）
+        publishedTotal:
+          type: integer
+          description: 已发布（PUBLISHED + PUBLISHING）
+        reviewed:
+          type: integer
+          description: 已审核通过待后续流转
+        publishedWeek:
+          type: integer
+          description: 本周已发布，V1.1 规划
+        alerts:
+          type: array
+          description: 工作台告警，V1.1 规划
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              type:
+                type: string
+                enum: [risk, agent, account]
+              title:
+                type: string
+              message:
+                type: string
+              severity:
+                type: string
+                enum: [info, warning, error]
+
+    DashboardAlert:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [risk, agent, account]
+        title:
+          type: string
+        message:
+          type: string
+        severity:
+          type: string
+          enum: [info, warning, error]
+
+    MaterialAsset:
+      type: object
+      description: 独立素材库资产（P1 规划）
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        fileName:
+          type: string
+        type:
+          $ref: '#/components/schemas/MaterialType'
+        format:
+          type: string
+          description: 如 JPG、MP4
+        sizeBytes:
+          type: integer
+        url:
+          type: string
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        source:
+          type: string
+          nullable: true
+        uploaderId:
+          type: string
+        uploader:
+          $ref: '#/components/schemas/UserPublic'
+        status:
+          $ref: '#/components/schemas/MaterialAssetStatus'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MaterialAssetCreate:
+      type: object
+      required: [name, type]
+      properties:
+        name:
+          type: string
+        type:
+          $ref: '#/components/schemas/MaterialType'
+        format:
+          type: string
+        sizeBytes:
+          type: integer
+        url:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        source:
+          type: string
+
+    MaterialAssetPatch:
+      type: object
+      properties:
+        name:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        source:
+          type: string
+        status:
+          $ref: '#/components/schemas/MaterialAssetStatus'
+
+    MaterialLibraryStats:
+      type: object
+      properties:
+        total:
+          type: integer
+        byType:
+          type: object
+          additionalProperties:
+            type: integer
+
+    ContentMaterialLink:
+      type: object
+      properties:
+        id:
+          type: string
+        contentId:
+          type: string
+        assetId:
+          type: string
+        role:
+          $ref: '#/components/schemas/MaterialRole'
+        asset:
+          $ref: '#/components/schemas/MaterialAsset'
+
+    ContentMaterialLinkCreate:
+      type: object
+      properties:
+        assetId:
+          type: string
+          description: 关联已有素材库资产
+        role:
+          $ref: '#/components/schemas/MaterialRole'
+        type:
+          $ref: '#/components/schemas/MaterialType'
+        name:
+          type: string
+        url:
+          type: string
+        localPath:
+          type: string
+        source:
+          type: string
+
+    IntegrationApiKey:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        keyPrefix:
+          type: string
+          description: 脱敏前缀，如 acs_live_abc***
+        description:
+          type: string
+          nullable: true
+        enabled:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        lastUsedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    IntegrationApiKeyCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+
+    IntegrationApiKeyCreateResponse:
+      type: object
+      properties:
+        apiKey:
+          $ref: '#/components/schemas/IntegrationApiKey'
+        plainTextKey:
+          type: string
+          description: 仅创建时返回一次明文
+
+    IntegrationWebhook:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        url:
+          type: string
+        events:
+          type: array
+          items:
+            type: string
+        enabled:
+          type: boolean
+        secret:
+          type: string
+          nullable: true
+          description: 响应脱敏
+
+    IntegrationWebhookUpsert:
+      type: object
+      properties:
+        name:
+          type: string
+        url:
+          type: string
+        events:
+          type: array
+          items:
+            type: string
+        enabled:
+          type: boolean
+        secret:
+          type: string
+
+    IntegrationAccessLog:
+      type: object
+      properties:
+        id:
+          type: string
+        apiKeyId:
+          type: string
+        apiKeyPrefix:
+          type: string
+        method:
+          type: string
+        path:
+          type: string
+        statusCode:
+          type: integer
+        durationMs:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    IntegrationStatus:
+      type: object
+      properties:
+        healthy:
+          type: boolean
+        rateLimitPerMinute:
+          type: integer
+        requestsLast24h:
+          type: integer
+        errorRateLast24h:
+          type: number
+
+    SystemSetting:
+      type: object
+      properties:
+        key:
+          type: string
+        value:
+          type: object
+          additionalProperties: true
+        description:
+          type: string
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+
+    SystemSettingUpdate:
+      type: object
+      required: [value]
+      properties:
+        value:
+          type: object
+          additionalProperties: true
+
+    UserCreate:
+      type: object
+      required: [email, password, name, role]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        name:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+
+    UserPatch:
+      type: object
+      properties:
+        name:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+        disabled:
+          type: boolean
+
+    AccountCreate:
+      type: object
+      required: [platform, accountName]
+      properties:
+        platform:
+          $ref: '#/components/schemas/Platform'
+        accountName:
+          type: string
+        accountType:
+          type: string
+        ownerId:
+          type: string
+
+    ReviewStats:
+      type: object
+      description: 审核中心汇总，规划字段
+      properties:
+        pending:
+          type: integer
+        approved:
+          type: integer
+        rejected:
+          type: integer
+
+    AnalyticsOverview:
+      type: object
+      description: 数据复盘页概览，规划字段
+      properties:
+        views:
+          type: integer
+        likes:
+          type: integer
+        comments:
+          type: integer
+        shares:
+          type: integer
+        collects:
+          type: integer
+        topContents:
+          type: array
+          items:
+            type: object
+            properties:
+              contentId:
+                type: string
+              title:
+                type: string
+              platform:
+                $ref: '#/components/schemas/Platform'
+              views:
+                type: integer
+              interactions:
+                type: integer
+
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      security: []
+      summary: 邮箱密码登录
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LoginResponseData'
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: 当前用户
+      responses:
+        '200':
+          description: OK
+
+  /dashboard/stats:
+    get:
+      tags: [Dashboard]
+      summary: 工作台统计
+      x-implementation-status: implemented
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DashboardStats'
+
+  /accounts:
+    get:
+      tags: [Accounts]
+      summary: 平台账号列表
+      parameters:
+        - name: platform
+          in: query
+          schema:
+            $ref: '#/components/schemas/Platform'
+        - name: authStatus
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Accounts]
+      summary: 手动创建平台账号
+      x-implementation-status: planned
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountCreate'
+      responses:
+        '200':
+          description: OK
+
+  /accounts/{id}:
+    get:
+      tags: [Accounts]
+      summary: 平台账号详情
+      x-implementation-status: implemented
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+    patch:
+      tags: [Accounts]
+      summary: 更新平台账号
+      x-implementation-status: implemented
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                platform:
+                  $ref: '#/components/schemas/Platform'
+                accountName:
+                  type: string
+                accountType:
+                  type: string
+                authStatus:
+                  type: string
+                ownerId:
+                  type: string
+                rawData:
+                  type: object
+                  additionalProperties: true
+      responses:
+        '200':
+          description: OK
+
+  /accounts/sync:
+    post:
+      tags: [Accounts]
+      summary: 从 TurboPush 同步账号
+      responses:
+        '200':
+          description: OK
+
+  /account-profiles:
+    get:
+      tags: [AccountProfiles]
+      summary: 按账号查询画像
+      parameters:
+        - name: accountId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+
+  /account-profiles/{accountId}:
+    put:
+      tags: [AccountProfiles]
+      summary: 创建或更新账号画像
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccountProfileUpsert'
+      responses:
+        '200':
+          description: OK
+
+  /topics:
+    get:
+      tags: [Topics]
+      summary: 选题列表
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ContentStatus'
+        - name: ownerId
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Topics]
+      summary: 创建选题
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TopicCreate'
+      responses:
+        '200':
+          description: OK
+
+  /topics/{id}:
+    get:
+      tags: [Topics]
+      summary: 选题详情
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+    patch:
+      tags: [Topics]
+      summary: 更新选题
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: [Topics]
+      summary: 删除选题
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+
+  /contents:
+    get:
+      tags: [Contents]
+      summary: 内容项目列表
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ContentStatus'
+        - name: topicId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Contents]
+      summary: 创建内容项目
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentCreate'
+      responses:
+        '200':
+          description: OK
+
+  /contents/{id}:
+    get:
+      tags: [Contents]
+      summary: 内容项目详情
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+    patch:
+      tags: [Contents]
+      summary: 更新内容项目
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentPatch'
+      responses:
+        '200':
+          description: OK
+
+  /contents/{id}/generate:
+    post:
+      tags: [Contents]
+      summary: 编排生成内容
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentGenerate'
+      responses:
+        '200':
+          description: OK
+
+  /contents/{id}/versions:
+    get:
+      tags: [Contents]
+      summary: 内容版本列表
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+
+  /contents/{id}/versions/generate:
+    post:
+      tags: [Contents]
+      summary: 批量生成平台版本
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionsGenerate'
+      responses:
+        '200':
+          description: OK
+
+  /contents/{id}/materials:
+    get:
+      tags: [Materials]
+      summary: 内容绑定素材列表
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Materials]
+      summary: 给内容新增素材
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MaterialInput'
+      responses:
+        '200':
+          description: OK
+
+  /versions/{versionId}:
+    get:
+      tags: [Versions]
+      summary: 版本详情
+      parameters:
+        - $ref: '#/components/parameters/VersionIdPath'
+      responses:
+        '200':
+          description: OK
+    patch:
+      tags: [Versions]
+      summary: 更新平台版本
+      parameters:
+        - $ref: '#/components/parameters/VersionIdPath'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContentVersionPatch'
+      responses:
+        '200':
+          description: OK
+
+  /materials:
+    get:
+      tags: [Materials]
+      summary: 素材列表
+      parameters:
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/MaterialType'
+        - name: role
+          in: query
+          schema:
+            $ref: '#/components/schemas/MaterialRole'
+      responses:
+        '200':
+          description: OK
+
+  /materials/{id}:
+    get:
+      tags: [Materials]
+      summary: 素材详情
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+    patch:
+      tags: [Materials]
+      summary: 更新素材
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MaterialInput'
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: [Materials]
+      summary: 删除素材
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+
+  /ima/config:
+    get:
+      tags: [IMA]
+      summary: IMA 配置
+      responses:
+        '200':
+          description: OK
+    put:
+      tags: [IMA]
+      summary: 更新 IMA 配置
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImaConfigUpdate'
+      responses:
+        '200':
+          description: OK
+
+  /ima/knowledge-bases:
+    get:
+      tags: [IMA]
+      summary: 知识库列表
+      parameters:
+        - name: enabledOnly
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: OK
+
+  /ima/knowledge-bases/sync:
+    post:
+      tags: [IMA]
+      summary: 同步知识库
+      responses:
+        '200':
+          description: OK
+
+  /ima/knowledge-bases/{id}:
+    patch:
+      tags: [IMA]
+      summary: 更新知识库配置
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                isDefault:
+                  type: boolean
+                name:
+                  type: string
+      responses:
+        '200':
+          description: OK
+
+  /ima/search:
+    post:
+      tags: [IMA]
+      summary: IMA 搜索
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImaSearch'
+      responses:
+        '200':
+          description: OK
+
+  /agents:
+    get:
+      tags: [Agents]
+      summary: Agent 配置列表
+      responses:
+        '200':
+          description: OK
+
+  /agents/title/run:
+    post:
+      tags: [Agents]
+      summary: 运行标题 Agent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentTitleRun'
+      responses:
+        '200':
+          description: OK
+
+  /agents/rewrite/run:
+    post:
+      tags: [Agents]
+      summary: 运行平台改写 Agent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentRewriteRun'
+      responses:
+        '200':
+          description: OK
+
+  /agents/review/run:
+    post:
+      tags: [Agents]
+      summary: 运行审核辅助 Agent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentReviewRun'
+      responses:
+        '200':
+          description: OK
+
+  /agent-runs:
+    get:
+      tags: [AgentRuns]
+      summary: Agent 执行记录
+      x-implementation-status: implemented
+      parameters:
+        - name: contentId
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/RunStatus'
+        - name: agentType
+          in: query
+          schema:
+            $ref: '#/components/schemas/AgentType'
+          description: V1.1 规划
+        - name: platform
+          in: query
+          schema:
+            $ref: '#/components/schemas/Platform'
+          description: V1.1 规划
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: V1.1 规划
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: V1.1 规划
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AgentRun'
+
+  /agent-runs/{id}:
+    get:
+      tags: [AgentRuns]
+      summary: Agent 执行详情
+      x-implementation-status: implemented
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AgentRun'
+
+  /agents/body/run:
+    post:
+      tags: [Agents]
+      summary: 运行正文 Agent
+      x-implementation-status: planned
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentBodyRun'
+      responses:
+        '200':
+          description: OK
+
+  /prompts:
+    get:
+      tags: [Prompts]
+      summary: Prompt 列表
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Prompts]
+      summary: 创建 Prompt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PromptCreate'
+      responses:
+        '200':
+          description: OK
+
+  /prompts/{id}:
+    patch:
+      tags: [Prompts]
+      summary: 更新 Prompt
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: OK
+
+  /reviews:
+    get:
+      tags: [Reviews]
+      summary: 审核列表
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ReviewStatus'
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Reviews]
+      summary: 提交审核
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewCreate'
+      responses:
+        '200':
+          description: OK
+
+  /reviews/{id}:
+    get:
+      tags: [Reviews]
+      summary: 审核详情
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+
+  /reviews/{id}/approve:
+    post:
+      tags: [Reviews]
+      summary: 审核通过
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+
+  /reviews/{id}/reject:
+    post:
+      tags: [Reviews]
+      summary: 审核驳回
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewReject'
+      responses:
+        '200':
+          description: OK
+
+  /publishing/tasks:
+    get:
+      tags: [Publishing]
+      summary: 发布任务列表
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/PublishStatus'
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Publishing]
+      summary: 创建发布任务
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishingTaskCreate'
+      responses:
+        '200':
+          description: OK
+
+  /publishing/tasks/{id}:
+    get:
+      tags: [Publishing]
+      summary: 发布任务详情
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+
+  /publishing/tasks/{id}/publish:
+    post:
+      tags: [Publishing]
+      summary: 执行发布
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+
+  /publishing/tasks/{id}/cancel:
+    post:
+      tags: [Publishing]
+      summary: 取消发布
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+
+  /analytics/sync:
+    post:
+      tags: [Analytics]
+      summary: 同步发布数据
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalyticsSync'
+      responses:
+        '200':
+          description: OK
+
+  /analytics/contents/{contentId}:
+    get:
+      tags: [Analytics]
+      summary: 内容数据指标
+      parameters:
+        - $ref: '#/components/parameters/ContentIdPath'
+      responses:
+        '200':
+          description: OK
+
+  /analytics/reports:
+    get:
+      tags: [Analytics]
+      summary: 复盘报告列表
+      parameters:
+        - name: contentId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+
+  /analytics/reports/generate:
+    post:
+      tags: [Analytics]
+      summary: 生成复盘报告
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportGenerate'
+      responses:
+        '200':
+          description: OK
+
+  /analytics/reports/{id}:
+    get:
+      tags: [Analytics]
+      summary: 复盘报告详情
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+
+  /analytics/overview:
+    get:
+      tags: [Analytics]
+      summary: 数据复盘页概览指标
+      x-implementation-status: planned
+      parameters:
+        - name: platform
+          in: query
+          schema:
+            $ref: '#/components/schemas/Platform'
+        - name: dateFrom
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: dateTo
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AnalyticsOverview'
+
+  /publishing/summary:
+    get:
+      tags: [Publishing]
+      summary: 发布管理页统计卡
+      x-implementation-status: planned
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PublishingSummary'
+
+  /reviews/stats:
+    get:
+      tags: [Reviews]
+      summary: 审核中心汇总统计
+      x-implementation-status: planned
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ReviewStats'
+
+  /materials/library:
+    get:
+      tags: [MaterialLibrary]
+      summary: 独立素材库列表
+      x-implementation-status: planned
+      parameters:
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/MaterialType'
+        - name: tag
+          in: query
+          schema:
+            type: string
+        - name: keyword
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/MaterialAssetStatus'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [MaterialLibrary]
+      summary: 登记素材元数据
+      x-implementation-status: planned
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MaterialAssetCreate'
+      responses:
+        '200':
+          description: OK
+
+  /materials/library/stats:
+    get:
+      tags: [MaterialLibrary]
+      summary: 素材库统计卡片
+      x-implementation-status: planned
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/MaterialLibraryStats'
+
+  /materials/library/upload:
+    post:
+      tags: [MaterialLibrary]
+      summary: 上传素材文件
+      x-implementation-status: planned
+      description: MVP 采用 multipart/form-data 直传本地存储目录；生产可切换预签名 URL
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                name:
+                  type: string
+                tags:
+                  type: string
+                  description: 逗号分隔标签
+                source:
+                  type: string
+      responses:
+        '200':
+          description: OK
+
+  /materials/library/{id}:
+    get:
+      tags: [MaterialLibrary]
+      summary: 素材库资产详情
+      x-implementation-status: planned
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+    patch:
+      tags: [MaterialLibrary]
+      summary: 更新素材库资产
+      x-implementation-status: planned
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MaterialAssetPatch'
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: [MaterialLibrary]
+      summary: 删除素材库资产
+      x-implementation-status: planned
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+
+  /integration/api-keys:
+    get:
+      tags: [Integration]
+      summary: 外部 Agent API Key 列表
+      x-implementation-status: planned
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Integration]
+      summary: 创建 API Key
+      x-implementation-status: planned
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IntegrationApiKeyCreate'
+      responses:
+        '200':
+          description: OK
+
+  /integration/api-keys/{id}:
+    patch:
+      tags: [Integration]
+      summary: 启用/停用 API Key
+      x-implementation-status: planned
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                name:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '200':
+          description: OK
+    delete:
+      tags: [Integration]
+      summary: 删除 API Key
+      x-implementation-status: planned
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+
+  /integration/webhooks:
+    get:
+      tags: [Integration]
+      summary: 回调配置列表
+      x-implementation-status: planned
+      responses:
+        '200':
+          description: OK
+    put:
+      tags: [Integration]
+      summary: 批量更新回调配置
+      x-implementation-status: planned
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/IntegrationWebhookUpsert'
+      responses:
+        '200':
+          description: OK
+
+  /integration/access-logs:
+    get:
+      tags: [Integration]
+      summary: 外部接入访问日志
+      x-implementation-status: planned
+      parameters:
+        - name: apiKeyId
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: OK
+
+  /integration/status:
+    get:
+      tags: [Integration]
+      summary: 外部接入健康与限流概览
+      x-implementation-status: planned
+      responses:
+        '200':
+          description: OK
+
+  /settings:
+    get:
+      tags: [Settings]
+      summary: 系统配置列表
+      x-implementation-status: planned
+      responses:
+        '200':
+          description: OK
+
+  /settings/{key}:
+    put:
+      tags: [Settings]
+      summary: 更新系统配置项
+      x-implementation-status: planned
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SystemSettingUpdate'
+      responses:
+        '200':
+          description: OK
+
+  /users:
+    get:
+      tags: [Users]
+      summary: 用户列表
+      x-implementation-status: planned
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: OK
+    post:
+      tags: [Users]
+      summary: 创建用户
+      x-implementation-status: planned
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserCreate'
+      responses:
+        '200':
+          description: OK
+
+  /users/{id}:
+    get:
+      tags: [Users]
+      summary: 用户详情
+      x-implementation-status: planned
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      responses:
+        '200':
+          description: OK
+    patch:
+      tags: [Users]
+      summary: 更新用户
+      x-implementation-status: planned
+      parameters:
+        - $ref: '#/components/parameters/IdPath'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPatch'
+      responses:
+        '200':
+          description: OK
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: 服务端注销
+      x-implementation-status: planned
+      responses:
+        '200':
+          description: OK

@@ -10,7 +10,8 @@
     }
   },
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "test": "node --import tsx --test src/**/*.test.ts"
   },
   "dependencies": {
     "@acs/core": "workspace:*",
@@ -18,6 +19,7 @@
     "@acs/content-center": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "tsx": "^4.19.4"
   }
 }

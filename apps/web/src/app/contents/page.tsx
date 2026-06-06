@@ -1,91 +1,343 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { Edit, Plus, RefreshCw, Search } from 'lucide-react';
 import { StudioLayout } from '@/components/StudioLayout';
+import { ContentEditDialog, type ContentEditForm } from '@/components/dialogs/content-edit-dialog';
+import { PageContainer } from '@/components/layout/page-container';
+import { EmptyState } from '@/components/studio/empty-state';
+import { PlatformBadge } from '@/components/studio/platform-badge';
+import { StatusBadge } from '@/components/studio/status-badge';
+import { StudioCard } from '@/components/studio/studio-card';
+import { Button } from '@/components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { api } from '@/lib/api';
+import { getStatusLabel, getStatusStyle } from '@/lib/tokens';
 
-type Content = { id: string; title: string; status: string; updatedAt: string };
+type ContentStatus =
+  | 'DRAFT'
+  | 'PENDING_GENERATE'
+  | 'GENERATING'
+  | 'PENDING_REVIEW'
+  | 'REJECTED'
+  | 'APPROVED'
+  | 'PENDING_PUBLISH'
+  | 'PUBLISHING'
+  | 'PUBLISHED'
+  | 'FAILED'
+  | 'REVIEWED'
+  | 'ARCHIVED';
+
+type ContentItem = {
+  id: string;
+  title: string;
+  summary?: string | null;
+  status: ContentStatus;
+  topicId?: string | null;
+  updatedAt: string;
+  creator?: { name?: string | null; email?: string | null };
+  versions: {
+    platform: string;
+    status: string;
+    account?: { accountName: string; platform: string } | null;
+  }[];
+};
+
+type ContentListResponse = {
+  items: ContentItem[];
+  total: number;
+};
+
+const statusKeys: ContentStatus[] = [
+  'PENDING_GENERATE',
+  'GENERATING',
+  'PENDING_REVIEW',
+  'PENDING_PUBLISH',
+  'PUBLISHED',
+  'REVIEWED',
+];
 
 export default function ContentsPage() {
-  const [items, setItems] = useState<Content[]>([]);
-  const [title, setTitle] = useState('');
-  const [selected, setSelected] = useState<string>('');
+  const [items, setItems] = useState<ContentItem[]>([]);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [keyword, setKeyword] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingContent, setEditingContent] = useState<ContentItem | null>(null);
+  const [total, setTotal] = useState(0);
 
   async function load() {
-    const res = await api<{ items: Content[] }>('/api/contents');
-    setItems(res.data.items);
+    setLoading(true);
+    try {
+      const res = await api<ContentListResponse>('/api/contents');
+      setItems(res.data.items || []);
+      setTotal(res.data.total ?? res.data.items?.length ?? 0);
+      setSelected([]);
+      setLoadError(null);
+    } catch (error) {
+      console.error(error);
+      setLoadError('内容列表加载失败，请稍后重试');
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
     load().catch(console.error);
   }, []);
 
-  async function create() {
-    await api('/api/contents', {
-      method: 'POST',
-      body: JSON.stringify({ title }),
-    });
-    setTitle('');
-    await load();
+  const filteredItems = items.filter((item) => {
+    const normalizedKeyword = keyword.trim().toLowerCase();
+    if (!normalizedKeyword) return true;
+    return [item.title, item.summary, item.creator?.name, item.creator?.email]
+      .filter(Boolean)
+      .some((value) => value?.toLowerCase().includes(normalizedKeyword));
+  });
+
+  const statusCounts = items.reduce<Record<string, number>>((acc, c) => {
+    acc[c.status] = (acc[c.status] || 0) + 1;
+    return acc;
+  }, {});
+
+  const toggleSelect = (id: string) => {
+    setSelected((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleAll = () => {
+    setSelected(
+      selected.length === filteredItems.length ? [] : filteredItems.map((c) => c.id)
+    );
+  };
+
+  function openCreateDialog() {
+    setEditingContent(null);
+    setDialogOpen(true);
   }
 
-  async function generate() {
-    if (!selected) return;
-    await api(`/api/contents/${selected}/generate`, {
-      method: 'POST',
-      body: JSON.stringify({ platforms: ['XIAOHONGSHU'] }),
-    });
-    alert('生成完成');
+  function openEditDialog(content: ContentItem) {
+    setEditingContent(content);
+    setDialogOpen(true);
+  }
+
+  async function saveContent(form: ContentEditForm) {
+    const body = {
+      title: form.title,
+      summary: form.summary || undefined,
+      topicId: form.topicId || undefined,
+    };
+
+    if (editingContent) {
+      await api(`/api/contents/${editingContent.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          title: form.title,
+          summary: form.summary || undefined,
+        }),
+      });
+    } else {
+      const res = await api<ContentItem>('/api/contents', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
+      if (form.platforms.length > 0) {
+        await api(`/api/contents/${res.data.id}/versions/generate`, {
+          method: 'POST',
+          body: JSON.stringify({ platforms: form.platforms }),
+        });
+      }
+    }
+
     await load();
   }
 
   return (
     <StudioLayout>
-      <h1>内容资产</h1>
-      <div className="card" style={{ marginTop: 16, display: 'flex', gap: 8 }}>
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="内容标题"
-          style={{ flex: 1 }}
-        />
-        <button className="btn" onClick={create}>
-          新建内容
-        </button>
-        <button
-          className="btn secondary"
-          onClick={generate}
-          disabled={!selected}
-        >
-          一键生成
-        </button>
-      </div>
-      <table className="table card" style={{ marginTop: 16 }}>
-        <thead>
-          <tr>
-            <th></th>
-            <th>标题</th>
-            <th>状态</th>
-            <th>更新</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((c) => (
-            <tr key={c.id}>
-              <td>
-                <input
-                  type="radio"
-                  checked={selected === c.id}
-                  onChange={() => setSelected(c.id)}
-                />
-              </td>
-              <td>{c.title}</td>
-              <td>{c.status}</td>
-              <td>{new Date(c.updatedAt).toLocaleString()}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <PageContainer className="max-w-none gap-4 p-6">
+        <div className="flex items-center justify-between gap-4">
+          <h1 className="text-xl font-bold text-[#1D2129]">内容项目管理</h1>
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#86909c]" />
+              <input
+                value={keyword}
+                onChange={(e) => setKeyword(e.target.value)}
+                placeholder="搜索内容"
+                className="studio-input h-10 w-60 pl-10 pr-4 text-sm"
+              />
+            </div>
+            <Button size="icon" variant="ghost" className="size-10" onClick={load} disabled={loading}>
+              <RefreshCw className={`size-4 text-[#86909c] ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button size="sm" className="h-10 bg-[#1664FF] text-white hover:bg-[#0E52D9]" onClick={openCreateDialog}>
+              <Plus className="size-4" />
+              新建内容
+            </Button>
+          </div>
+        </div>
+
+        <StudioCard className="overflow-hidden px-6 py-5" contentClassName="p-0">
+          <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
+            {statusKeys.map((key) => {
+              const style = getStatusStyle(key);
+              const count = statusCounts[key] || 0;
+              return (
+                <div key={key} className="flex items-center gap-3">
+                  <div
+                    className={`flex size-8 shrink-0 items-center justify-center rounded-md text-sm font-bold ${style.bg} ${style.text}`}
+                  >
+                    {count}
+                  </div>
+                  <div>
+                    <p className="text-[15px] font-semibold text-[#1D2129]">
+                      {getStatusLabel(key)}
+                    </p>
+                    <p className="text-[11px] text-[#86909c]">共 {count} 条</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </StudioCard>
+
+        {loadError && (
+          <StudioCard contentClassName="p-4">
+            <p className="text-sm text-[#F53F3F]">{loadError}</p>
+          </StudioCard>
+        )}
+
+        <StudioCard contentClassName="overflow-hidden px-5 pt-4">
+          <div className="mb-3 flex items-center justify-between px-1 text-xs text-[#86909c]">
+            <span>共 {filteredItems.length} 条内容</span>
+            <span>已选 {selected.length} 条</span>
+          </div>
+
+          {loading ? (
+            <EmptyState title="内容加载中…" description="正在读取内容项目列表" />
+          ) : filteredItems.length === 0 ? (
+            <EmptyState title="暂无内容" description="新建内容后可在这里管理内容项目" />
+          ) : (
+            <Table className="studio-table">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">
+                    <input
+                      type="checkbox"
+                      className="accent-[#1664ff]"
+                      checked={selected.length === filteredItems.length && filteredItems.length > 0}
+                      onChange={toggleAll}
+                    />
+                  </TableHead>
+                  <TableHead>选题名称</TableHead>
+                  <TableHead>目标平台</TableHead>
+                  <TableHead>目标账号</TableHead>
+                  <TableHead>当前状态</TableHead>
+                  <TableHead>负责人</TableHead>
+                  <TableHead>最近更新时间</TableHead>
+                  <TableHead className="text-right">操作</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredItems.map((c) => {
+                  const firstPlatform = c.versions?.[0]?.platform || '';
+                  const firstAccount = c.versions?.[0]?.account?.accountName || '';
+                  return (
+                    <TableRow key={c.id} className="h-14">
+                      <TableCell>
+                        <input
+                          type="checkbox"
+                          className="accent-[#1664ff]"
+                          checked={selected.includes(c.id)}
+                          onChange={() => toggleSelect(c.id)}
+                        />
+                      </TableCell>
+                      <TableCell className="max-w-xs">
+                        <Link
+                          href={`/contents/${c.id}`}
+                          className="font-medium text-[#1D2129] hover:text-[#1664ff] hover:underline"
+                        >
+                          {c.title}
+                        </Link>
+                        {c.summary && (
+                          <p className="mt-1 truncate text-xs text-[#86909C]">{c.summary}</p>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {firstPlatform ? (
+                          <PlatformBadge platform={firstPlatform} size="sm" />
+                        ) : (
+                          <span className="text-xs text-[#86909c]">未指定</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm text-[#4e5969]">
+                        {firstAccount || '未指定'}
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={c.status} />
+                      </TableCell>
+                      <TableCell>
+                        <span className="inline-flex items-center gap-2 text-sm text-[#4e5969]">
+                          <span className="flex size-6 items-center justify-center rounded-full bg-[#f5f7fa] text-[11px] font-medium text-[#86909c]">
+                            {(c.creator?.name || 'U').slice(0, 1)}
+                          </span>
+                          {c.creator?.name || '未分配'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-xs text-[#86909c]">
+                        {new Date(c.updatedAt).toLocaleString('zh-CN', {
+                          year: 'numeric',
+                          month: '2-digit',
+                          day: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button size="sm" variant="outline" onClick={() => openEditDialog(c)}>
+                          <Edit className="size-3.5" />
+                          编辑
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
+
+          <div className="flex items-center justify-between border-t border-[#f5f7fa] px-2 py-3 text-xs text-[#86909c]">
+            <span>共 {total} 条记录</span>
+            <Button variant="ghost" size="sm" className="h-7 px-2" disabled>
+              当前第 1 页
+            </Button>
+            <Button variant="ghost" size="sm" className="h-7 gap-1" disabled>
+              10 条/页
+            </Button>
+          </div>
+        </StudioCard>
+      </PageContainer>
+      <ContentEditDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        content={editingContent ? {
+          id: editingContent.id,
+          title: editingContent.title,
+          summary: editingContent.summary,
+          topicId: editingContent.topicId,
+          platforms: editingContent.versions.map((version) => version.platform),
+        } : undefined}
+        onSubmit={saveContent}
+      />
     </StudioLayout>
   );
 }

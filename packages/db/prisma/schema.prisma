@@ -18,6 +18,7 @@ enum Platform {
   WECHAT
   XIAOHONGSHU
   DOUYIN
+  KUAISHOU
   VIDEO_CHANNEL
   BILIBILI
   ZHIHU
@@ -74,6 +75,19 @@ enum PublishStatus {
   CANCELLED
 }
 
+enum MaterialType {
+  IMAGE
+  VIDEO
+  AUDIO
+  FILE
+}
+
+enum MaterialRole {
+  COVER
+  BODY
+  ATTACHMENT
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -87,30 +101,124 @@ model User {
   contents      Content[]         @relation("ContentCreator")
   reviewTasks   ReviewTask[]      @relation("Reviewer")
   ownedAccounts PlatformAccount[] @relation("AccountOwner")
+  oauthStates   SocialOAuthState[]
 
   @@map("users")
 }
 
 model PlatformAccount {
-  id          String   @id @default(cuid())
-  platform    Platform
-  accountName String
-  accountType String?
-  authStatus  String   @default("pending")
-  ownerId     String
-  rawData     Json?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String    @id @default(cuid())
+  platform          Platform
+  accountName       String
+  accountType       String?
+  authStatus        String    @default("pending")
+  ownerId           String
+  externalAccountId String?
+  avatarUrl         String?
+  scopes            Json?
+  authMode          String?
+  lastSyncAt        DateTime?
+  lastError         String?
+  boundAt           DateTime?
+  revokedAt         DateTime?
+  rawData           Json?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  owner           User              @relation("AccountOwner", fields: [ownerId], references: [id])
+  owner           User                 @relation("AccountOwner", fields: [ownerId], references: [id])
   profile         AccountProfile?
+  oauthStates     SocialOAuthState[]
+  token           SocialAccountToken?
+  socialWorks     SocialContentWork[]
+  metricSnapshots SocialMetricSnapshot[]
   contentVersions ContentVersion[]
   publishingTasks PublishingTask[]
   analyticsData   AnalyticsData[]
 
   @@index([platform, authStatus])
   @@index([ownerId])
+  @@index([platform, externalAccountId])
   @@map("platform_accounts")
+}
+
+model SocialOAuthState {
+  id                String    @id @default(cuid())
+  state             String    @unique
+  platform          Platform
+  ownerId           String
+  accountId         String?
+  redirectAfterBind String?
+  scopes            Json?
+  expiresAt         DateTime
+  consumedAt        DateTime?
+  createdAt         DateTime  @default(now())
+
+  owner   User             @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  account PlatformAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
+  @@index([ownerId, platform, createdAt])
+  @@index([accountId])
+  @@map("social_oauth_states")
+}
+
+model SocialAccountToken {
+  id               String   @id @default(cuid())
+  accountId        String   @unique
+  accessToken      String
+  refreshToken     String?
+  expiresAt        DateTime?
+  refreshExpiresAt DateTime?
+  scopes           Json?
+  rawData          Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  account PlatformAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@map("social_account_tokens")
+}
+
+model SocialContentWork {
+  id               String    @id @default(cuid())
+  accountId        String
+  platform         Platform
+  platformWorkId   String
+  workType         String?
+  coverUrl         String?
+  duration         Int?
+  status           String?
+  contentVersionId String?
+  title            String?
+  url              String?
+  publishedAt      DateTime?
+  rawData          Json?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  account        PlatformAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  contentVersion ContentVersion? @relation(fields: [contentVersionId], references: [id], onDelete: SetNull)
+  metricSnapshots SocialMetricSnapshot[]
+
+  @@unique([platform, platformWorkId])
+  @@index([accountId, publishedAt])
+  @@map("social_content_works")
+}
+
+model SocialMetricSnapshot {
+  id          String   @id @default(cuid())
+  accountId   String
+  workId      String?
+  platform    Platform
+  metrics     Json
+  collectedAt DateTime @default(now())
+  rawData     Json?
+
+  account PlatformAccount    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  work    SocialContentWork? @relation(fields: [workId], references: [id], onDelete: SetNull)
+
+  @@index([accountId, collectedAt])
+  @@index([workId, collectedAt])
+  @@map("social_metric_snapshots")
 }
 
 model AccountProfile {
@@ -200,6 +308,7 @@ model ContentVersion {
   reviewTasks     ReviewTask[]
   publishingTasks PublishingTask[]
   analyticsData   AnalyticsData[]
+  socialWorks     SocialContentWork[]
 
   @@index([contentId, platform])
   @@index([accountId, status])
@@ -207,19 +316,22 @@ model ContentVersion {
 }
 
 model Material {
-  id        String   @id @default(cuid())
+  id        String       @id @default(cuid())
   contentId String
-  type      String
+  type      MaterialType
+  role      MaterialRole @default(ATTACHMENT)
   name      String?
   url       String?
   localPath String?
   source    String?
   meta      Json?
-  createdAt DateTime @default(now())
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 
   content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
 
-  @@index([contentId])
+  @@index([contentId, type])
+  @@index([type, role])
   @@map("materials")
 }
 
@@ -282,17 +394,37 @@ model AgentRun {
   @@map("agent_runs")
 }
 
-model ImaSearchLog {
-  id            String   @id @default(cuid())
-  contentId     String
-  query         String
-  resultSummary String?
-  rawResult     Json?
-  createdAt     DateTime @default(now())
+model ImaKnowledgeBase {
+  id          String    @id @default(cuid())
+  externalId  String    @unique
+  name        String
+  description String?
+  enabled     Boolean   @default(true)
+  isDefault   Boolean   @default(false)
+  rawData     Json?
+  syncedAt    DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  content Content @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  searchLogs ImaSearchLog[]
+
+  @@map("ima_knowledge_bases")
+}
+
+model ImaSearchLog {
+  id              String   @id @default(cuid())
+  contentId       String
+  knowledgeBaseId String?
+  query           String
+  resultSummary   String?
+  rawResult       Json?
+  createdAt       DateTime @default(now())
+
+  content       Content           @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  knowledgeBase ImaKnowledgeBase? @relation(fields: [knowledgeBaseId], references: [id], onDelete: SetNull)
 
   @@index([contentId, createdAt])
+  @@index([knowledgeBaseId])
   @@map("ima_search_logs")
 }
 
