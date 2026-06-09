@@ -26,7 +26,14 @@ export class AgnesGateway implements ModelGateway {
     });
 
     if (!res.ok) {
-      throw new Error(`Agnes API error: ${res.status}`);
+      const detail = await res.text().catch(() => '');
+      const modelHint =
+        input.model && !input.model.startsWith('agnes')
+          ? `（当前模型 ${input.model}，请检查 AGNES_MODEL 配置）`
+          : '';
+      throw new Error(
+        `Agnes API error: ${res.status}${modelHint}${detail ? ` - ${detail.slice(0, 200)}` : ''}`
+      );
     }
 
     const json = (await res.json()) as {

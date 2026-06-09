@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@acs/db';
 
-function successResponse(data: any, message = 'success') {
+function successResponse(data: unknown, message = 'success') {
   return NextResponse.json({ code: 0, message, data });
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const contentId =
+      new URL(req.url).searchParams.get('contentId') ?? undefined;
     const runs = await prisma.agentRun.findMany({
+      where: contentId ? { contentId } : undefined,
       include: {
         agent: { select: { id: true, name: true, type: true } },
         content: { select: { id: true, title: true, summary: true } },
@@ -19,13 +22,21 @@ export async function GET() {
               select: { id: true, accountName: true, platform: true },
             },
           },
-          where: { accountId: { not: null } },
         },
       },
       orderBy: { startedAt: 'desc' },
-      take: 100,
+      take: contentId ? 20 : 100,
     });
-    return successResponse(runs);
+    const data = runs.map((run) => ({
+      id: run.id,
+      agentType: run.agent.type,
+      status: run.status,
+      createdAt: run.startedAt.toISOString(),
+      agent: run.agent,
+      content: run.content,
+      version: run.version,
+    }));
+    return successResponse(data);
   } catch (err) {
     console.error('List agent runs error:', err);
     return NextResponse.json(

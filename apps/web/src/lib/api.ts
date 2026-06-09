@@ -68,17 +68,17 @@ export async function api<T>(
     return pendingRedirect();
   }
 
+  const text = await res.text();
   let json: { code: number; message: string; data: T };
   try {
-    json = await res.json();
+    json = JSON.parse(text);
   } catch {
-    const text = await res.text().catch(() => '(unable to read response)');
     console.error('[API Response Error]', {
       status: res.status,
       statusText: res.statusText,
       url: path,
-      headers: Object.fromEntries(res.headers.entries()),
-      bodyPreview: text.slice(0, 500),
+      contentType: res.headers.get('content-type'),
+      bodyPreview: text.slice(0, 500) || '(empty body)',
     });
     throw new ApiError(
       res.status === 401 ? UNAUTHORIZED_CODE : 50000,

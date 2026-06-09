@@ -1,6 +1,8 @@
 import { prisma, type Platform } from '@acs/db';
 import { runAgentByType } from '../runtime/agent-runtime.js';
 import { runImaSearch } from '../tool-engine.js';
+import { orchestrateCoverImages } from './image-generation.js';
+import { canGenerateImages } from '@acs/doubao-image-provider';
 
 export async function orchestrateGenerate(
   contentId: string,
@@ -13,8 +15,7 @@ export async function orchestrateGenerate(
   });
 
   try {
-    const content = await prisma.content.findUnique({ where: { id: contentId } });
-    await runImaSearch(contentId, content?.title ?? '内容运营');
+    await runImaSearch(contentId);
 
     await runAgentByType('TITLE', {
       contentId,
@@ -40,6 +41,10 @@ export async function orchestrateGenerate(
         overrides: { platform },
       });
       versions.push(version);
+    }
+
+    if (canGenerateImages()) {
+      await orchestrateCoverImages(contentId, platforms, accountId);
     }
 
     await prisma.content.update({

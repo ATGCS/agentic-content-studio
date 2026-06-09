@@ -3,6 +3,8 @@ export interface KnowledgeItem {
   summary: string;
   url?: string;
   source?: string;
+  mediaId?: string;
+  mediaType?: number;
 }
 
 export interface KnowledgeSearchInput {
@@ -12,8 +14,14 @@ export interface KnowledgeSearchInput {
   limit?: number;
 }
 
+export interface KnowledgeSearchResult {
+  items: KnowledgeItem[];
+  raw: unknown;
+  mode: 'search' | 'list' | 'none';
+}
+
 export interface KnowledgeProvider {
-  search(input: KnowledgeSearchInput): Promise<KnowledgeItem[]>;
+  search(input: KnowledgeSearchInput): Promise<KnowledgeSearchResult>;
   listKnowledgeBases?(): Promise<
     Array<{ externalId: string; name: string; description?: string }>
   >;

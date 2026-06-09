@@ -44,7 +44,11 @@ export const defaultAgentSpecs: AgentSpec[] = [
   },
   {
     type: 'SUMMARY',
-    contextProviders: ['content.basic', 'analytics.content', 'runtime.overrides'],
+    contextProviders: [
+      'content.basic',
+      'analytics.content',
+      'runtime.overrides',
+    ],
     parser: 'summary',
     applier: 'noop',
   },
@@ -56,9 +60,15 @@ export const defaultAgentSpecs: AgentSpec[] = [
   },
   {
     type: 'IMAGE',
-    contextProviders: contentGenerationContext,
+    contextProviders: [
+      'content.basic',
+      'version.current',
+      'knowledge.ima.latest',
+      'account.profile',
+      'runtime.overrides',
+    ],
     parser: 'image',
-    applier: 'noop',
+    applier: 'image',
   },
   {
     type: 'VIDEO_SCRIPT',

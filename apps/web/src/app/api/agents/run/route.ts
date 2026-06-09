@@ -1,3 +1,4 @@
+import '../../../../env';
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { AppError, ErrorCodes } from '@acs/core';
@@ -38,6 +39,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    console.log(
+      `[agents/run] 收到请求 agentId=${body.agentId ?? '-'} agentType=${body.agentType ?? '-'} contentId=${body.contentId}`
+    );
+
     const data = await runAgent({
       agentId: body.agentId,
       agentType: body.agentType,
@@ -46,6 +51,10 @@ export async function POST(req: NextRequest) {
       accountId: body.accountId,
       overrides: body.overrides,
     });
+
+    console.log(
+      `[agents/run] 完成 runId=${data?.id ?? '-'} status=${data?.status ?? '-'}`
+    );
 
     return successResponse(data);
   } catch (err) {

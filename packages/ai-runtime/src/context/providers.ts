@@ -1,5 +1,6 @@
 import { prisma } from '@acs/db';
 import { getProfileByAccountId } from '@acs/account-profile';
+import { IMA_METHODOLOGY_PREFIX } from '../prompt/agent-system-prompts.js';
 import type { ContextProvider } from './types.js';
 
 export const contentBasicProvider: ContextProvider = {
@@ -29,7 +30,10 @@ export const knowledgeImaLatestProvider: ContextProvider = {
       orderBy: { createdAt: 'desc' },
     });
 
-    return { imaSummary: lastIma?.resultSummary ?? '' };
+    const raw = lastIma?.resultSummary ?? '';
+    const imaSummary = raw ? `${IMA_METHODOLOGY_PREFIX}${raw}` : '';
+
+    return { imaSummary };
   },
 };
 
@@ -61,6 +65,7 @@ export const runtimeOverridesProvider: ContextProvider = {
     return {
       platform: String(input.platform ?? 'WECHAT'),
       count: String(input.count ?? 5),
+      imageRole: String(input.imageRole ?? 'COVER'),
     };
   },
 };

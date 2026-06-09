@@ -70,9 +70,15 @@ export async function getContent(id: string) {
     where: { id },
     include: {
       topic: true,
-      versions: true,
+      versions: {
+        include: { account: { select: { accountName: true, platform: true } } },
+      },
       materials: { orderBy: { createdAt: 'desc' } },
-      agentRuns: { orderBy: { startedAt: 'desc' }, take: 10 },
+      agentRuns: {
+        orderBy: { startedAt: 'desc' },
+        take: 20,
+        include: { agent: { select: { type: true, name: true } } },
+      },
       imaSearchLogs: { orderBy: { createdAt: 'desc' }, take: 5 },
     },
   });

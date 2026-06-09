@@ -27,7 +27,11 @@ export type ContentEditForm = {
 interface ContentEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit?: (form: ContentEditForm) => Promise<void> | void;
+  onSubmit?: (form: ContentEditForm) => Promise<string | void> | string | void;
+  /** 新建后跳转：detail=内容详情，generate=AI 生成页 */
+  redirectAfterCreate?: 'detail' | 'generate';
+  defaultTopicId?: string;
+  defaultPlatforms?: string[];
   content?: {
     id?: string;
     title?: string;
@@ -52,6 +56,9 @@ export function ContentEditDialog({
   open,
   onOpenChange,
   onSubmit,
+  redirectAfterCreate = 'detail',
+  defaultTopicId,
+  defaultPlatforms,
   content,
 }: ContentEditDialogProps) {
   const router = useRouter();
@@ -67,8 +74,10 @@ export function ContentEditDialog({
   useEffect(() => {
     if (!open) return;
     setTitle(content?.title ?? '');
-    setTopicId(content?.topicId ?? '');
-    setSelectedPlatforms(content?.platforms ?? []);
+    setTopicId(content?.topicId ?? defaultTopicId ?? '');
+    setSelectedPlatforms(
+      content?.platforms?.length ? content.platforms : (defaultPlatforms ?? [])
+    );
     setSummary(content?.summary ?? '');
     // Load topics for selector
     setLoadingTopics(true);
@@ -76,7 +85,9 @@ export function ContentEditDialog({
       .then((res) => setTopics(res.data.items ?? []))
       .catch(() => {})
       .finally(() => setLoadingTopics(false));
-  }, [content, open]);
+  }, [content, open, defaultTopicId, defaultPlatforms]);
+
+  const lockedTopicId = !content?.id && defaultTopicId;
 
   const togglePlatform = (platform: string) => {
     setSelectedPlatforms((prev) =>
@@ -95,14 +106,17 @@ export function ContentEditDialog({
       const result = await onSubmit?.({
         title,
         summary,
-        topicId,
+        topicId: topicId.trim(),
         platforms: selectedPlatforms,
       });
       onOpenChange(false);
 
-      // 如果是新建内容,自动跳转到详情页
       if (result && !content?.id) {
-        router.push(`/contents/${result}`);
+        if (redirectAfterCreate === 'generate') {
+          router.push(`/ai-generate?contentId=${result}`);
+        } else {
+          router.push(`/contents/${result}`);
+        }
       }
     } finally {
       setSubmitting(false);
@@ -113,8 +127,12 @@ export function ContentEditDialog({
     <DialogWrapper
       open={open}
       onOpenChange={onOpenChange}
-      title={content?.id ? '编辑内容' : '新建内容'}
-      description="填写内容基本信息，选择发布平台"
+      title={content?.id ? '编辑内容' : '新建文章'}
+      description={
+        lockedTopicId
+          ? '填写文章信息，创建后在详情页一键生成'
+          : '填写内容基本信息，选择发布平台'
+      }
       className="sm:max-w-[640px]"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -142,7 +160,12 @@ export function ContentEditDialog({
             <Label className="text-xs font-medium text-[#4E5969]">
               所属系列
             </Label>
-            {loadingTopics ? (
+            {lockedTopicId ? (
+              <div className="rounded-lg border border-[#E5E8EF] bg-[#FAFBFC] px-3 py-2 text-sm text-[#4E5969]">
+                {topics.find((t) => t.id === lockedTopicId)?.title ??
+                  '当前系列'}
+              </div>
+            ) : loadingTopics ? (
               <div className="flex items-center gap-2 text-xs text-[#86909C]">
                 <Loader2 className="size-3 animate-spin" />
                 加载系列列表…

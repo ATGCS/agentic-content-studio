@@ -7,6 +7,7 @@ export type ContextBuildInput = {
   accountId?: string;
   platform?: Platform | string;
   count?: number;
+  imageRole?: string;
 };
 
 export type ContextProvider = {

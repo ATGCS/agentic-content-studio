@@ -6,7 +6,11 @@ export interface RunAgentInput {
   contentId: string;
   versionId?: string;
   accountId?: string;
-  overrides?: { count?: number; platform?: Platform };
+  overrides?: {
+    count?: number;
+    platform?: Platform;
+    imageRole?: 'COVER' | 'BODY';
+  };
 }
 
 export type RuntimeVariables = Record<string, string>;
@@ -28,6 +32,7 @@ export type ApplyOutputInput = {
   contentId: string;
   versionId?: string;
   output: unknown;
+  overrides?: RunAgentInput['overrides'];
 };
 
 export type OutputParser = (rawText: string) => unknown;

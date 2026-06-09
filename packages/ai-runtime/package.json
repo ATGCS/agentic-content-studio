@@ -16,6 +16,7 @@
   "dependencies": {
     "@acs/db": "workspace:*",
     "@acs/account-profile": "workspace:*",
+    "@acs/doubao-image-provider": "workspace:*",
     "@acs/ima-provider": "workspace:*",
     "zod": "^3.25.67"
   },

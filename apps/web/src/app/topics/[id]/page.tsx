@@ -3,13 +3,12 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { ArrowLeft, ExternalLink, Layers, Plus } from 'lucide-react';
 import {
-  ArrowLeft,
-  ExternalLink,
-  FileText,
-  Layers,
-  RefreshCw,
-} from 'lucide-react';
+  ContentEditDialog,
+  type ContentEditForm,
+} from '@/components/dialogs/content-edit-dialog';
+import { CreationWorkflowGuide } from '@/components/studio/creation-workflow-guide';
 import { PlatformBadge } from '@/components/platform-icon';
 import { StatusBadge } from '@/components/studio/status-badge';
 import { StudioCard } from '@/components/studio/studio-card';
@@ -51,6 +50,12 @@ export default function TopicDetailPage() {
   const [topic, setTopic] = useState<TopicDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+
+  async function reloadTopic() {
+    const res = await api<TopicDetail>(`/api/topics/${id}`);
+    setTopic(res.data);
+  }
 
   useEffect(() => {
     setLoading(true);
@@ -62,6 +67,29 @@ export default function TopicDetailPage() {
       .catch(() => setError('系列不存在或已被删除'))
       .finally(() => setLoading(false));
   }, [id]);
+
+  async function createArticle(form: ContentEditForm): Promise<string> {
+    const res = await api<{ id: string }>('/api/contents', {
+      method: 'POST',
+      body: JSON.stringify({
+        title: form.title,
+        summary: form.summary || undefined,
+        topicId: id,
+      }),
+    });
+    const platforms =
+      form.platforms.length > 0
+        ? form.platforms
+        : (topic?.targetPlatforms ?? []);
+    if (platforms.length > 0) {
+      await api(`/api/contents/${res.data.id}/versions/generate`, {
+        method: 'POST',
+        body: JSON.stringify({ platforms }),
+      });
+    }
+    await reloadTopic();
+    return res.data.id;
+  }
 
   if (loading) {
     return (
@@ -96,6 +124,8 @@ export default function TopicDetailPage() {
   return (
     <StudioLayout>
       <PageContainer>
+        <CreationWorkflowGuide currentStep="content" compact className="mb-4" />
+
         <div className="mb-2">
           <Link
             href="/topics"
@@ -151,12 +181,11 @@ export default function TopicDetailPage() {
             系列文章（{topic.contents.length}）
           </h2>
           <Button
-            variant="outline"
             size="sm"
-            className="h-8 text-xs"
-            onClick={() => router.push(`/ai-generate?topicId=${topic.id}`)}
+            className="h-8 gap-1.5 bg-[#1664FF] text-xs text-white hover:bg-[#0E52D9]"
+            onClick={() => setCreateOpen(true)}
           >
-            <FileText className="size-3.5" />
+            <Plus className="size-3.5" />
             新建文章
           </Button>
         </div>
@@ -185,16 +214,25 @@ export default function TopicDetailPage() {
                       </p>
                     )}
                   </div>
-                  <StatusBadge status={content.status} />
+                  <div className="flex shrink-0 items-center gap-2">
+                    <StatusBadge status={content.status} />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 gap-1 text-[10px]"
+                      asChild
+                    >
+                      <Link href={`/contents/${content.id}`}>编辑</Link>
+                    </Button>
+                  </div>
                 </div>
 
-                {/* 各平台版本 */}
                 {content.versions && content.versions.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {content.versions.map((v) => (
                       <Link
                         key={v.id}
-                        href={`/versions/${v.id}`}
+                        href={`/contents/${content.id}`}
                         className="inline-flex items-center gap-1 rounded-md border border-[#E5E8EF] px-2.5 py-1 text-[10px] text-[#4E5969] hover:border-[#1664FF] hover:text-[#1664FF]"
                       >
                         <PlatformBadge platform={v.platform} size="sm" />
@@ -205,23 +243,24 @@ export default function TopicDetailPage() {
                   </div>
                 )}
 
-                <div className="mt-2 flex items-center gap-3 text-[10px] text-[#A9AEB8]">
-                  <span>
-                    创建于{' '}
-                    {new Date(content.createdAt).toLocaleDateString('zh-CN')}
-                  </span>
-                  <Link
-                    href={`/ai-generate?topicId=${topic.id}&contentId=${content.id}`}
-                    className="hover:text-[#1664FF]"
-                  >
-                    <RefreshCw className="size-3" />
-                  </Link>
+                <div className="mt-2 text-[10px] text-[#A9AEB8]">
+                  创建于{' '}
+                  {new Date(content.createdAt).toLocaleDateString('zh-CN')}
                 </div>
               </StudioCard>
             ))
           )}
         </div>
       </PageContainer>
+
+      <ContentEditDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onSubmit={createArticle}
+        redirectAfterCreate="detail"
+        defaultTopicId={topic.id}
+        defaultPlatforms={topic.targetPlatforms ?? []}
+      />
     </StudioLayout>
   );
 }

@@ -7,6 +7,7 @@ import {
   FileText,
   FolderOpen,
   Home,
+  Layers,
   Settings,
   Sparkles,
   Upload,
@@ -29,6 +30,13 @@ export type NavItem = {
 export const studioNavItems: NavItem[] = [
   { href: '/dashboard', label: '工作台', icon: Home, title: '工作台' },
   { href: '/contents', label: '内容管理', icon: FileText, title: '内容管理' },
+  {
+    href: '/topics',
+    label: '系列管理',
+    icon: Layers,
+    title: '系列管理',
+    parent: '/contents',
+  },
   {
     href: '/ai-generate',
     label: 'AI 生成',

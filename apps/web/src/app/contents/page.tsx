@@ -17,6 +17,7 @@ import {
 } from '@/components/dialogs/content-edit-dialog';
 import { PageContainer } from '@/components/layout/page-container';
 import { EmptyState } from '@/components/studio/empty-state';
+import { CreationWorkflowGuide } from '@/components/studio/creation-workflow-guide';
 import { PlatformBadge } from '@/components/studio/platform-badge';
 import { StatusBadge } from '@/components/studio/status-badge';
 import { StudioCard } from '@/components/studio/studio-card';
@@ -174,11 +175,13 @@ export default function ContentsPage() {
     setDialogOpen(true);
   }
 
-  async function saveContent(form: ContentEditForm): Promise<void> {
+  async function saveContent(form: ContentEditForm): Promise<string | void> {
+    const topicId =
+      form.topicId && form.topicId.trim() ? form.topicId.trim() : undefined;
     const body = {
       title: form.title,
       summary: form.summary || undefined,
-      topicId: form.topicId || undefined,
+      topicId,
     };
 
     if (editingContent) {
@@ -189,25 +192,28 @@ export default function ContentsPage() {
           summary: form.summary || undefined,
         }),
       });
-    } else {
-      const res = await api<{ id: string }>('/api/contents', {
-        method: 'POST',
-        body: JSON.stringify(body),
-      });
-      if (form.platforms.length > 0) {
-        await api(`/api/contents/${res.data.id}/versions/generate`, {
-          method: 'POST',
-          body: JSON.stringify({ platforms: form.platforms }),
-        });
-      }
+      return;
     }
 
+    const res = await api<{ id: string }>('/api/contents', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+    if (form.platforms.length > 0) {
+      await api(`/api/contents/${res.data.id}/versions/generate`, {
+        method: 'POST',
+        body: JSON.stringify({ platforms: form.platforms }),
+      });
+    }
     await load();
+    return res.data.id;
   }
 
   return (
     <StudioLayout>
       <PageContainer className="max-w-none gap-4 p-6">
+        <CreationWorkflowGuide currentStep="content" />
+
         <div className="flex items-center justify-between gap-4">
           <div className="flex flex-wrap items-center justify-end gap-3">
             <div className="relative">

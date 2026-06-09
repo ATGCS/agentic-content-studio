@@ -6,13 +6,17 @@ import {
   CheckCircle,
   ChevronRight,
   FileText,
+  Layers,
   Loader2,
   Send,
   Shield,
+  Sparkles,
 } from 'lucide-react';
 import { StudioLayout } from '@/components/StudioLayout';
 import { PageContainer } from '@/components/layout/page-container';
 import { DashboardAlertRail } from '@/components/studio/dashboard-alert-rail';
+import { CreationWorkflowGuide } from '@/components/studio/creation-workflow-guide';
+import { QuickAction } from '@/components/studio/quick-action';
 import {
   DashboardMetricCard,
   pseudoDelta,
@@ -117,6 +121,32 @@ export default function DashboardPage() {
       <PageContainer className="max-w-none gap-4 p-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start">
           <div className="min-w-0 flex-1 space-y-4">
+            <CreationWorkflowGuide />
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <QuickAction
+                href="/topics"
+                label="新建系列"
+                description="同一主题的多篇文章归组"
+                icon={Layers}
+                tone="purple"
+              />
+              <QuickAction
+                href="/contents"
+                label="新建文章"
+                description="创建内容并选择发布平台"
+                icon={FileText}
+                tone="blue"
+              />
+              <QuickAction
+                href="/ai-generate"
+                label="AI 生成"
+                description="一键生成标题、正文与分平台版本"
+                icon={Sparkles}
+                tone="cyan"
+              />
+            </div>
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
               {metricConfig.map(({ key, label, icon, tone, salt }) => (
                 <DashboardMetricCard

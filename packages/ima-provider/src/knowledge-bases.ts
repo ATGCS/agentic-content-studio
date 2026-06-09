@@ -4,6 +4,30 @@ import { getImaConfig } from './config.js';
 import { extractKnowledgeBases } from './parsers.js';
 import { imaRequest } from './client.js';
 
+function isMockExternalId(externalId: string): boolean {
+  return externalId.startsWith('mock-kb-');
+}
+
+async function findUsableKnowledgeBase() {
+  const candidates = await prisma.imaKnowledgeBase.findMany({
+    where: { enabled: true },
+    orderBy: [{ isDefault: 'desc' }, { syncedAt: 'desc' }],
+  });
+  return candidates.find((kb) => !isMockExternalId(kb.externalId));
+}
+
+async function ensureSyncedKnowledgeBase(): Promise<string | undefined> {
+  const existing = await findUsableKnowledgeBase();
+  if (existing) return existing.externalId;
+
+  const config = await getImaConfig();
+  if (!config.clientId || !config.apiKey) return undefined;
+
+  await syncKnowledgeBasesFromIma({ all: true });
+  const synced = await findUsableKnowledgeBase();
+  return synced?.externalId;
+}
+
 export async function listKnowledgeBases(query?: { enabledOnly?: boolean }) {
   const where = query?.enabledOnly ? { enabled: true } : {};
   return prisma.imaKnowledgeBase.findMany({
@@ -23,21 +47,34 @@ export async function resolveExternalKnowledgeBaseId(
   knowledgeBaseId?: string
 ): Promise<string | undefined> {
   if (!knowledgeBaseId) {
-    const defaultKb = await prisma.imaKnowledgeBase.findFirst({
-      where: { isDefault: true, enabled: true },
-    });
-    return defaultKb?.externalId;
+    const kb = await findUsableKnowledgeBase();
+    if (kb) return kb.externalId;
+    return ensureSyncedKnowledgeBase();
   }
 
   const byLocal = await prisma.imaKnowledgeBase.findUnique({
     where: { id: knowledgeBaseId },
   });
-  if (byLocal) return byLocal.externalId;
+  if (byLocal) {
+    if (isMockExternalId(byLocal.externalId)) {
+      return ensureSyncedKnowledgeBase();
+    }
+    return byLocal.externalId;
+  }
 
   const byExternal = await prisma.imaKnowledgeBase.findUnique({
     where: { externalId: knowledgeBaseId },
   });
-  if (byExternal) return byExternal.externalId;
+  if (byExternal) {
+    if (isMockExternalId(byExternal.externalId)) {
+      return ensureSyncedKnowledgeBase();
+    }
+    return byExternal.externalId;
+  }
+
+  if (isMockExternalId(knowledgeBaseId)) {
+    return ensureSyncedKnowledgeBase();
+  }
 
   return knowledgeBaseId;
 }
@@ -55,7 +92,7 @@ function inferAgentType(name: string): string | null {
   return null;
 }
 
-export async function syncKnowledgeBasesFromIma() {
+export async function syncKnowledgeBasesFromIma(options?: { all?: boolean }) {
   const config = await getImaConfig();
   const res = await imaRequest(
     config,
@@ -65,8 +102,7 @@ export async function syncKnowledgeBasesFromIma() {
   const remote = extractKnowledgeBases(res);
   const synced = [];
   for (const item of remote) {
-    // 只同步名称包含"智能运营中台"的知识库
-    if (!item.name.includes('智能运营中台')) {
+    if (!options?.all && !item.name.includes('智能运营中台')) {
       console.log(`⏭️  跳过非业务知识库: ${item.name}`);
       continue;
     }
@@ -106,25 +142,47 @@ export async function syncKnowledgeBasesFromIma() {
   }
 
   // 清理数据库中不再存在于远程的知识库(根据名称匹配)
-  const remoteNames = new Set(remote.map((item) => item.name));
-  const localKbs = await prisma.imaKnowledgeBase.findMany({
-    where: {
-      name: {
-        contains: '智能运营中台',
-      },
-    },
-  });
-
-  const toDelete = localKbs.filter((kb) => !remoteNames.has(kb.name));
-  if (toDelete.length > 0) {
-    console.log(`🗑️  清理 ${toDelete.length} 个已删除的知识库`);
-    await prisma.imaKnowledgeBase.deleteMany({
+  if (!options?.all) {
+    const remoteNames = new Set(remote.map((item) => item.name));
+    const localKbs = await prisma.imaKnowledgeBase.findMany({
       where: {
-        id: {
-          in: toDelete.map((kb) => kb.id),
+        name: {
+          contains: '智能运营中台',
         },
       },
     });
+
+    const toDelete = localKbs.filter((kb) => !remoteNames.has(kb.name));
+    if (toDelete.length > 0) {
+      console.log(`🗑️  清理 ${toDelete.length} 个已删除的知识库`);
+      await prisma.imaKnowledgeBase.deleteMany({
+        where: {
+          id: {
+            in: toDelete.map((kb) => kb.id),
+          },
+        },
+      });
+    }
+  }
+
+  if (synced.length > 0) {
+    const currentDefault = await prisma.imaKnowledgeBase.findFirst({
+      where: { isDefault: true, enabled: true },
+    });
+    const needsDefault =
+      !currentDefault || isMockExternalId(currentDefault.externalId);
+    if (needsDefault) {
+      const firstReal = synced.find((kb) => !isMockExternalId(kb.externalId));
+      if (firstReal) {
+        await prisma.imaKnowledgeBase.updateMany({
+          data: { isDefault: false },
+        });
+        await prisma.imaKnowledgeBase.update({
+          where: { id: firstReal.id },
+          data: { isDefault: true },
+        });
+      }
+    }
   }
 
   return synced;

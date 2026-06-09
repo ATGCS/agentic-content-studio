@@ -5,6 +5,7 @@ import {
   resolveExternalKnowledgeBaseId,
   getKnowledgeBase,
 } from './knowledge-bases.js';
+import { formatKnowledgeSummary } from './summary.js';
 
 export async function searchAndLog(
   contentId: string,
@@ -16,26 +17,36 @@ export async function searchAndLog(
     options.knowledgeBaseId
   );
 
+  if (!externalId) {
+    throw new AppError(
+      ErrorCodes.BAD_REQUEST,
+      '未找到可用知识库，请前往「设置 → IMA 知识库」同步并设置默认知识库',
+      400
+    );
+  }
+
   const provider = await getKnowledgeProvider();
-  let items;
+  let result;
   try {
-    items = await provider.search({
+    result = await provider.search({
       query,
       limit,
       knowledgeBaseId: externalId,
     });
   } catch (err) {
-    if (!externalId && err instanceof Error) {
+    if (err instanceof Error) {
       throw new AppError(
         ErrorCodes.BAD_REQUEST,
-        '请先同步知识库并选择默认知识库，或在搜索时指定 knowledgeBaseId',
+        `IMA 知识库检索失败: ${err.message}`,
         400
       );
     }
     throw err;
   }
 
-  const summary = items.map((i) => i.title).join('；');
+  const { items, raw, mode } = result;
+  const summary = formatKnowledgeSummary(items);
+
   let localKbId: string | undefined;
   if (options.knowledgeBaseId) {
     try {
@@ -60,8 +71,14 @@ export async function searchAndLog(
       knowledgeBaseId: localKbId,
       query,
       resultSummary: summary,
-      rawResult: items as object,
+      rawResult: { mode, items, raw } as object,
     },
   });
-  return { items, log, knowledgeBaseId: localKbId, externalKnowledgeBaseId: externalId };
+  return {
+    items,
+    log,
+    mode,
+    knowledgeBaseId: localKbId,
+    externalKnowledgeBaseId: externalId,
+  };
 }

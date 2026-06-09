@@ -8,6 +8,7 @@ import { PageContainer } from '@/components/layout/page-container';
 import { PlatformBadge } from '@/components/platform-icon';
 
 import { EmptyState } from '@/components/studio/empty-state';
+import { CreationWorkflowGuide } from '@/components/studio/creation-workflow-guide';
 import { StatusBadge } from '@/components/studio/status-badge';
 import { StudioCard } from '@/components/studio/studio-card';
 import { Button } from '@/components/ui/button';
@@ -161,6 +162,8 @@ export default function TopicsPage() {
   return (
     <StudioLayout>
       <PageContainer>
+        <CreationWorkflowGuide currentStep="series" compact className="mb-4" />
+
         {loadError && (
           <StudioCard contentClassName="p-4">
             <p className="text-sm text-[#F53F3F]">{loadError}</p>

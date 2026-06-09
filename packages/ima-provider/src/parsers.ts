@@ -43,6 +43,8 @@ export function extractSearchItems(
   summary: string;
   url?: string;
   source?: string;
+  mediaId?: string;
+  mediaType?: number;
 }> {
   const root = data as Record<string, unknown>;
   const payload = (root.data ?? root) as Record<string, unknown>;
@@ -83,6 +85,14 @@ export function extractSearchItems(
       summary: summary.slice(0, 500),
       url,
       source: 'ima',
+      mediaId:
+        typeof row.media_id === 'string'
+          ? row.media_id
+          : row.media_id != null
+            ? String(row.media_id)
+            : undefined,
+      mediaType:
+        typeof row.media_type === 'number' ? row.media_type : undefined,
     };
   });
 }
