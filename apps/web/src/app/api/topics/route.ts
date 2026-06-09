@@ -39,8 +39,13 @@ export async function GET(req: NextRequest) {
         { status: err.httpStatus }
       );
     }
+    console.error('[topics GET] unexpected error:', err);
     return NextResponse.json(
-      { code: 50000, message: 'internal error', data: null },
+      {
+        code: 50000,
+        message: err instanceof Error ? err.message : 'internal error',
+        data: null,
+      },
       { status: 500 }
     );
   }
