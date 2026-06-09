@@ -8,6 +8,7 @@ import {
   FolderOpen,
   Home,
   Settings,
+  Sparkles,
   Upload,
   Users,
 } from 'lucide-react';
@@ -18,14 +19,37 @@ export type NavItem = {
   icon: LucideIcon;
   /** Header breadcrumb title */
   title?: string;
+  /** Breadcrumb parent for header display */
+  breadcrumb?: string;
+  /** Parent href for nested navigation */
+  parent?: string;
 };
 
 /** Flat sidebar navigation — matches platform mockup */
 export const studioNavItems: NavItem[] = [
   { href: '/dashboard', label: '工作台', icon: Home, title: '工作台' },
-  { href: '/contents', label: '内容项目', icon: FileText, title: '内容项目' },
-  { href: '/reviews', label: '审核中心', icon: CheckSquare, title: '审核中心' },
-  { href: '/agent-tasks', label: 'Agent 任务', icon: Bot, title: 'Agent 任务' },
+  { href: '/contents', label: '内容管理', icon: FileText, title: '内容管理' },
+  {
+    href: '/ai-generate',
+    label: 'AI 生成',
+    icon: Sparkles,
+    title: 'AI 生成',
+    parent: '/contents',
+  },
+  {
+    href: '/agent-tasks',
+    label: '任务记录',
+    icon: Bot,
+    title: '任务记录',
+    parent: '/contents',
+  },
+  {
+    href: '/reviews',
+    label: '审核中心',
+    icon: CheckSquare,
+    title: '审核中心',
+    breadcrumb: '审核中心',
+  },
   { href: '/accounts', label: '平台账号', icon: Users, title: '平台账号' },
   { href: '/settings/ima', label: '知识库', icon: Database, title: '知识库' },
   { href: '/materials', label: '素材库', icon: FolderOpen, title: '素材库' },
@@ -33,6 +57,26 @@ export const studioNavItems: NavItem[] = [
   { href: '/analytics', label: '数据复盘', icon: BarChart3, title: '数据复盘' },
   { href: '/settings', label: '系统设置', icon: Settings, title: '系统设置' },
 ];
+
+type BreadcrumbConfig = { parent: string; child: string };
+
+/** Per-path breadcrumb mapping for header display */
+const breadcrumbMap: Record<string, BreadcrumbConfig> = {
+  '/dashboard': { parent: '工作台', child: '工作台' },
+  '/contents': { parent: '内容管理', child: '内容管理' },
+  '/ai-generate': { parent: '内容管理', child: 'AI 生成' },
+  '/agent-tasks': { parent: '内容管理', child: '任务记录' },
+  '/reviews': { parent: '审核中心', child: '内容审核' },
+  '/accounts': { parent: '平台账号', child: '账号管理' },
+  '/settings/ima': { parent: '系统设置', child: 'IMA 知识库' },
+  '/materials': { parent: '素材库', child: '素材库' },
+  '/publishing': { parent: '发布管理', child: '发布管理' },
+  '/analytics': { parent: '数据复盘', child: '数据复盘' },
+  '/settings': { parent: '系统设置', child: '系统设置' },
+  '/topics': { parent: '内容管理', child: '系列管理' },
+  '/prompts': { parent: 'Prompt 中心', child: 'Prompt 中心' },
+  '/knowledge': { parent: '知识库', child: '知识库管理' },
+};
 
 /** Resolve page title from pathname */
 export function getNavTitle(pathname: string): string {
@@ -44,11 +88,26 @@ export function getNavTitle(pathname: string): string {
     .sort((a, b) => b.href.length - a.href.length)[0];
   if (nested) return nested.title ?? nested.label;
 
-  if (pathname.startsWith('/topics')) return '选题管理';
+  if (pathname.startsWith('/topics')) return '系列管理';
   if (pathname.startsWith('/prompts')) return 'Prompt 管理';
   if (pathname.startsWith('/contents/')) return '内容详情';
 
   return '智能内容运营中台';
+}
+
+/** Resolve breadcrumb for header display */
+export function getBreadcrumb(
+  pathname: string
+): { parent: string; child: string } | null {
+  const exact = Object.keys(breadcrumbMap).find((key) => key === pathname);
+  if (exact) return breadcrumbMap[exact];
+
+  const matched = Object.keys(breadcrumbMap).find((key) =>
+    pathname.startsWith(`${key}/`)
+  );
+  if (matched) return breadcrumbMap[matched];
+
+  return null;
 }
 
 /** @deprecated use studioNavItems */

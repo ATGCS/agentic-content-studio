@@ -8,7 +8,6 @@ import {
   Database,
   KeyRound,
   RefreshCw,
-  Settings,
   ShieldCheck,
 } from 'lucide-react';
 import { StudioLayout } from '@/components/StudioLayout';
@@ -22,7 +21,6 @@ type ImaConfig = {
   clientId: string;
   hasApiKey: boolean;
   baseUrl: string;
-  useMock: boolean;
   configured: boolean;
 };
 
@@ -54,8 +52,8 @@ const settingCards = [
     description: '审核规则、发布窗口、失败重试等策略配置',
     href: '/reviews',
     icon: ShieldCheck,
-    status: '规划中',
-    enabled: false,
+    status: '已接入',
+    enabled: true,
   },
   {
     title: '系统通知',
@@ -119,23 +117,15 @@ export default function SettingsPage() {
     }
   }
 
-  const enabledKnowledgeBases = knowledgeBases.filter((item) => item.enabled).length;
+  const enabledKnowledgeBases = knowledgeBases.filter(
+    (item) => item.enabled
+  ).length;
   const defaultKnowledgeBase = knowledgeBases.some((item) => item.isDefault);
 
   return (
     <StudioLayout>
       <PageContainer className="max-w-none gap-4 p-6">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="mb-2 flex items-center gap-2 text-sm text-[#86909C]">
-              <Settings className="size-4" />
-              系统设置
-            </div>
-            <h1 className="text-2xl font-bold text-[#1D2129]">设置中心</h1>
-            <p className="mt-2 text-sm text-[#4E5969]">
-              管理当前已接入的系统配置，未接入后端的能力会标记为规划中。
-            </p>
-          </div>
           <Button variant="outline" onClick={loadSettings} disabled={loading}>
             <RefreshCw className={cn('size-4', loading && 'animate-spin')} />
             刷新状态
@@ -151,11 +141,13 @@ export default function SettingsPage() {
         <div className="grid gap-4 md:grid-cols-3">
           <StudioCard contentClassName="p-5">
             <div className="mb-3 flex items-center justify-between">
-              <span className="text-sm font-semibold text-[#1D2129]">IMA 配置</span>
-              <StatusPill ready={Boolean(config?.configured || config?.useMock)} />
+              <span className="text-sm font-semibold text-[#1D2129]">
+                IMA 配置
+              </span>
+              <StatusPill ready={Boolean(config?.configured)} />
             </div>
             <p className="text-2xl font-bold text-[#1D2129]">
-              {loading ? '加载中…' : config?.useMock ? 'Mock 模式' : config?.configured ? '真实 API' : '未配置'}
+              {loading ? '加载中…' : config?.configured ? '已配置' : '未配置'}
             </p>
             <p className="mt-2 text-xs text-[#86909C]">
               {config?.baseUrl ?? '未读取到 Base URL'}
@@ -163,23 +155,32 @@ export default function SettingsPage() {
           </StudioCard>
           <StudioCard contentClassName="p-5">
             <div className="mb-3 flex items-center justify-between">
-              <span className="text-sm font-semibold text-[#1D2129]">知识库</span>
+              <span className="text-sm font-semibold text-[#1D2129]">
+                知识库
+              </span>
               <StatusPill ready={enabledKnowledgeBases > 0} />
             </div>
-            <p className="text-2xl font-bold text-[#1D2129]">{enabledKnowledgeBases}</p>
+            <p className="text-2xl font-bold text-[#1D2129]">
+              {enabledKnowledgeBases}
+            </p>
             <p className="mt-2 text-xs text-[#86909C]">
-              共 {knowledgeBases.length} 个知识库，{defaultKnowledgeBase ? '已设置默认知识库' : '未设置默认知识库'}
+              共 {knowledgeBases.length} 个知识库，
+              {defaultKnowledgeBase ? '已设置默认知识库' : '未设置默认知识库'}
             </p>
           </StudioCard>
           <StudioCard contentClassName="p-5">
             <div className="mb-3 flex items-center justify-between">
-              <span className="text-sm font-semibold text-[#1D2129]">凭证状态</span>
-              <StatusPill ready={Boolean(config?.hasApiKey || config?.useMock)} />
+              <span className="text-sm font-semibold text-[#1D2129]">
+                凭证状态
+              </span>
+              <StatusPill ready={Boolean(config?.hasApiKey)} />
             </div>
             <p className="text-2xl font-bold text-[#1D2129]">
-              {config?.hasApiKey ? '已保存' : config?.useMock ? 'Mock 无需凭证' : '未保存'}
+              {config?.hasApiKey ? '已保存' : '未保存'}
             </p>
-            <p className="mt-2 text-xs text-[#86909C]">API Key 不会在前端明文回显</p>
+            <p className="mt-2 text-xs text-[#86909C]">
+              API Key 不会在前端明文回显
+            </p>
           </StudioCard>
         </div>
 
@@ -199,12 +200,23 @@ export default function SettingsPage() {
                       </span>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-sm font-semibold text-[#1D2129]">{item.title}</h3>
-                          <span className={cn('rounded-full px-2 py-0.5 text-[11px]', item.enabled ? 'bg-[#E8FFEA] text-[#00B42A]' : 'bg-[#F2F3F5] text-[#86909C]')}>
+                          <h3 className="text-sm font-semibold text-[#1D2129]">
+                            {item.title}
+                          </h3>
+                          <span
+                            className={cn(
+                              'rounded-full px-2 py-0.5 text-[11px]',
+                              item.enabled
+                                ? 'bg-[#E8FFEA] text-[#00B42A]'
+                                : 'bg-[#F2F3F5] text-[#86909C]'
+                            )}
+                          >
                             {item.status}
                           </span>
                         </div>
-                        <p className="mt-1 truncate text-xs text-[#86909C]">{item.description}</p>
+                        <p className="mt-1 truncate text-xs text-[#86909C]">
+                          {item.description}
+                        </p>
                       </div>
                     </div>
                     <ChevronRight className="size-4 shrink-0 text-[#C9CDD4]" />
@@ -227,7 +239,11 @@ export default function SettingsPage() {
           <StudioCard contentClassName="p-5">
             <h2 className="text-sm font-semibold text-[#1D2129]">快捷操作</h2>
             <div className="mt-4 space-y-3">
-              <Button className="w-full justify-start bg-[#1664FF] text-white hover:bg-[#0E52D9]" onClick={syncKnowledgeBases} isLoading={syncing}>
+              <Button
+                className="w-full justify-start bg-[#1664FF] text-white hover:bg-[#0E52D9]"
+                onClick={syncKnowledgeBases}
+                isLoading={syncing}
+              >
                 <RefreshCw className="size-4" />
                 同步 IMA 知识库
               </Button>
@@ -245,7 +261,8 @@ export default function SettingsPage() {
               </Link>
             </div>
             <div className="mt-5 rounded-lg bg-[#F7F8FA] p-3 text-xs leading-5 text-[#86909C]">
-              API Key、Webhook、通知等系统级配置尚未有稳定后端接口，因此这里只保留状态说明，不提供假操作入口。
+              API
+              Key、Webhook、通知等系统级配置尚未有稳定后端接口，因此这里只保留状态说明，不提供假操作入口。
             </div>
           </StudioCard>
         </div>

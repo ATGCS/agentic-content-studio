@@ -3,7 +3,15 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, BookOpen, Bot, RefreshCw, Save, User } from 'lucide-react';
+import {
+  ArrowLeft,
+  BookOpen,
+  Bot,
+  RefreshCw,
+  Save,
+  User,
+  X,
+} from 'lucide-react';
 import { StudioLayout } from '@/components/StudioLayout';
 import { PageContainer } from '@/components/layout/page-container';
 import { PlatformBadge } from '@/components/studio/platform-badge';
@@ -29,6 +37,7 @@ type AccountDetail = {
   lastError?: string | null;
   boundAt?: string | null;
   revokedAt?: string | null;
+  accountType?: string;
   owner?: { name: string } | null;
   token?: { expiresAt?: string; scopes?: unknown; updatedAt?: string } | null;
   socialWorks?: Array<{
@@ -82,6 +91,19 @@ export default function AccountDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncingMetrics, setSyncingMetrics] = useState(false);
+  const [notifications, setNotifications] = useState<
+    { id: number; type: 'success' | 'error'; message: string }[]
+  >([]);
+  let notifId = 0;
+
+  function notify(type: 'success' | 'error', message: string) {
+    const id = ++notifId;
+    setNotifications((prev) => [...prev, { type, message, id }]);
+    setTimeout(
+      () => setNotifications((prev) => prev.filter((n) => n.id !== id)),
+      3000
+    );
+  }
 
   useEffect(() => {
     setLoading(true);
@@ -122,6 +144,9 @@ export default function AccountDetailPage() {
       await api(`/api/accounts/${id}/sync-works`, { method: 'POST' });
       const res = await api<AccountDetail>(`/api/accounts/${id}`);
       setAccount(res.data);
+      notify('success', '同步作品成功');
+    } catch {
+      notify('error', '同步作品失败，请确认账号已授权');
     } finally {
       setSyncing(false);
     }
@@ -133,6 +158,9 @@ export default function AccountDetailPage() {
       await api(`/api/accounts/${id}/sync-metrics`, { method: 'POST' });
       const res = await api<AccountDetail>(`/api/accounts/${id}`);
       setAccount(res.data);
+      notify('success', '同步指标成功');
+    } catch {
+      notify('error', '同步指标失败，请确认账号已授权且有作品数据');
     } finally {
       setSyncingMetrics(false);
     }
@@ -140,14 +168,18 @@ export default function AccountDetailPage() {
 
   async function reauthorize() {
     try {
-      const res = await api<{ authorizationUrl: string }>(`/api/accounts/${id}/reauthorize`, {
-        method: 'POST',
-      });
+      const res = await api<{ authorizationUrl: string }>(
+        `/api/accounts/${id}/reauthorize`,
+        {
+          method: 'POST',
+        }
+      );
       if (res.data?.authorizationUrl) {
+        notify('success', '正在跳转授权页...');
         navigateToAuthorization(res.data.authorizationUrl);
       }
-    } catch (error) {
-      console.error('reauthorize error', error);
+    } catch {
+      notify('error', '重新授权失败，请稍后重试');
     }
   }
 
@@ -166,7 +198,9 @@ export default function AccountDetailPage() {
       <StudioLayout>
         <PageContainer>
           <StudioCard contentClassName="p-6 text-center">
-            <h2 className="text-base font-semibold text-[#1D2129]">账号不可用</h2>
+            <h2 className="text-base font-semibold text-[#1D2129]">
+              账号不可用
+            </h2>
             <p className="mt-2 text-sm text-[#86909c]">
               {error ?? '账号不存在或已被删除'}
             </p>
@@ -191,6 +225,28 @@ export default function AccountDetailPage() {
   return (
     <StudioLayout>
       <PageContainer>
+        {/* ---- notification bar ---- */}
+        {notifications.length > 0 && (
+          <div className="fixed right-6 top-6 z-50 flex flex-col gap-2">
+            {notifications.map((n) => (
+              <div
+                key={n.id}
+                className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm font-medium shadow-lg ${n.type === 'success' ? 'bg-[#00B42A] text-white' : 'bg-[#F53F3F] text-white'}`}
+              >
+                <span>{n.message}</span>
+                <button
+                  onClick={() =>
+                    setNotifications((prev) =>
+                      prev.filter((x) => x.id !== n.id)
+                    )
+                  }
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="mb-2">
           <Link
             href="/accounts"
@@ -233,7 +289,9 @@ export default function AccountDetailPage() {
                   disabled={syncing}
                   onClick={syncWorks}
                 >
-                  <RefreshCw className={`size-4 ${syncing ? 'animate-spin' : ''}`} />
+                  <RefreshCw
+                    className={`size-4 ${syncing ? 'animate-spin' : ''}`}
+                  />
                   {syncing ? '同步中...' : '同步作品'}
                 </Button>
                 <Button
@@ -242,12 +300,28 @@ export default function AccountDetailPage() {
                   disabled={syncingMetrics}
                   onClick={syncMetrics}
                 >
-                  <RefreshCw className={`size-4 ${syncingMetrics ? 'animate-spin' : ''}`} />
+                  <RefreshCw
+                    className={`size-4 ${syncingMetrics ? 'animate-spin' : ''}`}
+                  />
                   {syncingMetrics ? '同步中...' : '同步指标'}
                 </Button>
               </>
             )}
-            {(account.authStatus === 'need_reauth' || account.authStatus === 'token_expired') && (
+            {isZhihu && (
+              <p className="text-xs text-[#FF7D00]">
+                知乎暂不支持自动同步，数据需手动导入
+              </p>
+            )}
+            {account.platform === 'WECHAT' &&
+              !isZhihu &&
+              account.accountType?.includes('订阅号') && (
+                <p className="text-xs text-[#86909C]">
+                  个人订阅号暂不支持数据查询
+                  API。如需完整的数据同步功能，请将公众号认证为企业/组织类型。
+                </p>
+              )}
+            {(account.authStatus === 'need_reauth' ||
+              account.authStatus === 'token_expired') && (
               <Button size="sm" onClick={reauthorize}>
                 重新授权
               </Button>
@@ -265,30 +339,40 @@ export default function AccountDetailPage() {
 
         {/* 授权信息 */}
         <StudioCard contentClassName="p-5">
-          <h3 className="mb-3 text-sm font-semibold text-[#1D2129]">授权信息</h3>
+          <h3 className="mb-3 text-sm font-semibold text-[#1D2129]">
+            授权信息
+          </h3>
           <div className="grid grid-cols-2 gap-3 text-xs md:grid-cols-3">
             {account.externalAccountId && (
               <div>
                 <span className="text-[#86909c]">外部账号 ID：</span>
-                <span className="text-[#1D2129]">{account.externalAccountId}</span>
+                <span className="text-[#1D2129]">
+                  {account.externalAccountId}
+                </span>
               </div>
             )}
             {account.boundAt && (
               <div>
                 <span className="text-[#86909c]">绑定时间：</span>
-                <span className="text-[#1D2129]">{new Date(account.boundAt).toLocaleString('zh-CN')}</span>
+                <span className="text-[#1D2129]">
+                  {new Date(account.boundAt).toLocaleString('zh-CN')}
+                </span>
               </div>
             )}
             {account.lastSyncAt && (
               <div>
                 <span className="text-[#86909c]">最近同步：</span>
-                <span className="text-[#1D2129]">{new Date(account.lastSyncAt).toLocaleString('zh-CN')}</span>
+                <span className="text-[#1D2129]">
+                  {new Date(account.lastSyncAt).toLocaleString('zh-CN')}
+                </span>
               </div>
             )}
             {account.token?.expiresAt && (
               <div>
                 <span className="text-[#86909c]">Token 到期：</span>
-                <span className="text-[#1D2129]">{new Date(account.token.expiresAt).toLocaleString('zh-CN')}</span>
+                <span className="text-[#1D2129]">
+                  {new Date(account.token.expiresAt).toLocaleString('zh-CN')}
+                </span>
               </div>
             )}
             {account.workCount !== undefined && (
@@ -418,7 +502,9 @@ export default function AccountDetailPage() {
             ) : (
               <div className="space-y-3">
                 {account.socialWorks.map((work) => {
-                  const metric = account.recentMetrics?.find((m) => m.workId === work.id);
+                  const metric = account.recentMetrics?.find(
+                    (m) => m.workId === work.id
+                  );
                   return (
                     <div
                       key={work.id}
@@ -451,18 +537,29 @@ export default function AccountDetailPage() {
                           )}
                           {work.publishedAt && (
                             <p className="mt-1 text-[11px] text-[#86909c]">
-                              发布时间：{new Date(work.publishedAt).toLocaleString('zh-CN')}
+                              发布时间：
+                              {new Date(work.publishedAt).toLocaleString(
+                                'zh-CN'
+                              )}
                             </p>
                           )}
                         </div>
                       </div>
                       {metric && (
                         <div className="mt-3 grid grid-cols-3 gap-2 border-t border-[#F2F3F5] pt-3 text-[11px]">
-                          {(metric.metrics.playCount ?? metric.metrics.readCount ?? metric.metrics.viewCount) != null && (
+                          {(metric.metrics.playCount ??
+                            metric.metrics.readCount ??
+                            metric.metrics.viewCount) != null && (
                             <div>
-                              <span className="text-[#86909c]">播放/阅读：</span>
+                              <span className="text-[#86909c]">
+                                播放/阅读：
+                              </span>
                               <span className="font-medium text-[#1D2129]">
-                                {(metric.metrics.playCount ?? metric.metrics.readCount ?? metric.metrics.viewCount) as number}
+                                {
+                                  (metric.metrics.playCount ??
+                                    metric.metrics.readCount ??
+                                    metric.metrics.viewCount) as number
+                                }
                               </span>
                             </div>
                           )}
@@ -490,11 +587,15 @@ export default function AccountDetailPage() {
                               </span>
                             </div>
                           )}
-                          {(metric.metrics as Record<string, unknown>).coinCount != null && (
+                          {(metric.metrics as Record<string, unknown>)
+                            .coinCount != null && (
                             <div>
                               <span className="text-[#86909c]">投币：</span>
                               <span className="font-medium text-[#1D2129]">
-                                {(metric.metrics as Record<string, unknown>).coinCount as number}
+                                {
+                                  (metric.metrics as Record<string, unknown>)
+                                    .coinCount as number
+                                }
                               </span>
                             </div>
                           )}

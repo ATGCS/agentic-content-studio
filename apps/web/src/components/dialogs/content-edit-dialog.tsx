@@ -1,12 +1,21 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { DialogWrapper } from '@/components/dialog-wrapper';
-import { Sparkles } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Sparkles, Loader2, ArrowRight, Send, Eye } from 'lucide-react';
+import { api } from '@/lib/api';
 
 export type ContentEditForm = {
   title: string;
@@ -37,12 +46,23 @@ const platforms = [
   { value: 'ZHIHU', label: '知乎' },
 ];
 
-export function ContentEditDialog({ open, onOpenChange, onSubmit, content }: ContentEditDialogProps) {
+type TopicOption = { id: string; title: string };
+
+export function ContentEditDialog({
+  open,
+  onOpenChange,
+  onSubmit,
+  content,
+}: ContentEditDialogProps) {
+  const router = useRouter();
   const [title, setTitle] = useState('');
   const [topicId, setTopicId] = useState('');
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [summary, setSummary] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [topics, setTopics] = useState<TopicOption[]>([]);
+  const [loadingTopics, setLoadingTopics] = useState(false);
+  const [createdContentId, setCreatedContentId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -50,6 +70,12 @@ export function ContentEditDialog({ open, onOpenChange, onSubmit, content }: Con
     setTopicId(content?.topicId ?? '');
     setSelectedPlatforms(content?.platforms ?? []);
     setSummary(content?.summary ?? '');
+    // Load topics for selector
+    setLoadingTopics(true);
+    api<{ items: TopicOption[]; total: number }>('/api/topics?pageSize=200')
+      .then((res) => setTopics(res.data.items ?? []))
+      .catch(() => {})
+      .finally(() => setLoadingTopics(false));
   }, [content, open]);
 
   const togglePlatform = (platform: string) => {
@@ -66,13 +92,18 @@ export function ContentEditDialog({ open, onOpenChange, onSubmit, content }: Con
 
     setSubmitting(true);
     try {
-      await onSubmit?.({
+      const result = await onSubmit?.({
         title,
         summary,
         topicId,
         platforms: selectedPlatforms,
       });
       onOpenChange(false);
+
+      // 如果是新建内容,自动跳转到详情页
+      if (result && !content?.id) {
+        router.push(`/contents/${result}`);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -108,13 +139,29 @@ export function ContentEditDialog({ open, onOpenChange, onSubmit, content }: Con
 
         {!content?.id && (
           <div className="space-y-2">
-            <Label className="text-xs font-medium text-[#4E5969]">关联选题 ID</Label>
-            <Input
-              className="h-9 text-sm"
-              placeholder="选填，留空则创建独立内容"
-              value={topicId}
-              onChange={(e) => setTopicId(e.target.value)}
-            />
+            <Label className="text-xs font-medium text-[#4E5969]">
+              所属系列
+            </Label>
+            {loadingTopics ? (
+              <div className="flex items-center gap-2 text-xs text-[#86909C]">
+                <Loader2 className="size-3 animate-spin" />
+                加载系列列表…
+              </div>
+            ) : (
+              <Select value={topicId} onValueChange={setTopicId}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="不归属系列（独立内容）" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value=" ">不归属系列</SelectItem>
+                  {topics.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
         )}
 
@@ -137,7 +184,9 @@ export function ContentEditDialog({ open, onOpenChange, onSubmit, content }: Con
             ))}
           </div>
           {content?.id && (
-            <p className="text-xs text-[#86909C]">编辑内容时不会修改已生成的平台版本。</p>
+            <p className="text-xs text-[#86909C]">
+              编辑内容时不会修改已生成的平台版本。
+            </p>
           )}
         </div>
 

@@ -9,6 +9,7 @@ export function extractKnowledgeBases(data: unknown): Array<{
   const list =
     (payload.knowledge_base_list as unknown[]) ??
     (payload.knowledgeBaseList as unknown[]) ??
+    (payload.info_list as unknown[]) ??
     (payload.list as unknown[]) ??
     (Array.isArray(payload) ? payload : []);
 
@@ -16,12 +17,16 @@ export function extractKnowledgeBases(data: unknown): Array<{
     .map((item) => {
       const row = item as Record<string, unknown>;
       const externalId = String(
-        row.knowledge_base_id ?? row.knowledgeBaseId ?? row.id ?? ''
+        row.knowledge_base_id ??
+          row.kb_id ??
+          row.knowledgeBaseId ??
+          row.id ??
+          ''
       );
       if (!externalId) return null;
       return {
         externalId,
-        name: String(row.name ?? row.title ?? '未命名知识库'),
+        name: String(row.kb_name ?? row.name ?? row.title ?? '未命名知识库'),
         description:
           typeof row.description === 'string' ? row.description : undefined,
         raw: item,
@@ -44,6 +49,7 @@ export function extractSearchItems(
   const list =
     (payload.knowledge_list as unknown[]) ??
     (payload.knowledgeList as unknown[]) ??
+    (payload.info_list as unknown[]) ??
     (payload.items as unknown[]) ??
     (payload.list as unknown[]) ??
     [];
@@ -51,10 +57,15 @@ export function extractSearchItems(
   return list.slice(0, limit).map((item, index) => {
     const row = item as Record<string, unknown>;
     const title = String(
-      row.title ?? row.name ?? row.file_name ?? row.fileName ?? `结果 ${index + 1}`
+      row.title ??
+        row.name ??
+        row.file_name ??
+        row.fileName ??
+        `结果 ${index + 1}`
     );
     const summary = String(
-      row.summary ??
+      row.highlight_content ??
+        row.summary ??
         row.abstract ??
         row.snippet ??
         row.content ??

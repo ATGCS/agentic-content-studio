@@ -22,10 +22,17 @@ export async function listTopics(
       skip,
       take: pageSize,
       orderBy: { createdAt: 'desc' },
+      include: { _count: { select: { contents: true } } },
     }),
     prisma.topic.count({ where }),
   ]);
-  return { items, total, page, pageSize };
+  // Map _count up to contentCount for frontend
+  return {
+    items: items.map((t) => ({ ...t, contentCount: t._count.contents })),
+    total,
+    page,
+    pageSize,
+  };
 }
 
 export async function createTopic(

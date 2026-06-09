@@ -1,7 +1,7 @@
 import './env.js';
 import { buildApp } from './app.js';
 
-const port = parseInt(process.env.API_PORT ?? '3002', 10);
+const port = parseInt(process.env.API_PORT ?? '3001', 10);
 
 async function main() {
   const app = await buildApp();

@@ -35,50 +35,8 @@ export interface PublishProvider {
   syncMetrics(publishRecordId: string): Promise<MetricsResult>;
 }
 
-export class MockPublishProvider implements PublishProvider {
-  async listAccounts(ownerId: string): Promise<PlatformAccountDTO[]> {
-    return [
-      {
-        id: 'mock-acc-wechat',
-        platform: 'WECHAT',
-        accountName: '示例公众号',
-        accountType: 'official',
-        authStatus: 'authorized',
-      },
-      {
-        id: 'mock-acc-xhs',
-        platform: 'XIAOHONGSHU',
-        accountName: '示例小红书',
-        authStatus: 'authorized',
-      },
-    ];
-  }
-
-  async publish(input: PublishInput): Promise<PublishResult> {
-    return {
-      success: true,
-      externalPostId: `mock-post-${Date.now()}`,
-      externalUrl: `https://example.com/p/${input.versionId}`,
-      raw: { mock: true },
-    };
-  }
-
-  async syncMetrics(): Promise<MetricsResult> {
-    return {
-      views: 1200,
-      likes: 86,
-      comments: 12,
-      shares: 5,
-      collects: 30,
-    };
-  }
-}
-
 export function getPublishProvider(): PublishProvider {
-  if (process.env.USE_MOCK_TURBOPUSH !== 'false') {
-    return new MockPublishProvider();
-  }
-  return new MockPublishProvider();
+  throw new Error('内容发布引擎未配置：请集成真实的 turbopush 或平台发布 API');
 }
 
 export async function syncAccountsToDb(

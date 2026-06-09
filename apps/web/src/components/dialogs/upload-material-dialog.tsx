@@ -40,7 +40,11 @@ interface UploadMaterialDialogProps {
   onSuccess?: () => void;
 }
 
-export function UploadMaterialDialog({ open, onOpenChange, onSuccess }: UploadMaterialDialogProps) {
+export function UploadMaterialDialog({
+  open,
+  onOpenChange,
+  onSuccess,
+}: UploadMaterialDialogProps) {
   const [contents, setContents] = useState<ContentOption[]>([]);
   const [contentId, setContentId] = useState('');
   const [type, setType] = useState('IMAGE');
@@ -80,7 +84,12 @@ export function UploadMaterialDialog({ open, onOpenChange, onSuccess }: UploadMa
     setError(null);
     try {
       const meta = tags.trim()
-        ? { tags: tags.split(',').map((t) => t.trim()).filter(Boolean) }
+        ? {
+            tags: tags
+              .split(',')
+              .map((t) => t.trim())
+              .filter(Boolean),
+          }
         : undefined;
 
       await api('/api/materials', {
@@ -109,25 +118,35 @@ export function UploadMaterialDialog({ open, onOpenChange, onSuccess }: UploadMa
       open={open}
       onOpenChange={onOpenChange}
       title="上传素材"
-      description="通过 URL 添加素材，需选择所属内容项目"
+      description="通过 URL 添加素材，需选择所属内容管理"
       className="sm:max-w-[520px]"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {!loadingContents && contents.length === 0 && (
           <div className="rounded-md border border-[#FFF7E8] bg-[#FFF7E8] px-3 py-2 text-xs text-[#FF7D00]">
-            暂无内容项目，请先
-            {' '}
-            <Link href="/contents" className="font-semibold text-[#1664FF] underline">
-              创建内容项目
+            暂无内容管理，请先{' '}
+            <Link
+              href="/contents"
+              className="font-semibold text-[#1664FF] underline"
+            >
+              创建内容管理
             </Link>
           </div>
         )}
 
         <div className="space-y-2">
-          <Label className="text-xs font-medium text-[#4E5969]">所属内容 <span className="text-[#F53F3F]">*</span></Label>
-          <Select value={contentId} onValueChange={setContentId} disabled={contents.length === 0}>
+          <Label className="text-xs font-medium text-[#4E5969]">
+            所属内容 <span className="text-[#F53F3F]">*</span>
+          </Label>
+          <Select
+            value={contentId}
+            onValueChange={setContentId}
+            disabled={contents.length === 0}
+          >
             <SelectTrigger className="h-9 text-sm">
-              <SelectValue placeholder={loadingContents ? '加载中…' : '选择内容项目'} />
+              <SelectValue
+                placeholder={loadingContents ? '加载中…' : '选择内容管理'}
+              />
             </SelectTrigger>
             <SelectContent>
               {contents.map((c) => (
@@ -141,14 +160,18 @@ export function UploadMaterialDialog({ open, onOpenChange, onSuccess }: UploadMa
 
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label className="text-xs font-medium text-[#4E5969]">类型 <span className="text-[#F53F3F]">*</span></Label>
+            <Label className="text-xs font-medium text-[#4E5969]">
+              类型 <span className="text-[#F53F3F]">*</span>
+            </Label>
             <Select value={type} onValueChange={setType}>
               <SelectTrigger className="h-9 text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {materialTypes.map((t) => (
-                  <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  <SelectItem key={t.value} value={t.value}>
+                    {t.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -161,7 +184,9 @@ export function UploadMaterialDialog({ open, onOpenChange, onSuccess }: UploadMa
               </SelectTrigger>
               <SelectContent>
                 {materialRoles.map((r) => (
-                  <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                  <SelectItem key={r.value} value={r.value}>
+                    {r.label}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -179,7 +204,9 @@ export function UploadMaterialDialog({ open, onOpenChange, onSuccess }: UploadMa
         </div>
 
         <div className="space-y-2">
-          <Label className="text-xs font-medium text-[#4E5969]">素材 URL <span className="text-[#F53F3F]">*</span></Label>
+          <Label className="text-xs font-medium text-[#4E5969]">
+            素材 URL <span className="text-[#F53F3F]">*</span>
+          </Label>
           <Input
             value={url}
             onChange={(e) => setUrl(e.target.value)}
@@ -212,7 +239,13 @@ export function UploadMaterialDialog({ open, onOpenChange, onSuccess }: UploadMa
         {error && <p className="text-xs text-[#F53F3F]">{error}</p>}
 
         <div className="flex justify-end gap-3 border-t border-[#F2F3F5] pt-4">
-          <Button type="button" variant="outline" size="sm" className="h-9 text-xs" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-9 text-xs"
+            onClick={() => onOpenChange(false)}
+          >
             取消
           </Button>
           <Button

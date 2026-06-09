@@ -3,10 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Edit, Eye, Loader2, Plus, Power } from 'lucide-react';
 import { StudioLayout } from '@/components/StudioLayout';
-import {
-  PageContainer,
-  PageHeader,
-} from '@/components/layout/page-container';
+import { PageContainer } from '@/components/layout/page-container';
 import { EmptyState } from '@/components/studio/empty-state';
 import { StudioCard } from '@/components/studio/studio-card';
 import { Badge } from '@/components/ui/badge';
@@ -174,8 +171,16 @@ export default function PromptsPage() {
     <StudioLayout>
       <PageContainer>
         <div className="flex items-start justify-between gap-4">
-          <PageHeader title="Prompt 中心" description="Agent 提示词模板管理" />
-          <Button className="bg-[#1664FF] text-white hover:bg-[#0E52D9]" onClick={openCreateForm}>
+          <div>
+            <h2 className="text-lg font-semibold text-[#1D2129]">
+              Prompt 管理
+            </h2>
+            <p className="text-xs text-[#86909C] mt-1">管理 Agent 提示词模板</p>
+          </div>
+          <Button
+            className="bg-[#1664FF] text-white hover:bg-[#0E52D9]"
+            onClick={openCreateForm}
+          >
             <Plus className="size-4" />
             新建 Prompt
           </Button>
@@ -233,15 +238,27 @@ export default function PromptsPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button size="sm" variant="outline" onClick={() => openPreview(p)}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openPreview(p)}
+                        >
                           <Eye className="size-3.5" />
                           预览
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => openEditForm(p)}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openEditForm(p)}
+                        >
                           <Edit className="size-3.5" />
                           编辑
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => togglePrompt(p)}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => togglePrompt(p)}
+                        >
                           <Power className="size-3.5" />
                           {p.enabled ? '停用' : '启用'}
                         </Button>
@@ -258,7 +275,9 @@ export default function PromptsPage() {
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>{editingPrompt ? '编辑 Prompt' : '新建 Prompt'}</DialogTitle>
+            <DialogTitle>
+              {editingPrompt ? '编辑 Prompt' : '新建 Prompt'}
+            </DialogTitle>
             <DialogDescription>配置 Agent 使用的提示词模板</DialogDescription>
           </DialogHeader>
           <form onSubmit={savePrompt} className="space-y-4">
@@ -267,7 +286,12 @@ export default function PromptsPage() {
                 <Label>名称</Label>
                 <Input
                   value={form.name}
-                  onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      name: event.target.value,
+                    }))
+                  }
                   required
                 />
               </div>
@@ -275,7 +299,12 @@ export default function PromptsPage() {
                 <Label>版本</Label>
                 <Input
                   value={form.version}
-                  onChange={(event) => setForm((current) => ({ ...current, version: event.target.value }))}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      version: event.target.value,
+                    }))
+                  }
                   required
                 />
               </div>
@@ -284,7 +313,12 @@ export default function PromptsPage() {
               <Label>Agent 类型</Label>
               <Input
                 value={form.agentType}
-                onChange={(event) => setForm((current) => ({ ...current, agentType: event.target.value }))}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    agentType: event.target.value,
+                  }))
+                }
                 required
               />
             </div>
@@ -293,15 +327,28 @@ export default function PromptsPage() {
               <Textarea
                 className="min-h-[260px] font-mono text-xs"
                 value={form.template}
-                onChange={(event) => setForm((current) => ({ ...current, template: event.target.value }))}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    template: event.target.value,
+                  }))
+                }
                 required
               />
             </div>
             <div className="flex justify-end gap-3 border-t border-[#F2F3F5] pt-4">
-              <Button type="button" variant="outline" onClick={() => setFormOpen(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setFormOpen(false)}
+              >
                 取消
               </Button>
-              <Button type="submit" isLoading={saving} className="bg-[#1664FF] text-white hover:bg-[#0E52D9]">
+              <Button
+                type="submit"
+                isLoading={saving}
+                className="bg-[#1664FF] text-white hover:bg-[#0E52D9]"
+              >
                 保存
               </Button>
             </div>
@@ -309,7 +356,10 @@ export default function PromptsPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!previewPrompt} onOpenChange={(open) => !open && setPreviewPrompt(null)}>
+      <Dialog
+        open={!!previewPrompt}
+        onOpenChange={(open) => !open && setPreviewPrompt(null)}
+      >
         <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle>Prompt 预览</DialogTitle>
@@ -317,7 +367,9 @@ export default function PromptsPage() {
           </DialogHeader>
           <div className="grid gap-4 lg:grid-cols-2">
             <div>
-              <div className="mb-2 text-sm font-medium text-[#1D2129]">预览变量 JSON</div>
+              <div className="mb-2 text-sm font-medium text-[#1D2129]">
+                预览变量 JSON
+              </div>
               <Textarea
                 className="min-h-[260px] font-mono text-xs"
                 value={previewVariables}
@@ -333,13 +385,19 @@ export default function PromptsPage() {
               </Button>
             </div>
             <div>
-              <div className="mb-2 text-sm font-medium text-[#1D2129]">渲染结果</div>
+              <div className="mb-2 text-sm font-medium text-[#1D2129]">
+                渲染结果
+              </div>
               <pre className="min-h-[260px] whitespace-pre-wrap rounded-lg border border-[#E5E8EF] bg-[#F7F8FA] p-3 text-xs text-[#4E5969]">
                 {preview?.text ?? '暂无预览'}
               </pre>
               <div className="mt-3 grid gap-2 text-xs text-[#86909C]">
-                <div>模板变量：{preview?.declaredVariables.join(', ') || '—'}</div>
-                <div>缺失变量：{preview?.missingVariables.join(', ') || '—'}</div>
+                <div>
+                  模板变量：{preview?.declaredVariables.join(', ') || '—'}
+                </div>
+                <div>
+                  缺失变量：{preview?.missingVariables.join(', ') || '—'}
+                </div>
                 <div>额外变量：{preview?.extraVariables.join(', ') || '—'}</div>
               </div>
             </div>

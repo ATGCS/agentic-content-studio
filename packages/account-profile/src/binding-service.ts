@@ -4,9 +4,12 @@ import { encryptToken, decryptToken } from './token-crypto.js';
 import { oauthPublicBase, platformToSlug } from './platform-slug.js';
 import { consumeOAuthState } from './oauth-state.js';
 import { getAdapter } from './adapters/index.js';
+import { getOAuthConfig } from './oauth-config.js';
 import { AccountAuthStatus, canTransition } from './status.js';
 
-function toJsonInput(value: Record<string, unknown> | undefined): Prisma.InputJsonValue | undefined {
+function toJsonInput(
+  value: Record<string, unknown> | undefined
+): Prisma.InputJsonValue | undefined {
   return value === undefined ? undefined : (value as Prisma.InputJsonObject);
 }
 
@@ -17,21 +20,20 @@ export async function startBind(input: {
   scopes?: string[];
   accountId?: string;
 }) {
-  const adapter = getAdapter(input.platform);
-  const { state, expiresAt } = await (async () => {
-    const { createOAuthState } = await import('./oauth-state.js');
-    return createOAuthState({
-      platform: input.platform,
-      ownerId: input.ownerId,
-      accountId: input.accountId,
-      redirectAfterBind: input.redirectAfterBind,
-      scopes: input.scopes,
-    });
-  })();
+  const [oauthConfig] = await Promise.all([getOAuthConfig()]);
+  const { createOAuthState } = await import('./oauth-state.js');
+  const { state, expiresAt } = await createOAuthState({
+    platform: input.platform,
+    ownerId: input.ownerId,
+    accountId: input.accountId,
+    redirectAfterBind: input.redirectAfterBind,
+    scopes: input.scopes,
+  });
 
   const callbackBase = oauthPublicBase();
   const redirectUri = `${callbackBase}/api/oauth/${platformToSlug(input.platform)}/callback`;
 
+  const adapter = getAdapter(input.platform, oauthConfig);
   const authorizationUrl = adapter.buildAuthorizeUrl({
     state,
     redirectUri,
@@ -39,10 +41,17 @@ export async function startBind(input: {
   });
 
   if (input.accountId) {
-    const account = await prisma.platformAccount.findUnique({ where: { id: input.accountId } });
-    if (!account) throw new AppError(ErrorCodes.NOT_FOUND, 'account not found', 404);
+    const account = await prisma.platformAccount.findUnique({
+      where: { id: input.accountId },
+    });
+    if (!account)
+      throw new AppError(ErrorCodes.NOT_FOUND, 'account not found', 404);
     if (!canTransition(account.authStatus, AccountAuthStatus.AUTHORIZING)) {
-      throw new AppError(ErrorCodes.BAD_REQUEST, `cannot transition from ${account.authStatus} to authorizing`, 400);
+      throw new AppError(
+        ErrorCodes.BAD_REQUEST,
+        `cannot transition from ${account.authStatus} to authorizing`,
+        400
+      );
     }
     await prisma.platformAccount.update({
       where: { id: input.accountId },
@@ -59,8 +68,11 @@ export async function completeOAuthCallback(input: {
   state: string;
   redirectUri: string;
 }) {
-  const stateRecord = await consumeOAuthState(input.state);
-  const adapter = getAdapter(input.platform);
+  const [oauthConfig, stateRecord] = await Promise.all([
+    getOAuthConfig(),
+    consumeOAuthState(input.state),
+  ]);
+  const adapter = getAdapter(input.platform, oauthConfig);
 
   const tokenResult = await adapter.exchangeCode({
     code: input.code,
@@ -115,7 +127,9 @@ export async function completeOAuthCallback(input: {
   });
 
   const encryptedAccess = encryptToken(tokenResult.accessToken);
-  const encryptedRefresh = tokenResult.refreshToken ? encryptToken(tokenResult.refreshToken) : null;
+  const encryptedRefresh = tokenResult.refreshToken
+    ? encryptToken(tokenResult.refreshToken)
+    : null;
 
   if (!existingToken) {
     await prisma.socialAccountToken.create({
@@ -123,8 +137,12 @@ export async function completeOAuthCallback(input: {
         accountId: account.id,
         accessToken: encryptedAccess,
         refreshToken: encryptedRefresh,
-        expiresAt: tokenResult.expiresIn ? new Date(Date.now() + tokenResult.expiresIn * 1000) : null,
-        refreshExpiresAt: tokenResult.refreshExpiresIn ? new Date(Date.now() + tokenResult.refreshExpiresIn * 1000) : null,
+        expiresAt: tokenResult.expiresIn
+          ? new Date(Date.now() + tokenResult.expiresIn * 1000)
+          : null,
+        refreshExpiresAt: tokenResult.refreshExpiresIn
+          ? new Date(Date.now() + tokenResult.refreshExpiresIn * 1000)
+          : null,
         scopes: tokenResult.scopes,
         rawData: toJsonInput(tokenResult.rawData),
       },
@@ -135,8 +153,12 @@ export async function completeOAuthCallback(input: {
       data: {
         accessToken: encryptedAccess,
         refreshToken: encryptedRefresh,
-        expiresAt: tokenResult.expiresIn ? new Date(Date.now() + tokenResult.expiresIn * 1000) : null,
-        refreshExpiresAt: tokenResult.refreshExpiresIn ? new Date(Date.now() + tokenResult.refreshExpiresIn * 1000) : null,
+        expiresAt: tokenResult.expiresIn
+          ? new Date(Date.now() + tokenResult.expiresIn * 1000)
+          : null,
+        refreshExpiresAt: tokenResult.refreshExpiresIn
+          ? new Date(Date.now() + tokenResult.refreshExpiresIn * 1000)
+          : null,
         scopes: tokenResult.scopes,
         rawData: toJsonInput(tokenResult.rawData),
       },
@@ -153,7 +175,11 @@ export async function devAuthorize(input: {
 }) {
   const stateRecord = await consumeOAuthState(input.state);
   if (stateRecord.platform !== input.platform) {
-    throw new AppError(ErrorCodes.BAD_REQUEST, 'oauth state platform mismatch', 400);
+    throw new AppError(
+      ErrorCodes.BAD_REQUEST,
+      'oauth state platform mismatch',
+      400
+    );
   }
 
   const profile = {
@@ -171,7 +197,9 @@ export async function devAuthorize(input: {
   };
 
   let account = input.accountId
-    ? await prisma.platformAccount.findUnique({ where: { id: input.accountId } })
+    ? await prisma.platformAccount.findUnique({
+        where: { id: input.accountId },
+      })
     : null;
 
   const now = new Date();
@@ -218,7 +246,9 @@ export async function devAuthorize(input: {
         accessToken: encryptedAccess,
         refreshToken: encryptedRefresh,
         expiresAt: new Date(Date.now() + tokenResult.expiresIn * 1000),
-        refreshExpiresAt: new Date(Date.now() + tokenResult.refreshExpiresIn * 1000),
+        refreshExpiresAt: new Date(
+          Date.now() + tokenResult.refreshExpiresIn * 1000
+        ),
         scopes: tokenResult.scopes,
       },
     });
@@ -229,7 +259,9 @@ export async function devAuthorize(input: {
         accessToken: encryptedAccess,
         refreshToken: encryptedRefresh,
         expiresAt: new Date(Date.now() + tokenResult.expiresIn * 1000),
-        refreshExpiresAt: new Date(Date.now() + tokenResult.refreshExpiresIn * 1000),
+        refreshExpiresAt: new Date(
+          Date.now() + tokenResult.refreshExpiresIn * 1000
+        ),
         scopes: tokenResult.scopes,
       },
     });
@@ -239,10 +271,17 @@ export async function devAuthorize(input: {
 }
 
 export async function revokeAccount(accountId: string) {
-  const account = await prisma.platformAccount.findUnique({ where: { id: accountId } });
-  if (!account) throw new AppError(ErrorCodes.NOT_FOUND, 'account not found', 404);
+  const account = await prisma.platformAccount.findUnique({
+    where: { id: accountId },
+  });
+  if (!account)
+    throw new AppError(ErrorCodes.NOT_FOUND, 'account not found', 404);
   if (!canTransition(account.authStatus, AccountAuthStatus.REVOKED)) {
-    throw new AppError(ErrorCodes.BAD_REQUEST, `cannot revoke from ${account.authStatus}`, 400);
+    throw new AppError(
+      ErrorCodes.BAD_REQUEST,
+      `cannot revoke from ${account.authStatus}`,
+      400
+    );
   }
 
   await prisma.socialAccountToken.deleteMany({ where: { accountId } });
@@ -260,11 +299,19 @@ export async function syncWorks(accountId: string) {
     where: { id: accountId },
     include: { token: true },
   });
-  if (!account) throw new AppError(ErrorCodes.NOT_FOUND, 'account not found', 404);
-  if (!account.token) throw new AppError(ErrorCodes.UNAUTHORIZED, 'account not bound', 401);
+  if (!account)
+    throw new AppError(ErrorCodes.NOT_FOUND, 'account not found', 404);
+  if (!account.token)
+    throw new AppError(ErrorCodes.UNAUTHORIZED, 'account not bound', 401);
 
-  const adapter = getAdapter(account.platform);
-  if (!adapter.syncWorks) throw new AppError(ErrorCodes.BAD_REQUEST, 'platform does not support syncWorks', 400);
+  const oauthConfig = await getOAuthConfig();
+  const adapter = getAdapter(account.platform, oauthConfig);
+  if (!adapter.syncWorks)
+    throw new AppError(
+      ErrorCodes.BAD_REQUEST,
+      'platform does not support syncWorks',
+      400
+    );
 
   const accessToken = decryptToken(account.token.accessToken);
 
@@ -319,16 +366,26 @@ export async function syncWorks(accountId: string) {
   return results;
 }
 
-export async function syncMetricsForAccount(accountId: string, workIds?: string[]) {
+export async function syncMetricsForAccount(
+  accountId: string,
+  workIds?: string[]
+) {
   const account = await prisma.platformAccount.findUnique({
     where: { id: accountId },
     include: { token: true },
   });
-  if (!account) throw new AppError(ErrorCodes.NOT_FOUND, 'account not found', 404);
-  if (!account.token) throw new AppError(ErrorCodes.UNAUTHORIZED, 'account not bound', 401);
+  if (!account)
+    throw new AppError(ErrorCodes.NOT_FOUND, 'account not found', 404);
+  if (!account.token)
+    throw new AppError(ErrorCodes.UNAUTHORIZED, 'account not bound', 401);
 
   const adapter = getAdapter(account.platform);
-  if (!adapter.syncMetrics) throw new AppError(ErrorCodes.BAD_REQUEST, 'platform does not support syncMetrics', 400);
+  if (!adapter.syncMetrics)
+    throw new AppError(
+      ErrorCodes.BAD_REQUEST,
+      'platform does not support syncMetrics',
+      400
+    );
 
   const accessToken = decryptToken(account.token.accessToken);
 

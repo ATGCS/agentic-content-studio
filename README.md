@@ -36,7 +36,6 @@ pnpm dev:studio
 ```
 
 - 中台 Web：http://localhost:3001
-- API：http://localhost:3002
 - 默认账号：`admin@acs.local` / `admin123`
 
 官网（仓库根目录，独立端口）：

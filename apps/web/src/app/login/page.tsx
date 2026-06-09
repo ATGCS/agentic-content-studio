@@ -7,8 +7,8 @@ import { api, setToken } from '@/lib/api';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('admin@acs.local');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -48,10 +48,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <p className="mb-6 text-sm text-[#86909c]">
-            演示账号 admin@acs.local / admin123
-          </p>
-
           <div className="space-y-4">
             <div className="login-input-wrap">
               <Mail />
@@ -76,9 +72,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {error && (
-            <p className="mt-4 text-sm text-[#f53f3f]">{error}</p>
-          )}
+          {error && <p className="mt-4 text-sm text-[#f53f3f]">{error}</p>}
 
           <button
             type="submit"
@@ -97,7 +91,9 @@ export default function LoginPage() {
             「一站式 AI 内容生产、审核、发布与数据复盘，让运营效率提升 10 倍。」
           </p>
           <div className="text-center">
-            <p className="text-sm font-semibold text-[#1d2129]">Content Studio</p>
+            <p className="text-sm font-semibold text-[#1d2129]">
+              Content Studio
+            </p>
             <p className="text-xs text-[#86909c]">Powered by TurboPush</p>
           </div>
         </div>

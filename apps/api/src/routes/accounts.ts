@@ -182,12 +182,18 @@ export async function accountRoutes(app: FastifyInstance) {
       const task = await prisma.reviewTask.findUnique({
         where: { id },
         include: {
-          content: { include: { versions: true, creator: { select: { id: true, name: true, email: true } } } },
+          content: {
+            include: {
+              versions: true,
+              creator: { select: { id: true, name: true, email: true } },
+            },
+          },
           version: true,
           reviewer: { select: { id: true, name: true } },
         },
       });
-      if (!task) throw new AppError(ErrorCodes.NOT_FOUND, 'review not found', 404);
+      if (!task)
+        throw new AppError(ErrorCodes.NOT_FOUND, 'review not found', 404);
       return reply.success(task);
     }
   );
@@ -196,12 +202,26 @@ export async function accountRoutes(app: FastifyInstance) {
     '/reviews',
     { onRequest: [app.authenticate] },
     async (request, reply) => {
-      return reply.success(
-        await reviews.listReviews(
-          getUser(request),
-          request.query as Record<string, string>
-        )
+      const result = await reviews.listReviews(
+        getUser(request),
+        request.query as Record<string, string>
       );
+      // Map fields for frontend compatibility
+      const mapped = result.items.map((item: any) => ({
+        ...item,
+        platform: item.version?.platform ?? item.content?.status ?? '',
+        account: item.version?.account?.accountName ?? '',
+        submittedAt: item.createdAt?.toISOString?.() ?? item.createdAt ?? '',
+        source: 'AI 生成',
+        reviewType: '内容合规',
+        riskLevel: 'low' as const,
+      }));
+      return reply.success({
+        items: mapped,
+        total: result.total,
+        page: result.page,
+        pageSize: result.pageSize,
+      });
     }
   );
 
@@ -312,7 +332,8 @@ export async function accountRoutes(app: FastifyInstance) {
           analyticsData: true,
         },
       });
-      if (!version) throw new AppError(ErrorCodes.NOT_FOUND, 'version not found', 404);
+      if (!version)
+        throw new AppError(ErrorCodes.NOT_FOUND, 'version not found', 404);
       return reply.success(version);
     }
   );
@@ -387,6 +408,244 @@ export async function accountRoutes(app: FastifyInstance) {
     }
   );
 
+  // --- Analytics aggregate route ---
+  app.get(
+    '/analytics/aggregate',
+    { onRequest: [app.authenticate] },
+    async (_request, reply) => {
+      const [
+        viewsResult,
+        likesResult,
+        commentsResult,
+        sharesResult,
+        collectsResult,
+      ] = await Promise.all([
+        prisma.analyticsData.aggregate({ _sum: { views: true } }),
+        prisma.analyticsData.aggregate({ _sum: { likes: true } }),
+        prisma.analyticsData.aggregate({ _sum: { comments: true } }),
+        prisma.analyticsData.aggregate({ _sum: { shares: true } }),
+        prisma.analyticsData.aggregate({ _sum: { collects: true } }),
+      ]);
+      const totalViews = viewsResult._sum.views ?? 0;
+      const totalLikes = likesResult._sum.likes ?? 0;
+      const totalComments = commentsResult._sum.comments ?? 0;
+      const totalShares = sharesResult._sum.shares ?? 0;
+      const totalCollects = collectsResult._sum.collects ?? 0;
+
+      // Top 10 contents by views
+      const topContents = await prisma.analyticsData.groupBy({
+        by: ['contentId'],
+        _sum: { views: true, likes: true },
+        orderBy: { _sum: { views: 'desc' } },
+        take: 10,
+      });
+
+      const contentIds = topContents.map((t) => t.contentId);
+      const contentsMap = new Map(
+        (
+          await prisma.content.findMany({
+            where: { id: { in: contentIds } },
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              versions: { select: { platform: true } },
+            },
+          })
+        ).map((c) => [c.id, c])
+      );
+
+      const top10 = topContents.map((t) => {
+        const c = contentsMap.get(t.contentId);
+        const views = t._sum.views ?? 0;
+        const likes = t._sum.likes ?? 0;
+        const completion =
+          views > 0 ? ((likes / views) * 100).toFixed(1) + '%' : '0%';
+        return {
+          contentId: t.contentId,
+          title: c?.title ?? '未知内容',
+          platform: c?.versions?.[0]?.platform ?? 'WECHAT',
+          views: views.toLocaleString(),
+          interactions: likes.toLocaleString(),
+          completion,
+        };
+      });
+
+      return reply.success({
+        metrics: {
+          totalViews,
+          totalLikes,
+          totalComments,
+          totalShares,
+          totalCollects,
+        },
+        top10,
+      });
+    }
+  );
+
+  // --- Reviews stats route ---
+  app.get(
+    '/reviews/stats',
+    { onRequest: [app.authenticate] },
+    async (_request, reply) => {
+      const [pending, approved, rejected, total] = await Promise.all([
+        prisma.reviewTask.count({ where: { status: 'PENDING' } }),
+        prisma.reviewTask.count({ where: { status: 'APPROVED' } }),
+        prisma.reviewTask.count({ where: { status: 'REJECTED' } }),
+        prisma.reviewTask.count(),
+      ]);
+
+      // Risk distribution (by content platform from version)
+      const reviewTasks = await prisma.reviewTask.findMany({
+        select: {
+          id: true,
+          version: {
+            select: { platform: true, id: true },
+          },
+        },
+        where: { versionId: { not: null } },
+        take: 500,
+      });
+
+      const platformCounts: Record<string, number> = {};
+      for (const task of reviewTasks) {
+        const platform = task.version?.platform ?? 'OTHER';
+        platformCounts[platform] = (platformCounts[platform] ?? 0) + 1;
+      }
+
+      return reply.success({
+        total,
+        pending,
+        approved,
+        rejected,
+        platformDistribution: Object.entries(platformCounts).map(
+          ([platform, count]) => ({
+            platform,
+            count,
+            percent:
+              total > 0 ? ((count / total) * 100).toFixed(1) + '%' : '0%',
+          })
+        ),
+      });
+    }
+  );
+
+  // --- Publishing drafts route (WeChat draft sync) ---
+  app.get(
+    '/publishing/drafts',
+    { onRequest: [app.authenticate] },
+    async (_request, reply) => {
+      const drafts = await prisma.contentVersion.findMany({
+        where: { platform: 'WECHAT', status: 'DRAFT' },
+        include: {
+          content: { select: { id: true, title: true, topicId: true } },
+          account: { select: { id: true, accountName: true } },
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 50,
+      });
+
+      return reply.success(
+        drafts.map((d) => ({
+          id: d.id,
+          title: d.title ?? d.content.title,
+          project: d.content.title,
+          account: d.account?.accountName ?? '未绑定账号',
+          syncedAt: d.updatedAt.toISOString(),
+          status: d.status === 'DRAFT' ? 'synced' : 'syncing',
+          contentId: d.content.id,
+        }))
+      );
+    }
+  );
+
+  // --- Publishing packages route (platform-specific packages) ---
+  app.get(
+    '/publishing/packages',
+    { onRequest: [app.authenticate] },
+    async (request, reply) => {
+      const { platform } = request.query as { platform?: string };
+      const where = platform
+        ? {
+            platform: platform as Platform,
+            status: {
+              in: ['DRAFT', 'APPROVED', 'PENDING_PUBLISH'] as ContentStatus[],
+            },
+          }
+        : {
+            status: { in: ['APPROVED', 'PENDING_PUBLISH'] as ContentStatus[] },
+          };
+
+      const packages = await prisma.contentVersion.findMany({
+        where,
+        include: {
+          content: { select: { id: true, title: true } },
+          account: { select: { id: true, accountName: true } },
+          publishingTasks: {
+            select: { id: true, status: true, scheduledAt: true },
+          },
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 50,
+      });
+
+      return reply.success(
+        packages.map((p) => ({
+          id: p.id,
+          title: p.title ?? p.content.title,
+          project: p.content.title,
+          platform: p.platform,
+          account: p.account?.accountName ?? '未选择账号',
+          status:
+            p.status === 'PUBLISHED'
+              ? 'published'
+              : p.status === 'PENDING_PUBLISH'
+                ? 'generated'
+                : 'draft',
+          time: p.updatedAt.toISOString(),
+          hasPublishingTask: p.publishingTasks.length > 0,
+        }))
+      );
+    }
+  );
+
+  // --- Platform OAuth config routes (credentials per platform) ---
+
+  app.get(
+    '/accounts/oauth-config',
+    { onRequest: [app.authenticate] },
+    async (_request, reply) => {
+      const config = await accounts.getOAuthConfig();
+      return reply.success(accounts.publicOAuthConfig(config));
+    }
+  );
+
+  app.put(
+    '/accounts/oauth-config',
+    { onRequest: [app.authenticate] },
+    async (request, reply) => {
+      const body = z
+        .object({
+          wechat: z
+            .object({ appId: z.string(), appSecret: z.string() })
+            .optional(),
+          douyin: z
+            .object({ clientKey: z.string(), clientSecret: z.string() })
+            .optional(),
+          kuaishou: z
+            .object({ appId: z.string(), appSecret: z.string() })
+            .optional(),
+          bilibili: z
+            .object({ appId: z.string(), appSecret: z.string() })
+            .optional(),
+        })
+        .parse(request.body);
+      const saved = await accounts.saveOAuthConfig(body);
+      return reply.success(accounts.publicOAuthConfig(saved));
+    }
+  );
+
   // --- Account binding routes ---
 
   app.post(
@@ -394,12 +653,14 @@ export async function accountRoutes(app: FastifyInstance) {
     { onRequest: [app.authenticate] },
     async (request, reply) => {
       const user = getUser(request);
-      const body = z.object({
-        platform: platformSchema,
-        redirectAfterBind: z.string().optional(),
-        scopes: z.array(z.string()).optional(),
-        accountId: z.string().optional(),
-      }).parse(request.body);
+      const body = z
+        .object({
+          platform: platformSchema,
+          redirectAfterBind: z.string().optional(),
+          scopes: z.array(z.string()).optional(),
+          accountId: z.string().optional(),
+        })
+        .parse(request.body);
 
       const result = await accounts.startBind({
         platform: body.platform as Platform,
@@ -462,9 +723,12 @@ export async function accountRoutes(app: FastifyInstance) {
       const user = getUser(request);
       requireRoles(user, 'ADMIN', 'OPERATOR');
       const { id } = request.params as { id: string };
-      const body = z.object({
-        workIds: z.array(z.string()).optional(),
-      }).optional().parse(request.body);
+      const body = z
+        .object({
+          workIds: z.array(z.string()).optional(),
+        })
+        .optional()
+        .parse(request.body);
       const result = await accounts.syncMetricsForAccount(id, body?.workIds);
       return reply.success(result);
     }
@@ -472,64 +736,73 @@ export async function accountRoutes(app: FastifyInstance) {
 }
 
 export async function oauthRoutes(app: FastifyInstance) {
-  app.get(
-    '/oauth/:platform/callback',
-    async (request, reply) => {
-      const { platform: platformSlug } = request.params as { platform: string };
-      const query = z.object({
+  app.get('/oauth/:platform/callback', async (request, reply) => {
+    const { platform: platformSlug } = request.params as { platform: string };
+    const query = z
+      .object({
         code: z.string(),
         state: z.string(),
-      }).parse(request.query);
+      })
+      .parse(request.query);
 
-      let platform: Platform;
-      try {
-        platform = slugToPlatform(platformSlug);
-      } catch {
-        throw new AppError(ErrorCodes.NOT_FOUND, 'platform not supported', 404);
-      }
-
-      const callbackBase = oauthPublicBase();
-      const redirectUri = `${callbackBase}/api/oauth/${platformSlug}/callback`;
-
-      const account = await accounts.completeOAuthCallback({
-        platform,
-        code: query.code,
-        state: query.state,
-        redirectUri,
-      });
-
-      const resultUrl = process.env.WEB_BASE_URL ?? 'http://localhost:3001';
-      return reply.redirect(`${resultUrl}/accounts/bind/result?success=true&accountId=${account.id}`);
+    let platform: Platform;
+    try {
+      platform = slugToPlatform(platformSlug);
+    } catch {
+      throw new AppError(ErrorCodes.NOT_FOUND, 'platform not supported', 404);
     }
-  );
 
-  app.get(
-    '/oauth/:platform/dev-authorize',
-    async (request, reply) => {
-      if (process.env.NODE_ENV === 'production' && process.env.ALLOW_DEV_AUTH !== '1') {
-        throw new AppError(ErrorCodes.FORBIDDEN, 'dev auth disabled in production', 403);
-      }
+    const callbackBase = oauthPublicBase();
+    const redirectUri = `${callbackBase}/api/oauth/${platformSlug}/callback`;
 
-      const { platform: platformSlug } = request.params as { platform: string };
-      const query = z.object({
+    const account = await accounts.completeOAuthCallback({
+      platform,
+      code: query.code,
+      state: query.state,
+      redirectUri,
+    });
+
+    const resultUrl = process.env.WEB_BASE_URL ?? 'http://localhost:3001';
+    return reply.redirect(
+      `${resultUrl}/accounts/bind/result?success=true&accountId=${account.id}`
+    );
+  });
+
+  app.get('/oauth/:platform/dev-authorize', async (request, reply) => {
+    if (
+      process.env.NODE_ENV === 'production' &&
+      process.env.ALLOW_DEV_AUTH !== '1'
+    ) {
+      throw new AppError(
+        ErrorCodes.FORBIDDEN,
+        'dev auth disabled in production',
+        403
+      );
+    }
+
+    const { platform: platformSlug } = request.params as { platform: string };
+    const query = z
+      .object({
         state: z.string(),
         redirect_uri: z.string().optional(),
-      }).parse(request.query);
+      })
+      .parse(request.query);
 
-      let platform: Platform;
-      try {
-        platform = slugToPlatform(platformSlug);
-      } catch {
-        throw new AppError(ErrorCodes.NOT_FOUND, 'platform not supported', 404);
-      }
-
-      const account = await accounts.devAuthorize({
-        platform,
-        state: query.state,
-      });
-
-      const resultUrl = process.env.WEB_BASE_URL ?? 'http://localhost:3001';
-      return reply.redirect(`${resultUrl}/accounts/bind/result?success=true&accountId=${account.id}&dev=true`);
+    let platform: Platform;
+    try {
+      platform = slugToPlatform(platformSlug);
+    } catch {
+      throw new AppError(ErrorCodes.NOT_FOUND, 'platform not supported', 404);
     }
-  );
+
+    const account = await accounts.devAuthorize({
+      platform,
+      state: query.state,
+    });
+
+    const resultUrl = process.env.WEB_BASE_URL ?? 'http://localhost:3001';
+    return reply.redirect(
+      `${resultUrl}/accounts/bind/result?success=true&accountId=${account.id}&dev=true`
+    );
+  });
 }

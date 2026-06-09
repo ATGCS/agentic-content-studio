@@ -3,7 +3,7 @@
 ## 一、概述
 
 - **Base URL**：`/api`
-- **本地 API**：`http://localhost:3002/api`
+- **本地 API**：`http://localhost:3001/api`
 - **协议**：HTTPS（生产）/ HTTP（本地）
 - **格式**：JSON，`Content-Type: application/json`
 - **OpenAPI**：见同目录 [`openapi.yaml`](./openapi.yaml)
@@ -33,14 +33,14 @@
 
 ### 常见 HTTP 状态
 
-| HTTP | code 示例 | 说明 |
-| ---- | --------- | ---- |
-| 200 | 0 | 成功 |
-| 400 | 400xx | 参数错误 |
-| 401 | 40100 | 未登录或 token 无效 |
-| 403 | 40300 | 无权限 |
-| 404 | 404xx | 资源不存在 |
-| 500 | 50000 | 服务错误 |
+| HTTP | code 示例 | 说明                |
+| ---- | --------- | ------------------- |
+| 200  | 0         | 成功                |
+| 400  | 400xx     | 参数错误            |
+| 401  | 40100     | 未登录或 token 无效 |
+| 403  | 40300     | 无权限              |
+| 404  | 404xx     | 资源不存在          |
+| 500  | 50000     | 服务错误            |
 
 ### 分页列表
 
@@ -59,11 +59,11 @@
 
 通用查询参数：
 
-| 参数 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| page | number | 否 | 页码，默认 1 |
-| pageSize | number | 否 | 每页数量，默认 20，最大建议 100 |
-| sort | string | 否 | 排序，如 `-createdAt` |
+| 参数     | 类型   | 必填 | 说明                            |
+| -------- | ------ | ---- | ------------------------------- |
+| page     | number | 否   | 页码，默认 1                    |
+| pageSize | number | 否   | 每页数量，默认 20，最大建议 100 |
+| sort     | string | 否   | 排序，如 `-createdAt`           |
 
 ## 三、枚举
 
@@ -118,28 +118,28 @@ MaterialRole: COVER / BODY / ATTACHMENT
 
 ## 四、模块与路由总览
 
-| 模块 | 路径 | 状态 | 说明 |
-| ---- | ---- | ---- | ---- |
-| Auth | `/auth/*` | 已实现 | 登录、当前用户 |
-| Dashboard | `/dashboard/stats` | 已实现 | 工作台统计 |
-| Accounts | `/accounts/*` | 已实现 | 平台账号 |
-| Account Profiles | `/account-profiles/*` | 已实现 | 账号画像 |
-| Topics | `/topics/*` | 已实现 | 选题 |
-| Contents | `/contents/*` | 已实现 | 内容项目 |
-| Content Materials | `/contents/:id/materials` | 已实现 | 内容素材绑定 |
-| Versions | `/versions/*` | 已实现 | 平台版本详情与编辑 |
-| Materials | `/materials/*` | 已实现 | 内容绑定素材（旧模型） |
-| Material Library | `/materials/library/*` | 规划中 P1 | 独立素材库 |
-| IMA | `/ima/*` | 已实现 | IMA 配置、知识库、检索 |
-| Agents | `/agents/*` | 部分实现 | Agent 配置与执行；`body/run` 规划中 |
-| Agent Runs | `/agent-runs/*` | 已实现 | Agent 执行记录 |
-| Prompts | `/prompts/*` | 已实现 | Prompt 模板 |
-| Reviews | `/reviews/*` | 已实现 | 审核；`/reviews/stats` 规划中 |
-| Publishing | `/publishing/*` | 已实现 | 发布任务；`/publishing/summary` 规划中 |
-| Analytics | `/analytics/*` | 部分实现 | 数据同步与复盘；`/analytics/overview` 规划中 |
-| Integration | `/integration/*` | 规划中 P1 | 外部 Agent 接入 |
-| Users | `/users/*` | 规划中 P2 | 用户管理 |
-| Settings | `/settings/*` | 规划中 P2 | 系统配置（模型/TurboPush 等） |
+| 模块              | 路径                      | 状态      | 说明                                         |
+| ----------------- | ------------------------- | --------- | -------------------------------------------- |
+| Auth              | `/auth/*`                 | 已实现    | 登录、当前用户                               |
+| Dashboard         | `/dashboard/stats`        | 已实现    | 工作台统计                                   |
+| Accounts          | `/accounts/*`             | 已实现    | 平台账号                                     |
+| Account Profiles  | `/account-profiles/*`     | 已实现    | 账号画像                                     |
+| Topics            | `/topics/*`               | 已实现    | 选题                                         |
+| Contents          | `/contents/*`             | 已实现    | 内容项目                                     |
+| Content Materials | `/contents/:id/materials` | 已实现    | 内容素材绑定                                 |
+| Versions          | `/versions/*`             | 已实现    | 平台版本详情与编辑                           |
+| Materials         | `/materials/*`            | 已实现    | 内容绑定素材（旧模型）                       |
+| Material Library  | `/materials/library/*`    | 规划中 P1 | 独立素材库                                   |
+| IMA               | `/ima/*`                  | 已实现    | IMA 配置、知识库、检索                       |
+| Agents            | `/agents/*`               | 部分实现  | Agent 配置与执行；`body/run` 规划中          |
+| Agent Runs        | `/agent-runs/*`           | 已实现    | Agent 执行记录                               |
+| Prompts           | `/prompts/*`              | 已实现    | Prompt 模板                                  |
+| Reviews           | `/reviews/*`              | 已实现    | 审核；`/reviews/stats` 规划中                |
+| Publishing        | `/publishing/*`           | 已实现    | 发布任务；`/publishing/summary` 规划中       |
+| Analytics         | `/analytics/*`            | 部分实现  | 数据同步与复盘；`/analytics/overview` 规划中 |
+| Integration       | `/integration/*`          | 规划中 P1 | 外部 Agent 接入                              |
+| Users             | `/users/*`                | 规划中 P2 | 用户管理                                     |
+| Settings          | `/settings/*`             | 规划中 P2 | 系统配置（模型/TurboPush 等）                |
 
 ## 五、Auth
 
@@ -149,10 +149,10 @@ MaterialRole: COVER / BODY / ATTACHMENT
 
 请求体：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| email | string | 是 | 登录邮箱 |
-| password | string | 是 | 登录密码 |
+| 字段     | 类型   | 必填 | 说明     |
+| -------- | ------ | ---- | -------- |
+| email    | string | 是   | 登录邮箱 |
+| password | string | 是   | 登录密码 |
 
 请求示例：
 
@@ -165,10 +165,10 @@ MaterialRole: COVER / BODY / ATTACHMENT
 
 响应 `data`：
 
-| 字段 | 类型 | 说明 |
-| ---- | ---- | ---- |
-| token | string | JWT |
-| user | UserPublic | 当前用户 |
+| 字段  | 类型       | 说明     |
+| ----- | ---------- | -------- |
+| token | string     | JWT      |
+| user  | UserPublic | 当前用户 |
 
 响应示例：
 
@@ -204,21 +204,21 @@ MaterialRole: COVER / BODY / ATTACHMENT
 
 工作台统计。**V1 已实现**扁平计数结构：
 
-| 字段 | 类型 | 说明 |
-| ---- | ---- | ---- |
-| pendingGenerate | number | 待生成（DRAFT + PENDING_GENERATE） |
-| generating | number | 生成中 |
-| pendingReview | number | 待审核 |
-| pendingPublish | number | 待发布（APPROVED + PENDING_PUBLISH） |
-| publishedTotal | number | 已发布（PUBLISHED + PUBLISHING） |
-| reviewed | number | 已审核通过 |
+| 字段            | 类型   | 说明                                 |
+| --------------- | ------ | ------------------------------------ |
+| pendingGenerate | number | 待生成（DRAFT + PENDING_GENERATE）   |
+| generating      | number | 生成中                               |
+| pendingReview   | number | 待审核                               |
+| pendingPublish  | number | 待发布（APPROVED + PENDING_PUBLISH） |
+| publishedTotal  | number | 已发布（PUBLISHED + PUBLISHING）     |
+| reviewed        | number | 已审核通过                           |
 
 **V1.1 规划**字段：
 
-| 字段 | 类型 | 说明 |
-| ---- | ---- | ---- |
-| publishedWeek | number | 本周已发布 |
-| alerts | array | 工作台右侧告警（risk / agent / account） |
+| 字段          | 类型   | 说明                                     |
+| ------------- | ------ | ---------------------------------------- |
+| publishedWeek | number | 本周已发布                               |
+| alerts        | array  | 工作台右侧告警（risk / agent / account） |
 
 响应示例（V1）：
 
@@ -245,26 +245,26 @@ MaterialRole: COVER / BODY / ATTACHMENT
 
 Query：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| platform | Platform | 否 | 平台筛选 |
-| authStatus | string | 否 | 授权状态筛选 |
+| 字段       | 类型     | 必填 | 说明         |
+| ---------- | -------- | ---- | ------------ |
+| platform   | Platform | 否   | 平台筛选     |
+| authStatus | string   | 否   | 授权状态筛选 |
 
 响应 `data`：`PlatformAccount[]`
 
 `PlatformAccount` 字段：
 
-| 字段 | 类型 | 说明 |
-| ---- | ---- | ---- |
-| id | string | 账号 ID |
-| platform | Platform | 平台 |
-| accountName | string | 账号名称 |
-| accountType | string? | 账号类型 |
-| authStatus | string | 授权状态 |
-| ownerId | string | 负责人 ID |
-| rawData | object? | 平台原始数据 |
-| createdAt | string | 创建时间 |
-| updatedAt | string | 更新时间 |
+| 字段        | 类型     | 说明         |
+| ----------- | -------- | ------------ |
+| id          | string   | 账号 ID      |
+| platform    | Platform | 平台         |
+| accountName | string   | 账号名称     |
+| accountType | string?  | 账号类型     |
+| authStatus  | string   | 授权状态     |
+| ownerId     | string   | 负责人 ID    |
+| rawData     | object?  | 平台原始数据 |
+| createdAt   | string   | 创建时间     |
+| updatedAt   | string   | 更新时间     |
 
 ### GET /accounts/:id
 
@@ -272,9 +272,9 @@ Query：
 
 Path：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| id | string | 是 | 账号 ID |
+| 字段 | 类型   | 必填 | 说明    |
+| ---- | ------ | ---- | ------- |
+| id   | string | 是   | 账号 ID |
 
 响应 `data`：`PlatformAccount`，可包含 `profile` 等关联信息。
 
@@ -296,12 +296,12 @@ Path：
 
 请求体：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| platform | Platform | 是 | 平台 |
-| accountName | string | 是 | 账号名称 |
-| accountType | string | 否 | 账号类型 |
-| ownerId | string | 否 | 负责人 ID，默认当前用户 |
+| 字段        | 类型     | 必填 | 说明                    |
+| ----------- | -------- | ---- | ----------------------- |
+| platform    | Platform | 是   | 平台                    |
+| accountName | string   | 是   | 账号名称                |
+| accountType | string   | 否   | 账号类型                |
+| ownerId     | string   | 否   | 负责人 ID，默认当前用户 |
 
 响应 `data`：`PlatformAccount`
 
@@ -311,14 +311,14 @@ Path：
 
 请求体：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| platform | Platform | 否 | 平台 |
-| accountName | string | 否 | 账号名称 |
-| accountType | string | 否 | 账号类型 |
-| authStatus | string | 否 | 授权状态 |
-| ownerId | string | 否 | 负责人 ID |
-| rawData | object | 否 | 平台原始数据 |
+| 字段        | 类型     | 必填 | 说明         |
+| ----------- | -------- | ---- | ------------ |
+| platform    | Platform | 否   | 平台         |
+| accountName | string   | 否   | 账号名称     |
+| accountType | string   | 否   | 账号类型     |
+| authStatus  | string   | 否   | 授权状态     |
+| ownerId     | string   | 否   | 负责人 ID    |
+| rawData     | object   | 否   | 平台原始数据 |
 
 响应 `data`：`PlatformAccount`
 
@@ -330,9 +330,9 @@ Path：
 
 Query：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| accountId | string | 是 | 账号 ID |
+| 字段      | 类型   | 必填 | 说明    |
+| --------- | ------ | ---- | ------- |
+| accountId | string | 是   | 账号 ID |
 
 响应 `data`：`AccountProfile | null`
 
@@ -342,23 +342,23 @@ Query：
 
 Path：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| accountId | string | 是 | 账号 ID |
+| 字段      | 类型   | 必填 | 说明    |
+| --------- | ------ | ---- | ------- |
+| accountId | string | 是   | 账号 ID |
 
 请求体：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| positioning | string | 否 | 账号定位 |
-| targetAudience | object | 否 | 目标人群 |
-| contentStyle | string | 否 | 内容风格 |
-| titlePreference | string | 否 | 标题偏好 |
-| coverPreference | string | 否 | 封面偏好 |
-| tone | string | 否 | 语气 |
-| forbiddenWords | array | 否 | 禁用词 |
-| contentBoundary | string | 否 | 内容边界 |
-| publishStrategy | string | 否 | 发布策略 |
+| 字段            | 类型   | 必填 | 说明     |
+| --------------- | ------ | ---- | -------- |
+| positioning     | string | 否   | 账号定位 |
+| targetAudience  | object | 否   | 目标人群 |
+| contentStyle    | string | 否   | 内容风格 |
+| titlePreference | string | 否   | 标题偏好 |
+| coverPreference | string | 否   | 封面偏好 |
+| tone            | string | 否   | 语气     |
+| forbiddenWords  | array  | 否   | 禁用词   |
+| contentBoundary | string | 否   | 内容边界 |
+| publishStrategy | string | 否   | 发布策略 |
 
 响应 `data`：`AccountProfile`
 
@@ -370,12 +370,12 @@ Path：
 
 Query：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| status | ContentStatus | 否 | 状态 |
-| ownerId | string | 否 | 负责人 |
-| page | number | 否 | 页码 |
-| pageSize | number | 否 | 每页数量 |
+| 字段     | 类型          | 必填 | 说明     |
+| -------- | ------------- | ---- | -------- |
+| status   | ContentStatus | 否   | 状态     |
+| ownerId  | string        | 否   | 负责人   |
+| page     | number        | 否   | 页码     |
+| pageSize | number        | 否   | 每页数量 |
 
 响应 `data`：分页列表或 `Topic[]`，以服务实现为准。
 
@@ -385,12 +385,12 @@ Query：
 
 请求体：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| title | string | 是 | 选题标题 |
-| description | string | 否 | 选题说明 |
-| targetPlatforms | Platform[] | 否 | 目标平台 |
-| source | string | 否 | 来源，默认 `manual` |
+| 字段            | 类型       | 必填 | 说明                |
+| --------------- | ---------- | ---- | ------------------- |
+| title           | string     | 是   | 选题标题            |
+| description     | string     | 否   | 选题说明            |
+| targetPlatforms | Platform[] | 否   | 目标平台            |
+| source          | string     | 否   | 来源，默认 `manual` |
 
 响应 `data`：`Topic`
 
@@ -414,10 +414,10 @@ Query：
 
 Query：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| status | ContentStatus | 否 | 内容状态 |
-| topicId | string | 否 | 选题 ID |
+| 字段    | 类型          | 必填 | 说明     |
+| ------- | ------------- | ---- | -------- |
+| status  | ContentStatus | 否   | 内容状态 |
+| topicId | string        | 否   | 选题 ID  |
 
 响应 `data`：`Content[]` 或分页列表。
 
@@ -427,11 +427,11 @@ Query：
 
 请求体：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| title | string | 是 | 内容标题 |
-| topicId | string | 否 | 关联选题 |
-| summary | string | 否 | 内容摘要 |
+| 字段    | 类型   | 必填 | 说明     |
+| ------- | ------ | ---- | -------- |
+| title   | string | 是   | 内容标题 |
+| topicId | string | 否   | 关联选题 |
+| summary | string | 否   | 内容摘要 |
 
 响应 `data`：`Content`
 
@@ -451,10 +451,10 @@ Query：
 
 请求体：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| accountId | string | 否 | 目标账号 |
-| platforms | Platform[] | 否 | 目标平台，默认 `['XIAOHONGSHU']` |
+| 字段      | 类型       | 必填 | 说明                             |
+| --------- | ---------- | ---- | -------------------------------- |
+| accountId | string     | 否   | 目标账号                         |
+| platforms | Platform[] | 否   | 目标平台，默认 `['XIAOHONGSHU']` |
 
 响应 `data`：
 
@@ -474,10 +474,10 @@ Query：
 
 请求体：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| platforms | Platform[] | 是 | 目标平台 |
-| accountIds | string[] | 否 | 目标账号 ID 列表 |
+| 字段       | 类型       | 必填 | 说明             |
+| ---------- | ---------- | ---- | ---------------- |
+| platforms  | Platform[] | 是   | 目标平台         |
+| accountIds | string[]   | 否   | 目标账号 ID 列表 |
 
 响应 `data`：`ContentVersion[]`
 
@@ -495,15 +495,15 @@ Query：
 
 可更新字段：
 
-| 字段 | 类型 | 说明 |
-| ---- | ---- | ---- |
-| title | string | 平台版本标题 |
-| body | string | 正文 |
-| coverText | string | 封面文案 |
-| tags | array | 标签 |
-| formatConfig | object | 平台格式配置 |
-| status | ContentStatus | 状态 |
-| accountId | string | 目标账号 |
+| 字段         | 类型          | 说明         |
+| ------------ | ------------- | ------------ |
+| title        | string        | 平台版本标题 |
+| body         | string        | 正文         |
+| coverText    | string        | 封面文案     |
+| tags         | array         | 标签         |
+| formatConfig | object        | 平台格式配置 |
+| status       | ContentStatus | 状态         |
+| accountId    | string        | 目标账号     |
 
 响应 `data`：`ContentVersion`
 
@@ -533,15 +533,15 @@ Query：支持按 `type`、`role`、`contentId` 等业务字段筛选。
 
 请求体：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| type | MaterialType | 否 | 素材类型 |
-| role | MaterialRole | 否 | 素材用途 |
-| name | string | 否 | 名称 |
-| url | string | 否 | 远程地址 |
-| localPath | string | 否 | 本地路径 |
-| source | string | 否 | 来源 |
-| meta | object | 否 | 扩展信息 |
+| 字段      | 类型         | 必填 | 说明     |
+| --------- | ------------ | ---- | -------- |
+| type      | MaterialType | 否   | 素材类型 |
+| role      | MaterialRole | 否   | 素材用途 |
+| name      | string       | 否   | 名称     |
+| url       | string       | 否   | 远程地址 |
+| localPath | string       | 否   | 本地路径 |
+| source    | string       | 否   | 来源     |
+| meta      | object       | 否   | 扩展信息 |
 
 ### DELETE /materials/:id
 
@@ -563,11 +563,11 @@ Query：支持按 `type`、`role`、`contentId` 等业务字段筛选。
 
 响应 `data`：
 
-| 字段 | 类型 | 说明 |
-| ---- | ---- | ---- |
-| clientId | string? | 客户端 ID |
-| baseUrl | string? | 服务地址 |
-| useMock | boolean | 是否 mock |
+| 字段      | 类型    | 说明           |
+| --------- | ------- | -------------- |
+| clientId  | string? | 客户端 ID      |
+| baseUrl   | string? | 服务地址       |
+| useMock   | boolean | 是否 mock      |
 | hasApiKey | boolean | 是否已配置密钥 |
 
 ### PUT /ima/config
@@ -576,12 +576,12 @@ Query：支持按 `type`、`role`、`contentId` 等业务字段筛选。
 
 请求体：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| clientId | string | 否 | 客户端 ID |
-| apiKey | string | 否 | API Key，响应不明文返回 |
-| baseUrl | string | 否 | 服务地址 |
-| useMock | boolean | 否 | 是否 mock |
+| 字段     | 类型    | 必填 | 说明                    |
+| -------- | ------- | ---- | ----------------------- |
+| clientId | string  | 否   | 客户端 ID               |
+| apiKey   | string  | 否   | API Key，响应不明文返回 |
+| baseUrl  | string  | 否   | 服务地址                |
+| useMock  | boolean | 否   | 是否 mock               |
 
 ### GET /ima/knowledge-bases
 
@@ -589,9 +589,9 @@ Query：支持按 `type`、`role`、`contentId` 等业务字段筛选。
 
 Query：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| enabledOnly | boolean | 否 | 仅返回启用知识库 |
+| 字段        | 类型    | 必填 | 说明             |
+| ----------- | ------- | ---- | ---------------- |
+| enabledOnly | boolean | 否   | 仅返回启用知识库 |
 
 响应 `data`：`ImaKnowledgeBase[]`
 
@@ -614,11 +614,11 @@ Query：
 
 请求体：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| enabled | boolean | 否 | 是否启用 |
-| isDefault | boolean | 否 | 是否默认 |
-| name | string | 否 | 本地显示名 |
+| 字段      | 类型    | 必填 | 说明       |
+| --------- | ------- | ---- | ---------- |
+| enabled   | boolean | 否   | 是否启用   |
+| isDefault | boolean | 否   | 是否默认   |
+| name      | string  | 否   | 本地显示名 |
 
 ### POST /ima/search
 
@@ -626,12 +626,12 @@ Query：
 
 请求体：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| query | string | 是 | 搜索词 |
-| contentId | string | 是 | 内容项目 ID |
-| limit | number | 否 | 返回数量 |
-| knowledgeBaseId | string | 否 | 指定知识库 |
+| 字段            | 类型   | 必填 | 说明        |
+| --------------- | ------ | ---- | ----------- |
+| query           | string | 是   | 搜索词      |
+| contentId       | string | 是   | 内容项目 ID |
+| limit           | number | 否   | 返回数量    |
+| knowledgeBaseId | string | 否   | 指定知识库  |
 
 响应 `data`：搜索结果，包含摘要和原始结果。
 
@@ -647,11 +647,11 @@ Agent 配置列表。响应 `data`：`Agent[]`，包含 `prompt`。
 
 请求体：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| contentId | string | 是 | 内容项目 ID |
-| accountId | string | 否 | 账号 ID |
-| count | number | 否 | 生成数量 |
+| 字段      | 类型   | 必填 | 说明        |
+| --------- | ------ | ---- | ----------- |
+| contentId | string | 是   | 内容项目 ID |
+| accountId | string | 否   | 账号 ID     |
+| count     | number | 否   | 生成数量    |
 
 响应 `data`：`AgentRun`
 
@@ -661,11 +661,11 @@ Agent 配置列表。响应 `data`：`Agent[]`，包含 `prompt`。
 
 请求体：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| contentId | string | 是 | 内容项目 ID |
-| platform | Platform | 是 | 目标平台 |
-| accountId | string | 否 | 账号 ID |
+| 字段      | 类型     | 必填 | 说明        |
+| --------- | -------- | ---- | ----------- |
+| contentId | string   | 是   | 内容项目 ID |
+| platform  | Platform | 是   | 目标平台    |
+| accountId | string   | 否   | 账号 ID     |
 
 响应 `data`：`AgentRun`
 
@@ -675,9 +675,9 @@ Agent 配置列表。响应 `data`：`Agent[]`，包含 `prompt`。
 
 请求体：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| versionId | string | 是 | 内容版本 ID |
+| 字段      | 类型   | 必填 | 说明        |
+| --------- | ------ | ---- | ----------- |
+| versionId | string | 是   | 内容版本 ID |
 
 响应 `data`：`AgentRun`
 
@@ -687,10 +687,10 @@ Agent 配置列表。响应 `data`：`Agent[]`，包含 `prompt`。
 
 请求体：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| contentId | string | 是 | 内容项目 ID |
-| accountId | string | 否 | 账号 ID |
+| 字段      | 类型   | 必填 | 说明        |
+| --------- | ------ | ---- | ----------- |
+| contentId | string | 是   | 内容项目 ID |
+| accountId | string | 否   | 账号 ID     |
 
 响应 `data`：`AgentRun`
 
@@ -700,27 +700,27 @@ Agent 执行记录。
 
 Query：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| contentId | string | 否 | 内容项目 ID |
-| status | RunStatus | 否 | 执行状态 |
-| agentType | AgentType | 否 | Agent 类型（V1.1 规划） |
-| platform | Platform | 否 | 平台（V1.1 规划） |
-| dateFrom | string | 否 | 起始时间 ISO8601（V1.1 规划） |
-| dateTo | string | 否 | 结束时间 ISO8601（V1.1 规划） |
-| page | number | 否 | 页码（V1.1 规划） |
-| pageSize | number | 否 | 每页数量（V1.1 规划） |
+| 字段      | 类型      | 必填 | 说明                          |
+| --------- | --------- | ---- | ----------------------------- |
+| contentId | string    | 否   | 内容项目 ID                   |
+| status    | RunStatus | 否   | 执行状态                      |
+| agentType | AgentType | 否   | Agent 类型（V1.1 规划）       |
+| platform  | Platform  | 否   | 平台（V1.1 规划）             |
+| dateFrom  | string    | 否   | 起始时间 ISO8601（V1.1 规划） |
+| dateTo    | string    | 否   | 结束时间 ISO8601（V1.1 规划） |
+| page      | number    | 否   | 页码（V1.1 规划）             |
+| pageSize  | number    | 否   | 每页数量（V1.1 规划）         |
 
 响应 `data`：`AgentRun[]`，详情接口额外包含 `agent`（含 `prompt`）、`content`、`version`。
 
 `AgentRun` 关联字段：
 
-| 字段 | 类型 | 说明 |
-| ---- | ---- | ---- |
-| agent.type | AgentType | Agent 类型 |
-| content.title | string | 关联内容标题 |
-| version.platform | Platform | 关联平台版本 |
-| durationMs | number | 执行耗时毫秒（V1.1 规划） |
+| 字段             | 类型      | 说明                      |
+| ---------------- | --------- | ------------------------- |
+| agent.type       | AgentType | Agent 类型                |
+| content.title    | string    | 关联内容标题              |
+| version.platform | Platform  | 关联平台版本              |
+| durationMs       | number    | 执行耗时毫秒（V1.1 规划） |
 
 ### GET /agent-runs/:id
 
@@ -738,12 +738,12 @@ Prompt 列表。响应 `data`：`Prompt[]`
 
 请求体：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| name | string | 是 | Prompt 名称 |
-| agentType | AgentType | 是 | Agent 类型 |
-| template | string | 是 | 模板 |
-| version | string | 否 | 版本，默认 `v1` |
+| 字段      | 类型      | 必填 | 说明            |
+| --------- | --------- | ---- | --------------- |
+| name      | string    | 是   | Prompt 名称     |
+| agentType | AgentType | 是   | Agent 类型      |
+| template  | string    | 是   | 模板            |
+| version   | string    | 否   | 版本，默认 `v1` |
 
 ### PATCH /prompts/:id
 
@@ -785,10 +785,10 @@ Query：支持 `status`、`contentId`、`reviewerId` 等筛选。
 
 请求体：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| contentId | string | 是 | 内容项目 ID |
-| versionId | string | 否 | 内容版本 ID |
+| 字段      | 类型   | 必填 | 说明        |
+| --------- | ------ | ---- | ----------- |
+| contentId | string | 是   | 内容项目 ID |
+| versionId | string | 否   | 内容版本 ID |
 
 响应 `data`：`ReviewTask`
 
@@ -802,9 +802,9 @@ Query：支持 `status`、`contentId`、`reviewerId` 等筛选。
 
 请求体：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| comment | string | 否 | 驳回原因 |
+| 字段    | 类型   | 必填 | 说明     |
+| ------- | ------ | ---- | -------- |
+| comment | string | 否   | 驳回原因 |
 
 响应 `data`：`ReviewTask`
 
@@ -816,9 +816,9 @@ Query：支持 `status`、`contentId`、`reviewerId` 等筛选。
 
 Query：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| status | PublishStatus | 否 | 发布状态 |
+| 字段   | 类型          | 必填 | 说明     |
+| ------ | ------------- | ---- | -------- |
+| status | PublishStatus | 否   | 发布状态 |
 
 响应 `data`：`PublishingTask[]`
 
@@ -830,13 +830,13 @@ Query：
 
 响应 `data`：
 
-| 字段 | 类型 | 说明 |
-| ---- | ---- | ---- |
-| pendingCount | number | 待发布任务数 |
-| draftSyncCount | number | 草稿同步数（P3 TurboPush 扩展，MVP 可返回 0） |
-| packageRedCount | number | 小红书发布包（P3，MVP 可返回 0） |
-| packageDouyinCount | number | 抖音发布包（P3，MVP 可返回 0） |
-| publishedTodayCount | number | 今日已发布 |
+| 字段                | 类型   | 说明                                          |
+| ------------------- | ------ | --------------------------------------------- |
+| pendingCount        | number | 待发布任务数                                  |
+| draftSyncCount      | number | 草稿同步数（P3 TurboPush 扩展，MVP 可返回 0） |
+| packageRedCount     | number | 小红书发布包（P3，MVP 可返回 0）              |
+| packageDouyinCount  | number | 抖音发布包（P3，MVP 可返回 0）                |
+| publishedTodayCount | number | 今日已发布                                    |
 
 ### POST /publishing/tasks
 
@@ -844,11 +844,11 @@ Query：
 
 请求体：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| versionId | string | 是 | 内容版本 ID |
-| accountId | string | 是 | 发布账号 ID |
-| scheduledAt | string \| null | 否 | 定时发布时间，空表示立即或待定 |
+| 字段        | 类型           | 必填 | 说明                           |
+| ----------- | -------------- | ---- | ------------------------------ |
+| versionId   | string         | 是   | 内容版本 ID                    |
+| accountId   | string         | 是   | 发布账号 ID                    |
+| scheduledAt | string \| null | 否   | 定时发布时间，空表示立即或待定 |
 
 响应 `data`：`PublishingTask`
 
@@ -872,9 +872,9 @@ Query：
 
 请求体：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| publishRecordId | string | 是 | 发布记录 ID |
+| 字段            | 类型   | 必填 | 说明        |
+| --------------- | ------ | ---- | ----------- |
+| publishRecordId | string | 是   | 发布记录 ID |
 
 响应 `data`：`AnalyticsData`
 
@@ -896,9 +896,9 @@ Query：`platform`、`dateFrom`、`dateTo`
 
 请求体：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| contentId | string | 是 | 内容项目 ID |
+| 字段      | 类型   | 必填 | 说明        |
+| --------- | ------ | ---- | ----------- |
+| contentId | string | 是   | 内容项目 ID |
 
 响应 `data`：`AnalyticsReport`
 
@@ -912,9 +912,9 @@ Query：`platform`、`dateFrom`、`dateTo`
 
 Query：
 
-| 字段 | 类型 | 必填 | 说明 |
-| ---- | ---- | ---- | ---- |
-| contentId | string | 否 | 内容项目 ID |
+| 字段      | 类型   | 必填 | 说明        |
+| --------- | ------ | ---- | ----------- |
+| contentId | string | 否   | 内容项目 ID |
 
 响应 `data`：`AnalyticsReport[]`
 
@@ -937,21 +937,21 @@ Query：`type`、`tag`、`keyword`、`status`、`page`、`pageSize`
 
 `MaterialAsset` 字段：
 
-| 字段 | 类型 | 说明 |
-| ---- | ---- | ---- |
-| id | string | 素材 ID |
-| name | string | 显示名称 |
-| fileName | string | 文件名 |
-| type | MaterialType | 类型 |
-| format | string | 格式如 JPG、MP4 |
-| sizeBytes | number | 文件大小 |
-| url | string? | 访问地址 |
-| tags | string[] | 标签 |
-| source | string? | 来源 |
-| uploaderId | string | 上传者 |
-| uploader | UserPublic | 上传者信息 |
-| status | ENABLED / REVIEWING / DISABLED | 状态 |
-| createdAt | string | 创建时间 |
+| 字段       | 类型                           | 说明            |
+| ---------- | ------------------------------ | --------------- |
+| id         | string                         | 素材 ID         |
+| name       | string                         | 显示名称        |
+| fileName   | string                         | 文件名          |
+| type       | MaterialType                   | 类型            |
+| format     | string                         | 格式如 JPG、MP4 |
+| sizeBytes  | number                         | 文件大小        |
+| url        | string?                        | 访问地址        |
+| tags       | string[]                       | 标签            |
+| source     | string?                        | 来源            |
+| uploaderId | string                         | 上传者          |
+| uploader   | UserPublic                     | 上传者信息      |
+| status     | ENABLED / REVIEWING / DISABLED | 状态            |
+| createdAt  | string                         | 创建时间        |
 
 ### GET /materials/library/stats
 
@@ -1021,12 +1021,12 @@ X-API-Key: <api-key>
 
 与 IMA 配置分工：
 
-| 配置项 | 路径 |
-| ------ | ---- |
-| IMA 客户端/密钥/Mock | `PUT /ima/config` |
-| 默认 LLM 模型、DeepSeek Key | `PUT /settings/model.default` |
-| TurboPush 地址、同步开关 | `PUT /settings/turbopush.baseUrl` 等 |
-| 功能开关 | `PUT /settings/features.*` |
+| 配置项                      | 路径                                 |
+| --------------------------- | ------------------------------------ |
+| IMA 客户端/密钥/Mock        | `PUT /ima/config`                    |
+| 默认 LLM 模型、DeepSeek Key | `PUT /settings/model.default`        |
+| TurboPush 地址、同步开关    | `PUT /settings/turbopush.baseUrl` 等 |
+| 功能开关                    | `PUT /settings/features.*`           |
 
 ### GET /settings
 
@@ -1050,17 +1050,17 @@ X-API-Key: <api-key>
 
 ## 二十一、规划中增强接口（联调辅助）
 
-| 方法 | 路径 | 状态 | 说明 |
-| ---- | ---- | ---- | ---- |
-| POST | `/agents/body/run` | P1 | 正文 Agent |
-| POST | `/accounts` | P1 | 手动创建账号 |
-| GET | `/reviews/stats` | P1 | 审核 Tab 汇总 |
-| GET | `/publishing/summary` | P1 | 发布页统计卡 |
-| GET | `/analytics/overview` | P1 | 复盘页概览 |
-| GET | `/agent-runs` 扩展 query | V1.1 | 分页、agentType、日期筛选 |
-| GET | `/dashboard/stats` alerts | V1.1 | 工作台告警 |
-| DELETE | `/versions/:versionId` | 待定 | 删除草稿版本 |
-| — | 发布页草稿同步/发布包 | P3 | TurboPush 扩展，MVP 不对接 |
+| 方法   | 路径                      | 状态 | 说明                       |
+| ------ | ------------------------- | ---- | -------------------------- |
+| POST   | `/agents/body/run`        | P1   | 正文 Agent                 |
+| POST   | `/accounts`               | P1   | 手动创建账号               |
+| GET    | `/reviews/stats`          | P1   | 审核 Tab 汇总              |
+| GET    | `/publishing/summary`     | P1   | 发布页统计卡               |
+| GET    | `/analytics/overview`     | P1   | 复盘页概览                 |
+| GET    | `/agent-runs` 扩展 query  | V1.1 | 分页、agentType、日期筛选  |
+| GET    | `/dashboard/stats` alerts | V1.1 | 工作台告警                 |
+| DELETE | `/versions/:versionId`    | 待定 | 删除草稿版本               |
+| —      | 发布页草稿同步/发布包     | P3   | TurboPush 扩展，MVP 不对接 |
 
 ## 二十二、与运营流程的关系
 

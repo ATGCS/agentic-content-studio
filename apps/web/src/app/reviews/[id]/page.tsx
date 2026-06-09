@@ -32,9 +32,24 @@ type ReviewDetail = {
     title?: string | null;
     body?: string | null;
     coverUrl?: string | null;
-    tags?: string | null;
+    tags?: string[] | string | null;
   };
 };
+
+function normalizeTags(tags: unknown): string[] {
+  if (Array.isArray(tags)) {
+    return tags
+      .filter((t) => typeof t === 'string')
+      .map((t) => (t as string).trim());
+  }
+  if (typeof tags === 'string' && tags) {
+    return tags
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
 
 const reviewItems = [
   { key: 'title', label: '标题审核' },
@@ -96,6 +111,8 @@ export default function ReviewDetailPage() {
     );
   }
 
+  const tags = normalizeTags(review.version.tags);
+
   return (
     <StudioLayout>
       <PageContainer className="max-w-none">
@@ -139,14 +156,14 @@ export default function ReviewDetailPage() {
                 <p className="text-sm leading-relaxed text-[#4e5969]">
                   {review.version.body ?? review.content.body ?? '暂无正文'}
                 </p>
-                {review.version.tags && (
+                {tags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
-                    {review.version.tags.split(',').map((tag) => (
+                    {tags.map((tag) => (
                       <span
                         key={tag}
                         className="rounded-md bg-[#f0f5ff] px-2 py-0.5 text-xs text-[#1664ff]"
                       >
-                        {tag.trim()}
+                        {tag}
                       </span>
                     ))}
                   </div>
@@ -177,9 +194,7 @@ export default function ReviewDetailPage() {
             </StudioCard>
 
             <StudioCard contentClassName="space-y-4 p-4">
-              <h3 className="text-sm font-semibold text-[#1D2129]">
-                审核意见
-              </h3>
+              <h3 className="text-sm font-semibold text-[#1D2129]">审核意见</h3>
               <div className="space-y-2">
                 <Label className="text-xs text-[#86909c]">备注</Label>
                 <Textarea

@@ -2,15 +2,32 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Edit, Plus, RefreshCw, Search } from 'lucide-react';
+import {
+  Edit,
+  Layers,
+  Plus,
+  RefreshCw,
+  Search,
+  WandSparkles,
+} from 'lucide-react';
 import { StudioLayout } from '@/components/StudioLayout';
-import { ContentEditDialog, type ContentEditForm } from '@/components/dialogs/content-edit-dialog';
+import {
+  ContentEditDialog,
+  type ContentEditForm,
+} from '@/components/dialogs/content-edit-dialog';
 import { PageContainer } from '@/components/layout/page-container';
 import { EmptyState } from '@/components/studio/empty-state';
 import { PlatformBadge } from '@/components/studio/platform-badge';
 import { StatusBadge } from '@/components/studio/status-badge';
 import { StudioCard } from '@/components/studio/studio-card';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -42,6 +59,7 @@ type ContentItem = {
   summary?: string | null;
   status: ContentStatus;
   topicId?: string | null;
+  topic?: { id: string; title: string } | null;
   updatedAt: string;
   creator?: { name?: string | null; email?: string | null };
   versions: {
@@ -72,13 +90,26 @@ export default function ContentsPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingContent, setEditingContent] = useState<ContentItem | null>(null);
+  const [editingContent, setEditingContent] = useState<ContentItem | null>(
+    null
+  );
   const [total, setTotal] = useState(0);
+  const [topicFilter, setTopicFilter] = useState('');
+  const [topics, setTopics] = useState<{ id: string; title: string }[]>([]);
+  const [aiContentId, setAiContentId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState('ALL');
 
   async function load() {
     setLoading(true);
     try {
-      const res = await api<ContentListResponse>('/api/contents');
+      const params = new URLSearchParams();
+      if (topicFilter) params.set('topicId', topicFilter);
+      if (statusFilter && statusFilter !== 'ALL')
+        params.set('status', statusFilter);
+      const qs = params.toString();
+      const res = await api<ContentListResponse>(
+        `/api/contents${qs ? '?' + qs : ''}`
+      );
       setItems(res.data.items || []);
       setTotal(res.data.total ?? res.data.items?.length ?? 0);
       setSelected([]);
@@ -93,6 +124,12 @@ export default function ContentsPage() {
 
   useEffect(() => {
     load().catch(console.error);
+  }, [topicFilter, statusFilter]);
+
+  useEffect(() => {
+    api<{ items: { id: string; title: string }[] }>('/api/topics?pageSize=200')
+      .then((r) => setTopics(r.data.items ?? []))
+      .catch(() => {});
   }, []);
 
   const filteredItems = items.filter((item) => {
@@ -114,9 +151,16 @@ export default function ContentsPage() {
     );
   };
 
+  const openAiGenerate = (contentId: string) => {
+    setAiContentId(contentId);
+    window.location.href = `/ai-generate?contentId=${contentId}`;
+  };
+
   const toggleAll = () => {
     setSelected(
-      selected.length === filteredItems.length ? [] : filteredItems.map((c) => c.id)
+      selected.length === filteredItems.length
+        ? []
+        : filteredItems.map((c) => c.id)
     );
   };
 
@@ -130,7 +174,7 @@ export default function ContentsPage() {
     setDialogOpen(true);
   }
 
-  async function saveContent(form: ContentEditForm) {
+  async function saveContent(form: ContentEditForm): Promise<void> {
     const body = {
       title: form.title,
       summary: form.summary || undefined,
@@ -146,7 +190,7 @@ export default function ContentsPage() {
         }),
       });
     } else {
-      const res = await api<ContentItem>('/api/contents', {
+      const res = await api<{ id: string }>('/api/contents', {
         method: 'POST',
         body: JSON.stringify(body),
       });
@@ -165,7 +209,6 @@ export default function ContentsPage() {
     <StudioLayout>
       <PageContainer className="max-w-none gap-4 p-6">
         <div className="flex items-center justify-between gap-4">
-          <h1 className="text-xl font-bold text-[#1D2129]">内容项目管理</h1>
           <div className="flex flex-wrap items-center justify-end gap-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#86909c]" />
@@ -176,17 +219,89 @@ export default function ContentsPage() {
                 className="studio-input h-10 w-60 pl-10 pr-4 text-sm"
               />
             </div>
-            <Button size="icon" variant="ghost" className="size-10" onClick={load} disabled={loading}>
-              <RefreshCw className={`size-4 text-[#86909c] ${loading ? 'animate-spin' : ''}`} />
+            <Button
+              size="icon"
+              variant="ghost"
+              className="size-10"
+              onClick={load}
+              disabled={loading}
+            >
+              <RefreshCw
+                className={`size-4 text-[#86909c] ${loading ? 'animate-spin' : ''}`}
+              />
             </Button>
-            <Button size="sm" className="h-10 bg-[#1664FF] text-white hover:bg-[#0E52D9]" onClick={openCreateDialog}>
+            <Button
+              size="sm"
+              className="h-10 bg-[#1664FF] text-white hover:bg-[#0E52D9]"
+              onClick={openCreateDialog}
+            >
               <Plus className="size-4" />
               新建内容
             </Button>
+            <Link href="/topics">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-10 gap-1.5 border-[#E5E8EF] text-xs"
+              >
+                <Layers className="size-4" />
+                系列管理
+              </Button>
+            </Link>
+            <Select
+              value={statusFilter}
+              onValueChange={(val) => {
+                setStatusFilter(val);
+                load();
+              }}
+            >
+              <SelectTrigger className="h-9 w-36 bg-white text-xs">
+                <SelectValue placeholder="全部状态" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">全部状态</SelectItem>
+                {statusKeys.map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {getStatusLabel(key)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
-        <StudioCard className="overflow-hidden px-6 py-5" contentClassName="p-0">
+        {/* 系列筛选 */}
+        {topics.length > 0 && (
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-[#86909C]">按系列筛选：</span>
+            <button
+              onClick={() => {
+                setTopicFilter('');
+                load();
+              }}
+              className={`rounded-lg border px-3 py-1 text-xs transition-all ${!topicFilter ? 'border-[#1664FF] bg-[#F0F5FF] text-[#1664FF]' : 'border-[#E5E8EF] text-[#4E5969] hover:border-[#C9D8FF]'}`}
+            >
+              全部
+            </button>
+            {topics.map((t) => (
+              <button
+                key={t.id}
+                onClick={() => {
+                  setTopicFilter(t.id);
+                  load();
+                }}
+                className={`rounded-lg border px-3 py-1 text-xs transition-all ${topicFilter === t.id ? 'border-[#1664FF] bg-[#F0F5FF] text-[#1664FF]' : 'border-[#E5E8EF] text-[#4E5969] hover:border-[#C9D8FF]'}`}
+              >
+                {t.title}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <StudioCard
+          className="overflow-hidden px-6 py-5"
+          contentClassName="p-0"
+        >
           <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
             {statusKeys.map((key) => {
               const style = getStatusStyle(key);
@@ -223,9 +338,15 @@ export default function ContentsPage() {
           </div>
 
           {loading ? (
-            <EmptyState title="内容加载中…" description="正在读取内容项目列表" />
+            <EmptyState
+              title="内容加载中…"
+              description="正在读取内容管理列表"
+            />
           ) : filteredItems.length === 0 ? (
-            <EmptyState title="暂无内容" description="新建内容后可在这里管理内容项目" />
+            <EmptyState
+              title="暂无内容"
+              description="新建内容后可在这里管理内容"
+            />
           ) : (
             <Table className="studio-table">
               <TableHeader>
@@ -234,11 +355,15 @@ export default function ContentsPage() {
                     <input
                       type="checkbox"
                       className="accent-[#1664ff]"
-                      checked={selected.length === filteredItems.length && filteredItems.length > 0}
+                      checked={
+                        selected.length === filteredItems.length &&
+                        filteredItems.length > 0
+                      }
                       onChange={toggleAll}
                     />
                   </TableHead>
-                  <TableHead>选题名称</TableHead>
+                  <TableHead>标题</TableHead>
+                  <TableHead>系列</TableHead>
                   <TableHead>目标平台</TableHead>
                   <TableHead>目标账号</TableHead>
                   <TableHead>当前状态</TableHead>
@@ -250,7 +375,8 @@ export default function ContentsPage() {
               <TableBody>
                 {filteredItems.map((c) => {
                   const firstPlatform = c.versions?.[0]?.platform || '';
-                  const firstAccount = c.versions?.[0]?.account?.accountName || '';
+                  const firstAccount =
+                    c.versions?.[0]?.account?.accountName || '';
                   return (
                     <TableRow key={c.id} className="h-14">
                       <TableCell>
@@ -269,7 +395,21 @@ export default function ContentsPage() {
                           {c.title}
                         </Link>
                         {c.summary && (
-                          <p className="mt-1 truncate text-xs text-[#86909C]">{c.summary}</p>
+                          <p className="mt-1 truncate text-xs text-[#86909C]">
+                            {c.summary}
+                          </p>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {c.topic ? (
+                          <Link
+                            href={`/topics/${c.topic.id}`}
+                            className="text-xs text-[#1664FF] hover:underline"
+                          >
+                            {c.topic.title}
+                          </Link>
+                        ) : (
+                          <span className="text-xs text-[#C9CDD4]">—</span>
                         )}
                       </TableCell>
                       <TableCell>
@@ -303,10 +443,25 @@ export default function ContentsPage() {
                         })}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button size="sm" variant="outline" onClick={() => openEditDialog(c)}>
-                          <Edit className="size-3.5" />
-                          编辑
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 text-xs text-[#1664FF] border-[#1664FF]"
+                            onClick={() => openAiGenerate(c.id)}
+                          >
+                            <WandSparkles className="size-3.5" />
+                            AI 生成
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openEditDialog(c)}
+                          >
+                            <Edit className="size-3.5" />
+                            编辑
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -329,13 +484,19 @@ export default function ContentsPage() {
       <ContentEditDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        content={editingContent ? {
-          id: editingContent.id,
-          title: editingContent.title,
-          summary: editingContent.summary,
-          topicId: editingContent.topicId,
-          platforms: editingContent.versions.map((version) => version.platform),
-        } : undefined}
+        content={
+          editingContent
+            ? {
+                id: editingContent.id,
+                title: editingContent.title,
+                summary: editingContent.summary,
+                topicId: editingContent.topicId,
+                platforms: editingContent.versions.map(
+                  (version) => version.platform
+                ),
+              }
+            : undefined
+        }
         onSubmit={saveContent}
       />
     </StudioLayout>

@@ -53,19 +53,37 @@ export async function api<T>(
     return pendingRedirect();
   }
 
+  const hasBody = !!options.body;
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
     ...(options.headers as Record<string, string>),
   };
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const res = await fetch(path, { ...options, headers });
+
+  if (res.status === 401) {
+    redirectToLogin();
+    return pendingRedirect();
+  }
+
   let json: { code: number; message: string; data: T };
   try {
     json = await res.json();
   } catch {
-    throw new ApiError(res.status === 401 ? UNAUTHORIZED_CODE : 50000, 'network error');
+    const text = await res.text().catch(() => '(unable to read response)');
+    console.error('[API Response Error]', {
+      status: res.status,
+      statusText: res.statusText,
+      url: path,
+      headers: Object.fromEntries(res.headers.entries()),
+      bodyPreview: text.slice(0, 500),
+    });
+    throw new ApiError(
+      res.status === 401 ? UNAUTHORIZED_CODE : 50000,
+      `HTTP ${res.status}: ${res.statusText}`
+    );
   }
 
   if (json.code !== 0) {

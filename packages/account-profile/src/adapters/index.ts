@@ -1,5 +1,5 @@
 import type { Platform } from '@acs/db';
-import { oauthPublicBase, platformToSlug } from '../platform-slug.js';
+import type { PlatformOAuthConfig } from '../oauth-config.js';
 
 export interface PlatformAdapter {
   buildAuthorizeUrl(params: {
@@ -7,10 +7,7 @@ export interface PlatformAdapter {
     redirectUri: string;
     scopes?: string[];
   }): string;
-  exchangeCode(params: {
-    code: string;
-    redirectUri: string;
-  }): Promise<{
+  exchangeCode(params: { code: string; redirectUri: string }): Promise<{
     accessToken: string;
     refreshToken?: string;
     expiresIn?: number;
@@ -18,38 +15,31 @@ export interface PlatformAdapter {
     scopes?: string[];
     rawData?: Record<string, unknown>;
   }>;
-  getAccountProfile(params: {
-    accessToken: string;
-  }): Promise<{
+  getAccountProfile(params: { accessToken: string }): Promise<{
     externalAccountId: string;
     accountName: string;
     avatarUrl?: string;
     rawData?: Record<string, unknown>;
   }>;
-  refreshToken?(params: {
-    refreshToken: string;
-  }): Promise<{
+  refreshToken?(params: { refreshToken: string }): Promise<{
     accessToken: string;
     refreshToken?: string;
     expiresIn?: number;
   }>;
-  revokeToken?(params: {
-    accessToken: string;
-  }): Promise<void>;
-  syncWorks?(params: {
-    accountId: string;
-    accessToken: string;
-  }): Promise<Array<{
-    platformWorkId: string;
-    workType?: string;
-    title?: string;
-    coverUrl?: string;
-    url?: string;
-    publishedAt?: Date;
-    duration?: number;
-    status?: string;
-    rawData?: Record<string, unknown>;
-  }>>;
+  revokeToken?(params: { accessToken: string }): Promise<void>;
+  syncWorks?(params: { accountId: string; accessToken: string }): Promise<
+    Array<{
+      platformWorkId: string;
+      workType?: string;
+      title?: string;
+      coverUrl?: string;
+      url?: string;
+      publishedAt?: Date;
+      duration?: number;
+      status?: string;
+      rawData?: Record<string, unknown>;
+    }>
+  >;
   syncMetrics?(params: {
     platformWorkId: string;
     accessToken: string;
@@ -70,247 +60,217 @@ export interface PlatformAdapter {
   }>;
 }
 
-function envOr(key: string, fallback?: string): string {
-  const val = process.env[key];
-  if (!val) {
-    if (fallback !== undefined) return fallback;
-    throw new Error(`env ${key} is not set`);
+function cfgVal(
+  dbCfg: PlatformOAuthConfig | undefined,
+  platform: string,
+  keys: string[]
+): string | undefined {
+  // DB config takes priority
+  const p = (dbCfg as Record<string, Record<string, string> | undefined>)?.[
+    platform
+  ];
+  for (const key of keys) {
+    const v = p?.[key];
+    if (v) return v;
   }
-  return val;
-}
-
-function buildDouyinAuthorizeUrl({ state, redirectUri, scopes }: {
-  state: string;
-  redirectUri: string;
-  scopes?: string[];
-}): string {
-  const clientKey = envOr('DOUYIN_CLIENT_KEY');
-  const scopeStr = scopes?.join(',') ?? '';
-  return `https://open.douyin.com/platform/oauth/connect?client_key=${encodeURIComponent(clientKey)}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&scope=${encodeURIComponent(scopeStr)}&response_type=code`;
-}
-
-function buildKuaishouAuthorizeUrl({ state, redirectUri, scopes }: {
-  state: string;
-  redirectUri: string;
-  scopes?: string[];
-}): string {
-  const appId = envOr('KUAISHOU_APP_ID');
-  const scopeStr = scopes?.join(' ') ?? '';
-  return `https://open.kuaishou.com/oauth2/authorize?app_id=${encodeURIComponent(appId)}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&scope=${encodeURIComponent(scopeStr)}&response_type=code`;
-}
-
-function buildWeChatOAAuthorizeUrl({ state, redirectUri, scopes }: {
-  state: string;
-  redirectUri: string;
-  scopes?: string[];
-}): string {
-  const appId = envOr('WECHAT_OA_APP_ID');
-  const scopeStr = scopes?.join(',') ?? 'snsapi_base';
-  return `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${encodeURIComponent(appId)}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&scope=${encodeURIComponent(scopeStr)}&response_type=code#wechat_redirect`;
-}
-
-function buildBilibiliAuthorizeUrl({ state, redirectUri, scopes }: {
-  state: string;
-  redirectUri: string;
-  scopes?: string[];
-}): string {
-  const appId = envOr('BILIBILI_APP_ID');
-  const scopeStr = scopes?.join(' ') ?? '';
-  return `https://passport.bilibili.com/api/oauth2/authorize?client_id=${encodeURIComponent(appId)}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&scope=${encodeURIComponent(scopeStr)}&response_type=code`;
-}
-
-function buildDevAuthorizeUrl({ platform, state }: {
-  platform: Platform;
-  state: string;
-}): string {
-  const slug = platformToSlug(platform);
-  const base = oauthPublicBase();
-  return `${base}/api/oauth/${slug}/dev-authorize?state=${encodeURIComponent(state)}`;
-}
-
-function useMockOAuth(platform: Platform): boolean {
-  if (process.env.USE_MOCK_OAUTH === 'true') return true;
-  if (process.env.USE_MOCK_OAUTH === 'false') return false;
-  if (process.env.NODE_ENV === 'production') return false;
-  switch (platform) {
-    case 'DOUYIN':
-      return !process.env.DOUYIN_CLIENT_KEY;
-    case 'KUAISHOU':
-      return !process.env.KUAISHOU_APP_ID;
-    case 'WECHAT':
-      return !process.env.WECHAT_OA_APP_ID;
-    case 'BILIBILI':
-      return !process.env.BILIBILI_APP_ID;
-    default:
-      return true;
+  // Fallback to env
+  for (const key of keys) {
+    const envKey =
+      key === 'appId'
+        ? `${platform}_APP_ID`.toUpperCase()
+        : key === 'appSecret'
+          ? `${platform}_APP_SECRET`.toUpperCase()
+          : key === 'clientKey'
+            ? `${platform}_CLIENT_KEY`.toUpperCase()
+            : key === 'clientSecret'
+              ? `${platform}_CLIENT_SECRET`.toUpperCase()
+              : key.toUpperCase();
+    const v = process.env[envKey];
+    if (v) return v;
   }
+  return undefined;
 }
 
-function mockAdapter(platform: Platform): PlatformAdapter {
-  return {
-    buildAuthorizeUrl: (p) => buildDevAuthorizeUrl({ platform, state: p.state }),
-    exchangeCode: async () => mockExchange(),
-    getAccountProfile: async () => mockProfile(platform),
-    revokeToken: async () => {},
-    syncWorks: async () => mockWorks(platform),
-    syncMetrics: async () => mockMetrics(platform),
-  };
-}
-
-export function getAdapter(platform: Platform): PlatformAdapter {
-  if (useMockOAuth(platform)) {
-    return mockAdapter(platform);
-  }
-
-  if (platform === 'DOUYIN') {
-    return {
-      buildAuthorizeUrl: (p) => buildDouyinAuthorizeUrl(p),
-      exchangeCode: async () => mockExchange(),
-      getAccountProfile: async () => mockProfile('抖音'),
-      revokeToken: async () => {},
-      syncWorks: async () => mockWorks('DOUYIN'),
-      syncMetrics: async () => mockMetrics('DOUYIN'),
-    };
-  }
-
-  if (platform === 'KUAISHOU') {
-    return {
-      buildAuthorizeUrl: (p) => buildKuaishouAuthorizeUrl(p),
-      exchangeCode: async () => mockExchange(),
-      getAccountProfile: async () => mockProfile('快手'),
-      revokeToken: async () => {},
-      syncWorks: async () => mockWorks('KUAISHOU'),
-      syncMetrics: async () => mockMetrics('KUAISHOU'),
-    };
-  }
-
-  if (platform === 'WECHAT') {
-    return {
-      buildAuthorizeUrl: (p) => buildWeChatOAAuthorizeUrl(p),
-      exchangeCode: async () => mockExchange(),
-      getAccountProfile: async () => mockProfile('微信公众号'),
-      revokeToken: async () => {},
-      syncWorks: async () => mockWorks('WECHAT'),
-      syncMetrics: async () => mockMetrics('WECHAT'),
-    };
-  }
-
-  if (platform === 'BILIBILI') {
-    return {
-      buildAuthorizeUrl: (p) => buildBilibiliAuthorizeUrl(p),
-      exchangeCode: async () => mockExchange(),
-      getAccountProfile: async () => mockProfile('B站'),
-      revokeToken: async () => {},
-      syncWorks: async () => mockWorks('BILIBILI'),
-      syncMetrics: async () => mockMetrics('BILIBILI'),
-    };
-  }
-
-  if (platform === 'ZHIHU') {
-    return {
-      buildAuthorizeUrl: () => {
-        throw new Error('知乎暂不支持官方自动同步，请使用手动导入');
-      },
-      exchangeCode: async () => {
-        throw new Error('知乎暂不支持官方自动同步');
-      },
-      getAccountProfile: async () => {
-        throw new Error('知乎暂不支持官方自动同步');
-      },
-      revokeToken: async () => {},
-      syncWorks: async () => {
-        throw new Error('知乎暂不支持官方自动同步，请使用手动导入');
-      },
-      syncMetrics: async () => {
-        throw new Error('知乎暂不支持官方自动同步');
-      },
-    };
-  }
-
-  return mockAdapter(platform);
-}
-
-async function mockExchange() {
-  return {
-    accessToken: `mock_at_${Date.now()}`,
-    refreshToken: `mock_rt_${Date.now()}`,
-    expiresIn: 7200,
-    refreshExpiresIn: 30 * 24 * 3600,
-    scopes: ['basic'],
-    rawData: { mock: true },
-  };
-}
-
-const platformLabels: Record<string, string> = {
+const PLATFORM_NAMES: Record<string, string> = {
   WECHAT: '微信公众号',
-  XIAOHONGSHU: '小红书',
   DOUYIN: '抖音',
   KUAISHOU: '快手',
-  VIDEO_CHANNEL: '视频号',
   BILIBILI: 'B站',
   ZHIHU: '知乎',
-  OTHER: '其他',
+  XIAOHONGSHU: '小红书',
+  VIDEO_CHANNEL: '微信视频号',
 };
 
-async function mockProfile(platform: string) {
-  const label = platformLabels[platform] ?? platform;
+export function getAdapter(
+  platform: Platform,
+  dbConfig?: PlatformOAuthConfig
+): PlatformAdapter {
+  const name = PLATFORM_NAMES[platform] ?? platform;
+
+  switch (platform) {
+    case 'WECHAT': {
+      const appId =
+        cfgVal(dbConfig, 'wechat', ['appId']) ?? process.env.WECHAT_OA_APP_ID;
+      const appSecret =
+        cfgVal(dbConfig, 'wechat', ['appSecret']) ??
+        process.env.WECHAT_OA_APP_SECRET;
+      if (!appId || !appSecret) {
+        throw new Error(
+          `「${name}」未配置 AppID / AppSecret\n\n请在「账号管理 → OAuth 配置」中填写，或在 .env 中设置 WECHAT_OA_APP_ID / WECHAT_OA_APP_SECRET`
+        );
+      }
+      return buildWeChatAdapter(appId);
+    }
+
+    case 'DOUYIN': {
+      const key =
+        cfgVal(dbConfig, 'douyin', ['clientKey']) ??
+        process.env.DOUYIN_CLIENT_KEY;
+      const secret =
+        cfgVal(dbConfig, 'douyin', ['clientSecret']) ??
+        process.env.DOUYIN_CLIENT_SECRET;
+      if (!key || !secret) {
+        throw new Error(
+          `「${name}」未配置 ClientKey / ClientSecret\n\n请在「账号管理 → OAuth 配置」中填写，或在 .env 中设置 DOUYIN_CLIENT_KEY / DOUYIN_CLIENT_SECRET`
+        );
+      }
+      return buildDouyinAdapter(key);
+    }
+
+    case 'KUAISHOU': {
+      const appId =
+        cfgVal(dbConfig, 'kuaishou', ['appId']) ?? process.env.KUAISHOU_APP_ID;
+      const appSecret =
+        cfgVal(dbConfig, 'kuaishou', ['appSecret']) ??
+        process.env.KUAISHOU_APP_SECRET;
+      if (!appId || !appSecret) {
+        throw new Error(
+          `「${name}」未配置 AppID / AppSecret\n\n请在「账号管理 → OAuth 配置」中填写，或在 .env 中设置 KUAISHOU_APP_ID / KUAISHOU_APP_SECRET`
+        );
+      }
+      return buildKuaishouAdapter(appId);
+    }
+
+    case 'BILIBILI': {
+      const appId =
+        cfgVal(dbConfig, 'bilibili', ['appId']) ?? process.env.BILIBILI_APP_ID;
+      const appSecret =
+        cfgVal(dbConfig, 'bilibili', ['appSecret']) ??
+        process.env.BILIBILI_APP_SECRET;
+      if (!appId || !appSecret) {
+        throw new Error(
+          `「${name}」未配置 AppID / AppSecret\n\n请在「账号管理 → OAuth 配置」中填写，或在 .env 中设置 BILIBILI_APP_ID / BILIBILI_APP_SECRET`
+        );
+      }
+      return buildBilibiliAdapter(appId);
+    }
+
+    case 'ZHIHU':
+      return buildZhihuAdapter();
+
+    case 'XIAOHONGSHU':
+    case 'VIDEO_CHANNEL':
+    case 'OTHER':
+    default:
+      return buildUnsupportedAdapter(name);
+  }
+}
+
+/* ---- platform-specific adapter builders ---- */
+
+function buildWeChatAdapter(appId: string): PlatformAdapter {
   return {
-    externalAccountId: `ext_${platform}_${Date.now()}`,
-    accountName: `Mock ${label}`,
-    avatarUrl: undefined as string | undefined,
-    rawData: { mock: true },
+    buildAuthorizeUrl: ({ state, redirectUri, scopes }) => {
+      const scopeStr = scopes?.join(',') ?? 'snsapi_base';
+      return `https://open.weixin.qq.com/connect/oauth2/authorize?appid=${encodeURIComponent(appId)}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&scope=${encodeURIComponent(scopeStr)}&response_type=code#wechat_redirect`;
+    },
+    exchangeCode: () => notImplemented('微信公众号 exchangeCode'),
+    getAccountProfile: () => notImplemented('微信公众号 getAccountProfile'),
+    revokeToken: () => notImplemented('微信公众号 revokeToken'),
+    syncWorks: () => notImplemented('微信公众号 syncWorks'),
+    syncMetrics: () => notImplemented('微信公众号 syncMetrics'),
   };
 }
 
-async function mockWorks(platform: string) {
-  const now = new Date();
-  return [
-    {
-      platformWorkId: `work_${platform.toLowerCase()}_001`,
-      workType: platform === 'WECHAT' ? 'article' : 'video',
-      title: `${platform} 测试作品 1`,
-      coverUrl: undefined as string | undefined,
-      url: `https://example.com/${platform.toLowerCase()}/001`,
-      publishedAt: new Date(now.getTime() - 2 * 24 * 3600 * 1000),
-      duration: platform === 'WECHAT' ? undefined : 60,
-      status: 'published',
-      rawData: { mock: true },
+function buildDouyinAdapter(clientKey: string): PlatformAdapter {
+  return {
+    buildAuthorizeUrl: ({ state, redirectUri, scopes }) => {
+      const scopeStr = scopes?.join(',') ?? '';
+      return `https://open.douyin.com/platform/oauth/connect?client_key=${encodeURIComponent(clientKey)}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&scope=${encodeURIComponent(scopeStr)}&response_type=code`;
     },
-    {
-      platformWorkId: `work_${platform.toLowerCase()}_002`,
-      workType: platform === 'WECHAT' ? 'article' : 'video',
-      title: `${platform} 测试作品 2`,
-      coverUrl: undefined as string | undefined,
-      url: `https://example.com/${platform.toLowerCase()}/002`,
-      publishedAt: new Date(now.getTime() - 7 * 24 * 3600 * 1000),
-      duration: platform === 'WECHAT' ? undefined : 120,
-      status: 'published',
-      rawData: { mock: true },
-    },
-  ];
+    exchangeCode: () => notImplemented('抖音 exchangeCode'),
+    getAccountProfile: () => notImplemented('抖音 getAccountProfile'),
+    revokeToken: () => notImplemented('抖音 revokeToken'),
+    syncWorks: () => notImplemented('抖音 syncWorks'),
+    syncMetrics: () => notImplemented('抖音 syncMetrics'),
+  };
 }
 
-async function mockMetrics(platform: string) {
-  const base: Record<string, unknown> = {
-    playCount: Math.floor(Math.random() * 10000) + 100,
-    likeCount: Math.floor(Math.random() * 500) + 10,
-    commentCount: Math.floor(Math.random() * 200) + 5,
-    shareCount: Math.floor(Math.random() * 100) + 1,
-    favoriteCount: Math.floor(Math.random() * 300) + 5,
-    collectCount: Math.floor(Math.random() * 200) + 3,
-    completionRate: null,
+function buildKuaishouAdapter(appId: string): PlatformAdapter {
+  return {
+    buildAuthorizeUrl: ({ state, redirectUri, scopes }) => {
+      const scopeStr = scopes?.join(' ') ?? '';
+      return `https://open.kuaishou.com/oauth2/authorize?app_id=${encodeURIComponent(appId)}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&scope=${encodeURIComponent(scopeStr)}&response_type=code`;
+    },
+    exchangeCode: () => notImplemented('快手 exchangeCode'),
+    getAccountProfile: () => notImplemented('快手 getAccountProfile'),
+    revokeToken: () => notImplemented('快手 revokeToken'),
+    syncWorks: () => notImplemented('快手 syncWorks'),
+    syncMetrics: () => notImplemented('快手 syncMetrics'),
   };
+}
 
-  if (platform === 'BILIBILI') {
-    base.coinCount = Math.floor(Math.random() * 100) + 1;
-    base.avgWatchDuration = Math.floor(Math.random() * 120) + 30;
-    base.avgWatchProgress = Math.round((Math.random() * 0.8 + 0.1) * 100) / 100;
-  }
+function buildBilibiliAdapter(appId: string): PlatformAdapter {
+  return {
+    buildAuthorizeUrl: ({ state, redirectUri, scopes }) => {
+      const scopeStr = scopes?.join(' ') ?? '';
+      return `https://passport.bilibili.com/api/oauth2/authorize?client_id=${encodeURIComponent(appId)}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}&scope=${encodeURIComponent(scopeStr)}&response_type=code`;
+    },
+    exchangeCode: () => notImplemented('B站 exchangeCode'),
+    getAccountProfile: () => notImplemented('B站 getAccountProfile'),
+    revokeToken: () => notImplemented('B站 revokeToken'),
+    syncWorks: () => notImplemented('B站 syncWorks'),
+    syncMetrics: () => notImplemented('B站 syncMetrics'),
+  };
+}
 
-  if (platform === 'WECHAT') {
-    base.readCount = base.playCount;
-    delete base.playCount;
-  }
+function buildZhihuAdapter(): PlatformAdapter {
+  return {
+    buildAuthorizeUrl: () => {
+      throw new Error(
+        '知乎暂不支持官方 OAuth 授权，请在知乎平台手动绑定账号后，在系统设置中录入外部账号 ID。'
+      );
+    },
+    exchangeCode: () => notImplementedZhihu(),
+    getAccountProfile: () => notImplementedZhihu(),
+    revokeToken: async () => {},
+    syncWorks: () => notImplementedZhihu(),
+    syncMetrics: () => notImplementedZhihu(),
+  };
+}
 
-  return base;
+function buildUnsupportedAdapter(platformName: string): PlatformAdapter {
+  return {
+    buildAuthorizeUrl: () => {
+      throw new Error(
+        `「${platformName}」的平台适配器尚未实现，无法发起 OAuth 授权。请先实现该平台的 PlatformAdapter。`
+      );
+    },
+    exchangeCode: () => notImplemented(`${platformName} exchangeCode`),
+    getAccountProfile: () =>
+      notImplemented(`${platformName} getAccountProfile`),
+    revokeToken: async () => {},
+    syncWorks: () => notImplemented(`${platformName} syncWorks`),
+    syncMetrics: () => notImplemented(`${platformName} syncMetrics`),
+  };
+}
+
+/* ---- helpers ---- */
+
+async function notImplemented(name: string): Promise<never> {
+  throw new Error(`${name} 接口尚未实现，请先实现该平台的 PlatformAdapter。`);
+}
+
+async function notImplementedZhihu(): Promise<never> {
+  throw new Error('知乎暂不支持官方自动同步，请使用手动导入。');
 }

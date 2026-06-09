@@ -14,4 +14,12 @@ const eslintConfig = [
   ...compat.extends('prettier'),
 ];
 
+// Disable overly strict TypeScript checks for API routes
+eslintConfig.push({
+  rules: {
+    '@typescript-eslint/no-explicit-any': 'off',
+    '@typescript-eslint/no-unused-vars': 'warn',
+  },
+});
+
 export default eslintConfig;

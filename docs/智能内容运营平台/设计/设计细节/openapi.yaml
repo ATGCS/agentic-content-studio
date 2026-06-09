@@ -5,7 +5,7 @@ info:
   description: 智能内容运营平台 API，覆盖账号、选题、内容、Agent、审核、发布和数据复盘主流程。
 
 servers:
-  - url: http://localhost:3002/api
+  - url: http://localhost:3001/api
     description: 本地 API 服务
 
 tags:

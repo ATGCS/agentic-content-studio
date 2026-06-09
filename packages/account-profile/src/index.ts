@@ -7,6 +7,7 @@ export * from './token-crypto.js';
 export * from './platform-slug.js';
 export * from './adapters/index.js';
 export * from './binding-service.js';
+export * from './oauth-config.js';
 
 export async function listAccounts(
   user: AuthUser,
@@ -19,7 +20,10 @@ export async function listAccounts(
   if (user.role === 'OPERATOR') where.ownerId = user.id;
   return prisma.platformAccount.findMany({
     where,
-    include: { profile: true, owner: { select: { id: true, name: true, email: true } } },
+    include: {
+      profile: true,
+      owner: { select: { id: true, name: true, email: true } },
+    },
     orderBy: { createdAt: 'desc' },
   });
 }
@@ -27,7 +31,10 @@ export async function listAccounts(
 export async function getAccount(id: string) {
   const account = await prisma.platformAccount.findUnique({
     where: { id },
-    include: { profile: true, owner: { select: { id: true, name: true, email: true } } },
+    include: {
+      profile: true,
+      owner: { select: { id: true, name: true, email: true } },
+    },
   });
   if (!account)
     throw new AppError(ErrorCodes.NOT_FOUND, 'account not found', 404);
@@ -60,7 +67,10 @@ export async function updateAccount(
       ...data,
       rawData: data.rawData as object | undefined,
     },
-    include: { profile: true, owner: { select: { id: true, name: true, email: true } } },
+    include: {
+      profile: true,
+      owner: { select: { id: true, name: true, email: true } },
+    },
   });
 }
 

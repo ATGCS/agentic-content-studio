@@ -13,12 +13,10 @@ export function configFromEnv(): Partial<ImaConfig> {
     process.env.IMA_API_KEY ??
     process.env.IMA_APIKEY ??
     '';
-  const useMock = process.env.USE_MOCK_IMA !== 'false';
   return {
     clientId,
     apiKey,
     baseUrl: process.env.IMA_BASE_URL ?? DEFAULT_IMA_BASE_URL,
-    useMock: useMock || !clientId || !apiKey,
   };
 }
 
@@ -29,13 +27,12 @@ export async function getImaConfig(): Promise<ImaConfig> {
   const stored = (row?.value ?? {}) as Partial<ImaConfig>;
   const env = configFromEnv();
 
-  const clientId = stored.clientId ?? env.clientId ?? '';
-  const apiKey = stored.apiKey ?? env.apiKey ?? '';
-  const baseUrl = stored.baseUrl ?? env.baseUrl ?? DEFAULT_IMA_BASE_URL;
-  const useMock =
-    stored.useMock ?? env.useMock ?? (!clientId || !apiKey);
+  // Prefer env over stored empty strings (env is the source of truth)
+  const clientId = env.clientId || stored.clientId || '';
+  const apiKey = env.apiKey || stored.apiKey || '';
+  const baseUrl = env.baseUrl || stored.baseUrl || DEFAULT_IMA_BASE_URL;
 
-  return { clientId, apiKey, baseUrl, useMock };
+  return { clientId, apiKey, baseUrl };
 }
 
 export async function saveImaConfig(
@@ -46,7 +43,6 @@ export async function saveImaConfig(
     clientId: input.clientId ?? current.clientId,
     apiKey: input.apiKey?.trim() ? input.apiKey : current.apiKey,
     baseUrl: input.baseUrl?.trim() || current.baseUrl || DEFAULT_IMA_BASE_URL,
-    useMock: input.useMock ?? current.useMock,
   };
 
   await prisma.systemConfig.upsert({
@@ -77,7 +73,6 @@ export function publicImaConfig(config: ImaConfig) {
     apiKey: maskApiKey(config.apiKey),
     hasApiKey: Boolean(config.apiKey),
     baseUrl: config.baseUrl,
-    useMock: config.useMock,
     configured: Boolean(config.clientId && config.apiKey),
   };
 }

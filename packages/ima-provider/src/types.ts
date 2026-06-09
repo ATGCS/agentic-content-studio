@@ -23,7 +23,6 @@ export type ImaConfig = {
   clientId: string;
   apiKey: string;
   baseUrl: string;
-  useMock: boolean;
 };
 
 export const IMA_CONFIG_KEY = 'ima.config';

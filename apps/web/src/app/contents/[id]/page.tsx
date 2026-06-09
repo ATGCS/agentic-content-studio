@@ -62,11 +62,17 @@ type Version = {
   title?: string | null;
   body?: string | null;
   coverUrl?: string | null;
-  tags?: string | null;
+  tags?: string[] | string | null;
   status: string;
   createdAt: string;
   account?: { accountName: string } | null;
 };
+
+function normalizeTags(tags: string[] | string | null | undefined) {
+  return (Array.isArray(tags) ? tags : (tags?.split(',') ?? []))
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
 
 type Material = {
   id: string;
@@ -276,6 +282,7 @@ export default function ContentDetailPage() {
 
   const currentVersion =
     tab === 'draft' ? null : content.versions.find((v) => v.id === tab);
+  const currentVersionTags = normalizeTags(currentVersion?.tags);
 
   return (
     <StudioLayout>
@@ -286,7 +293,7 @@ export default function ContentDetailPage() {
             className="inline-flex items-center gap-1 text-sm text-[#86909c] hover:text-[#1664ff]"
           >
             <ArrowLeft className="size-4" />
-            返回内容项目列表
+            返回内容管理列表
           </Link>
         </div>
 
@@ -294,12 +301,10 @@ export default function ContentDetailPage() {
           {/* ===== 左侧：项目信息 ===== */}
           <aside className="w-full shrink-0 xl:w-64">
             <StudioCard contentClassName="space-y-4 p-4">
-              <h3 className="text-sm font-semibold text-[#1D2129]">
-                项目信息
-              </h3>
+              <h3 className="text-sm font-semibold text-[#1D2129]">项目信息</h3>
               <div className="space-y-3 text-sm">
                 <div>
-                  <p className="text-xs text-[#86909c]">选题名称</p>
+                  <p className="text-xs text-[#86909c]">系列标题</p>
                   <p className="font-medium text-[#1D2129]">{content.title}</p>
                 </div>
                 <div>
@@ -335,9 +340,7 @@ export default function ContentDetailPage() {
 
             {/* 审核操作 */}
             <StudioCard contentClassName="space-y-3 p-4">
-              <h3 className="text-sm font-semibold text-[#1D2129]">
-                审核操作
-              </h3>
+              <h3 className="text-sm font-semibold text-[#1D2129]">审核操作</h3>
               <div className="space-y-2">
                 <Label className="text-xs text-[#86909c]">
                   选择版本提交审核
@@ -372,11 +375,7 @@ export default function ContentDetailPage() {
 
           {/* ===== 中间：主编辑区 ===== */}
           <div className="min-w-0 flex-1 space-y-4">
-            <StudioTabs
-              items={platformTabs}
-              value={tab}
-              onChange={setTab}
-            />
+            <StudioTabs items={platformTabs} value={tab} onChange={setTab} />
 
             {tab === 'draft' ? (
               <StudioCard contentClassName="space-y-5 p-5">
@@ -384,7 +383,12 @@ export default function ContentDetailPage() {
                   <h3 className="text-sm font-semibold text-[#1D2129]">
                     总稿编辑
                   </h3>
-                  <Button size="sm" variant="outline" onClick={saveContent} isLoading={saving}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={saveContent}
+                    isLoading={saving}
+                  >
                     <Save className="size-3.5" />
                     保存修改
                   </Button>
@@ -427,7 +431,12 @@ export default function ContentDetailPage() {
                   </h3>
                   <div className="flex items-center gap-2">
                     <StatusBadge status={currentVersion.status} />
-                    <Button size="sm" variant="outline" onClick={saveVersion} isLoading={saving}>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={saveVersion}
+                      isLoading={saving}
+                    >
                       <Save className="size-3.5" />
                       保存
                     </Button>
@@ -462,16 +471,16 @@ export default function ContentDetailPage() {
                     className="studio-input resize-none font-mono text-sm"
                   />
                 </div>
-                {currentVersion.tags && (
+                {currentVersionTags.length > 0 && (
                   <div className="space-y-2">
                     <Label className="text-xs text-[#86909c]">标签</Label>
                     <div className="flex flex-wrap gap-1.5">
-                      {currentVersion.tags.split(',').map((tag) => (
+                      {currentVersionTags.map((tag) => (
                         <span
                           key={tag}
                           className="rounded-md bg-[#f0f5ff] px-2 py-0.5 text-xs text-[#1664ff]"
                         >
-                          {tag.trim()}
+                          {tag}
                         </span>
                       ))}
                     </div>

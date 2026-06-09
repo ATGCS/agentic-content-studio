@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { RefreshCw, Search } from 'lucide-react';
 import { StudioLayout } from '@/components/StudioLayout';
-import { PageContainer, PageHeader } from '@/components/layout/page-container';
+import { PageContainer } from '@/components/layout/page-container';
 import { EmptyState } from '@/components/studio/empty-state';
 import { PlatformBadge } from '@/components/studio/platform-badge';
 import { StudioCard } from '@/components/studio/studio-card';
@@ -30,7 +30,7 @@ import { api } from '@/lib/api';
 type KnowledgeItem = {
   id: string;
   name: string;
-  type: string;
+  agentType?: string | null;
   platform?: string;
   enabled: boolean;
   updatedAt: string;
@@ -46,6 +46,7 @@ const categories = [
   { value: 'TAG', label: '标签知识库' },
   { value: 'PLATFORM_RULE', label: '平台规则库' },
   { value: 'ACCOUNT_STYLE', label: '账号风格库' },
+  { value: 'MATERIAL', label: '素材知识库' },
 ];
 
 const categoryLabels: Record<string, string> = {
@@ -56,6 +57,7 @@ const categoryLabels: Record<string, string> = {
   TAG: '标签知识库',
   PLATFORM_RULE: '平台规则库',
   ACCOUNT_STYLE: '账号风格库',
+  MATERIAL: '素材知识库',
 };
 
 export default function KnowledgePage() {
@@ -103,7 +105,7 @@ export default function KnowledgePage() {
   }
 
   const filtered = items.filter((item) => {
-    if (category !== 'ALL' && item.type !== category) return false;
+    if (category !== 'ALL' && item.agentType !== category) return false;
     if (search && !item.name.toLowerCase().includes(search.toLowerCase()))
       return false;
     return true;
@@ -112,11 +114,6 @@ export default function KnowledgePage() {
   return (
     <StudioLayout>
       <PageContainer>
-        <PageHeader
-          title="知识库管理"
-          description="结构化知识库，可供 AI Agent 调用"
-        />
-
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#86909c]" />
@@ -139,7 +136,12 @@ export default function KnowledgePage() {
               ))}
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm" onClick={syncKnowledgeBases} isLoading={syncing}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={syncKnowledgeBases}
+            isLoading={syncing}
+          >
             <RefreshCw className="size-4" />
             同步知识库
           </Button>
@@ -177,10 +179,7 @@ export default function KnowledgePage() {
                   description="正在从 IMA 配置读取知识库"
                 />
               ) : loadError ? (
-                <EmptyState
-                  title="知识库加载失败"
-                  description={loadError}
-                />
+                <EmptyState title="知识库加载失败" description={loadError} />
               ) : filtered.length === 0 ? (
                 <EmptyState
                   title="暂无知识条目"
@@ -211,7 +210,7 @@ export default function KnowledgePage() {
                         </TableCell>
                         <TableCell>
                           <span className="rounded-md bg-[#f0f5ff] px-2 py-0.5 text-xs text-[#1664ff]">
-                            {categoryLabels[item.type] ?? item.type}
+                            {categoryLabels[item.agentType || ''] ?? '通用'}
                           </span>
                         </TableCell>
                         <TableCell>
@@ -224,9 +223,7 @@ export default function KnowledgePage() {
                         <TableCell>
                           <span
                             className={`text-xs font-medium ${
-                              item.enabled
-                                ? 'text-[#00b42a]'
-                                : 'text-[#86909c]'
+                              item.enabled ? 'text-[#00b42a]' : 'text-[#86909c]'
                             }`}
                           >
                             {item.enabled ? '已启用' : '未启用'}
@@ -236,7 +233,11 @@ export default function KnowledgePage() {
                           {new Date(item.updatedAt).toLocaleDateString()}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button size="sm" variant="outline" onClick={() => toggleKnowledgeBase(item)}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => toggleKnowledgeBase(item)}
+                          >
                             {item.enabled ? '停用' : '启用'}
                           </Button>
                         </TableCell>

@@ -17,10 +17,7 @@ import {
 } from 'lucide-react';
 import { StudioLayout } from '@/components/StudioLayout';
 import { PlatformBadge } from '@/components/platform-icon';
-import {
-  PageContainer,
-  PageHeader,
-} from '@/components/layout/page-container';
+import { PageContainer } from '@/components/layout/page-container';
 import { EmptyState } from '@/components/studio/empty-state';
 import { StudioCard } from '@/components/studio/studio-card';
 import { Button } from '@/components/ui/button';
@@ -154,7 +151,9 @@ export default function AgentTasksPage() {
       if (statusFilter !== 'ALL') params.set('status', statusFilter);
       if (taskType !== 'ALL') params.set('agentType', taskType);
       const query = params.toString();
-      const res = await api<AgentRun[]>(`/api/agent-runs${query ? `?${query}` : ''}`);
+      const res = await api<AgentRun[]>(
+        `/api/agent-runs${query ? `?${query}` : ''}`
+      );
       setItems(res.data.map(mapRunToTask));
       setCurrentPage(1);
     } finally {
@@ -170,10 +169,34 @@ export default function AgentTasksPage() {
     const counts = { PENDING: 0, RUNNING: 0, SUCCESS: 0, FAILED: 0 };
     for (const item of items) counts[item.status] += 1;
     return [
-      { label: '待执行', count: counts.PENDING, icon: FileText, bg: '#FFF7E6', color: '#FF7D00' },
-      { label: '执行中', count: counts.RUNNING, icon: Clock, bg: '#E8F3FF', color: '#1664FF' },
-      { label: '已完成', count: counts.SUCCESS, icon: CheckCircle2, bg: '#E8FFEA', color: '#00B42A' },
-      { label: '失败', count: counts.FAILED, icon: XCircle, bg: '#FFF1F0', color: '#F53F3F' },
+      {
+        label: '待执行',
+        count: counts.PENDING,
+        icon: FileText,
+        bg: '#FFF7E6',
+        color: '#FF7D00',
+      },
+      {
+        label: '执行中',
+        count: counts.RUNNING,
+        icon: Clock,
+        bg: '#E8F3FF',
+        color: '#1664FF',
+      },
+      {
+        label: '已完成',
+        count: counts.SUCCESS,
+        icon: CheckCircle2,
+        bg: '#E8FFEA',
+        color: '#00B42A',
+      },
+      {
+        label: '失败',
+        count: counts.FAILED,
+        icon: XCircle,
+        bg: '#FFF1F0',
+        color: '#F53F3F',
+      },
     ];
   }, [items]);
 
@@ -206,11 +229,6 @@ export default function AgentTasksPage() {
   return (
     <StudioLayout>
       <PageContainer>
-        <PageHeader
-          title="Agent 任务中心"
-          description="管理和监控所有 Agent 任务的执行情况，生成过程可追踪、可管理、可审计"
-        />
-
         <StudioCard contentClassName="p-5">
           <div className="mb-6 flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-2">
@@ -258,7 +276,12 @@ export default function AgentTasksPage() {
                 <RotateCcw className="size-3.5" />
                 重置
               </Button>
-              <Button size="sm" className="h-8 text-xs" isLoading={loading} onClick={loadRuns}>
+              <Button
+                size="sm"
+                className="h-8 text-xs"
+                isLoading={loading}
+                onClick={loadRuns}
+              >
                 查询
               </Button>
             </div>
@@ -279,7 +302,9 @@ export default function AgentTasksPage() {
                     <Icon className="size-5" style={{ color: stat.color }} />
                   </div>
                   <div>
-                    <div className="text-lg font-semibold text-[#1D2129]">{stat.count}</div>
+                    <div className="text-lg font-semibold text-[#1D2129]">
+                      {stat.count}
+                    </div>
                     <div className="text-xs text-[#86909C]">{stat.label}</div>
                   </div>
                 </div>
@@ -297,27 +322,53 @@ export default function AgentTasksPage() {
               <Loader2 className="size-6 animate-spin text-[#1664FF]" />
             </div>
           ) : items.length === 0 ? (
-            <EmptyState title="暂无 Agent 运行记录" description="执行内容生成或审核后，这里会展示真实 AgentRun 记录" />
+            <EmptyState
+              title="暂无 Agent 运行记录"
+              description="执行内容生成或审核后，这里会展示真实 AgentRun 记录"
+            />
           ) : (
             <>
               <Table className="studio-table -mx-5 border-t border-[#E5E8EF] px-5">
                 <TableHeader>
                   <TableRow className="border-[#E5E8EF] hover:bg-transparent">
-                    <TableHead className="min-w-[220px] py-3 text-xs font-normal text-[#86909C]">任务名称</TableHead>
-                    <TableHead className="py-3 text-xs font-normal text-[#86909C]">内容项目</TableHead>
-                    <TableHead className="py-3 text-xs font-normal text-[#86909C]">目标平台</TableHead>
-                    <TableHead className="py-3 text-xs font-normal text-[#86909C]">目标账号</TableHead>
-                    <TableHead className="py-3 text-xs font-normal text-[#86909C]">执行 Agent</TableHead>
-                    <TableHead className="py-3 text-xs font-normal text-[#86909C]">执行状态</TableHead>
-                    <TableHead className="py-3 text-xs font-normal text-[#86909C]">调用模型</TableHead>
-                    <TableHead className="py-3 text-xs font-normal text-[#86909C]">生成时间</TableHead>
-                    <TableHead className="py-3 text-xs font-normal text-[#86909C]">耗时</TableHead>
-                    <TableHead className="py-3 text-right text-xs font-normal text-[#86909C]">操作</TableHead>
+                    <TableHead className="min-w-[220px] py-3 text-xs font-normal text-[#86909C]">
+                      任务名称
+                    </TableHead>
+                    <TableHead className="py-3 text-xs font-normal text-[#86909C]">
+                      内容管理
+                    </TableHead>
+                    <TableHead className="py-3 text-xs font-normal text-[#86909C]">
+                      目标平台
+                    </TableHead>
+                    <TableHead className="py-3 text-xs font-normal text-[#86909C]">
+                      目标账号
+                    </TableHead>
+                    <TableHead className="py-3 text-xs font-normal text-[#86909C]">
+                      执行 Agent
+                    </TableHead>
+                    <TableHead className="py-3 text-xs font-normal text-[#86909C]">
+                      执行状态
+                    </TableHead>
+                    <TableHead className="py-3 text-xs font-normal text-[#86909C]">
+                      调用模型
+                    </TableHead>
+                    <TableHead className="py-3 text-xs font-normal text-[#86909C]">
+                      生成时间
+                    </TableHead>
+                    <TableHead className="py-3 text-xs font-normal text-[#86909C]">
+                      耗时
+                    </TableHead>
+                    <TableHead className="py-3 text-right text-xs font-normal text-[#86909C]">
+                      操作
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {pagedItems.map((task) => (
-                    <TableRow key={task.id} className="border-[#E5E8EF] hover:bg-[#F7F8FA]">
+                    <TableRow
+                      key={task.id}
+                      className="border-[#E5E8EF] hover:bg-[#F7F8FA]"
+                    >
                       <TableCell className="py-3">
                         <div className="flex flex-col">
                           <Link
@@ -326,18 +377,33 @@ export default function AgentTasksPage() {
                           >
                             {task.name}
                           </Link>
-                          <div className="text-xs text-[#86909C]">{task.taskId}</div>
-                          {task.error ? <div className="mt-1 max-w-[260px] truncate text-xs text-[#F53F3F]">{task.error}</div> : null}
+                          <div className="text-xs text-[#86909C]">
+                            {task.taskId}
+                          </div>
+                          {task.error ? (
+                            <div className="mt-1 max-w-[260px] truncate text-xs text-[#F53F3F]">
+                              {task.error}
+                            </div>
+                          ) : null}
                         </div>
                       </TableCell>
                       <TableCell className="py-3">
-                        <div className="text-sm text-[#4E5969]">{task.content?.title ?? '—'}</div>
+                        <div className="text-sm text-[#4E5969]">
+                          {task.content?.title ?? '—'}
+                        </div>
                       </TableCell>
                       <TableCell className="py-3">
-                        <PlatformBadge platform={task.platform ?? ''} size="sm" />
+                        <PlatformBadge
+                          platform={task.platform ?? ''}
+                          size="sm"
+                        />
                       </TableCell>
-                      <TableCell className="py-3 text-sm text-[#4E5969]">{task.account?.accountName ?? '—'}</TableCell>
-                      <TableCell className="py-3 text-sm text-[#4E5969]">{agentTypeLabels[task.agentType] ?? task.agentType}</TableCell>
+                      <TableCell className="py-3 text-sm text-[#4E5969]">
+                        {task.account?.accountName ?? '—'}
+                      </TableCell>
+                      <TableCell className="py-3 text-sm text-[#4E5969]">
+                        {agentTypeLabels[task.agentType] ?? task.agentType}
+                      </TableCell>
                       <TableCell className="py-3">
                         <span
                           className={cn(
@@ -348,12 +414,21 @@ export default function AgentTasksPage() {
                           {taskStatusStyles[task.status]?.label ?? task.status}
                         </span>
                       </TableCell>
-                      <TableCell className="py-3 text-xs text-[#86909C]">{task.model ?? '—'}</TableCell>
-                      <TableCell className="py-3 text-sm text-[#86909C]">{task.createdAt}</TableCell>
-                      <TableCell className="py-3 text-xs text-[#86909C]">{task.duration ?? '—'}</TableCell>
+                      <TableCell className="py-3 text-xs text-[#86909C]">
+                        {task.model ?? '—'}
+                      </TableCell>
+                      <TableCell className="py-3 text-sm text-[#86909C]">
+                        {task.createdAt}
+                      </TableCell>
+                      <TableCell className="py-3 text-xs text-[#86909C]">
+                        {task.duration ?? '—'}
+                      </TableCell>
                       <TableCell className="py-3 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <Link href={`/agent-tasks/${task.id}`} className="rounded p-1.5 hover:bg-[#F5F7FA]">
+                          <Link
+                            href={`/agent-tasks/${task.id}`}
+                            className="rounded p-1.5 hover:bg-[#F5F7FA]"
+                          >
                             <Eye className="size-4 text-[#86909C]" />
                           </Link>
                           {task.status === 'FAILED' ? (
@@ -363,10 +438,16 @@ export default function AgentTasksPage() {
                               onClick={() => retryRun(task.id)}
                               title="重试"
                             >
-                              <RefreshCw className={cn('size-4 text-[#F53F3F]', actionId === task.id && 'animate-spin')} />
+                              <RefreshCw
+                                className={cn(
+                                  'size-4 text-[#F53F3F]',
+                                  actionId === task.id && 'animate-spin'
+                                )}
+                              />
                             </button>
                           ) : null}
-                          {task.status === 'RUNNING' || task.status === 'PENDING' ? (
+                          {task.status === 'RUNNING' ||
+                          task.status === 'PENDING' ? (
                             <button
                               className="rounded p-1.5 hover:bg-[#F5F7FA]"
                               disabled={actionId === task.id}
@@ -384,15 +465,25 @@ export default function AgentTasksPage() {
               </Table>
 
               <div className="mt-6 flex items-center justify-between border-t border-[#E5E8EF] pt-4">
-                <div className="text-sm text-[#86909C]">第 {currentPage} / {totalPages} 页</div>
+                <div className="text-sm text-[#86909C]">
+                  第 {currentPage} / {totalPages} 页
+                </div>
                 <div className="flex items-center gap-4">
-                  <Select value={pageSize} onValueChange={(value) => { setPageSize(value); setCurrentPage(1); }}>
+                  <Select
+                    value={pageSize}
+                    onValueChange={(value) => {
+                      setPageSize(value);
+                      setCurrentPage(1);
+                    }}
+                  >
                     <SelectTrigger size="sm" className="h-8 w-24 text-xs">
                       <SelectValue placeholder="10条/页" />
                     </SelectTrigger>
                     <SelectContent>
                       {pageSizeOptions.map((option) => (
-                        <SelectItem key={option} value={option}>{option}条/页</SelectItem>
+                        <SelectItem key={option} value={option}>
+                          {option}条/页
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -402,7 +493,9 @@ export default function AgentTasksPage() {
                       variant="outline"
                       className="size-8 p-0"
                       disabled={currentPage <= 1}
-                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                      onClick={() =>
+                        setCurrentPage(Math.max(1, currentPage - 1))
+                      }
                     >
                       <ChevronLeft className="size-4 text-[#86909C]" />
                     </Button>
@@ -411,7 +504,9 @@ export default function AgentTasksPage() {
                       variant="outline"
                       className="size-8 p-0"
                       disabled={currentPage >= totalPages}
-                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                      onClick={() =>
+                        setCurrentPage(Math.min(totalPages, currentPage + 1))
+                      }
                     >
                       <ChevronRight className="size-4" />
                     </Button>
@@ -435,7 +530,9 @@ function mapRunToTask(run: AgentRun): AgentTask {
     status: run.status,
     content: run.content,
     platform: run.version?.platform,
-    account: run.version?.account ? { accountName: run.version.account.accountName } : undefined,
+    account: run.version?.account
+      ? { accountName: run.version.account.accountName }
+      : undefined,
     model: run.model ?? undefined,
     error: run.error,
     createdAt: formatDateTime(run.startedAt),
@@ -454,7 +551,10 @@ function formatDateTime(value: string) {
 
 function formatDuration(start: string, end?: string | null) {
   if (!end) return undefined;
-  const seconds = Math.max(0, Math.round((new Date(end).getTime() - new Date(start).getTime()) / 1000));
+  const seconds = Math.max(
+    0,
+    Math.round((new Date(end).getTime() - new Date(start).getTime()) / 1000)
+  );
   if (seconds < 60) return `${seconds}秒`;
   const minutes = Math.floor(seconds / 60);
   return `${minutes}分${seconds % 60}秒`;

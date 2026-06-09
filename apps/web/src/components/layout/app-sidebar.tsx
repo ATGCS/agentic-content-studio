@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { ChevronLeft, LogOut, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LogOut, Sparkles } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -17,10 +18,91 @@ import { studioNavItems } from '@/config/nav';
 import { clearToken } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
+function NavItem({
+  item,
+  subItems,
+  pathname,
+}: {
+  item: (typeof studioNavItems)[number];
+  subItems: typeof studioNavItems;
+  pathname: string;
+}) {
+  const Icon = item.icon;
+  const active =
+    pathname === item.href ||
+    (pathname.startsWith(`${item.href}/`) &&
+      !subItems.some(
+        (sub) => sub.parent === item.href && pathname.startsWith(sub.href)
+      ));
+  const hasSubItems = subItems.some((sub) => sub.parent === item.href);
+  const isParentActive =
+    pathname === item.href ||
+    subItems.some(
+      (sub) =>
+        sub.parent === item.href &&
+        (pathname === sub.href || pathname.startsWith(`${sub.href}/`))
+    );
+  const [expanded, setExpanded] = useState(hasSubItems && isParentActive);
+
+  return (
+    <div>
+      <SidebarMenuItem>
+        <Link
+          href={item.href}
+          className={cn('studio-nav-link', active && 'studio-nav-link--active')}
+        >
+          <Icon className="size-4 shrink-0" />
+          <span className="group-data-[collapsible=icon]:hidden">
+            {item.label}
+          </span>
+          {hasSubItems && (
+            <ChevronRight
+              className={cn(
+                'size-3 transition-transform group-data-[collapsible=icon]:hidden',
+                expanded && 'rotate-90',
+                'group-data-[collapsible=icon]:hidden'
+              )}
+            />
+          )}
+        </Link>
+      </SidebarMenuItem>
+      {hasSubItems && expanded && (
+        <SidebarMenu className="ml-4 space-y-1 border-l-2 border-[#E5E8EF] pl-2 group-data-[collapsible=icon]:hidden">
+          {subItems
+            .filter((sub) => sub.parent === item.href)
+            .map((sub) => {
+              const SubIcon = sub.icon;
+              const subActive =
+                pathname === sub.href || pathname.startsWith(`${sub.href}/`);
+              return (
+                <SidebarMenuItem key={sub.href}>
+                  <Link
+                    href={sub.href}
+                    className={cn(
+                      'studio-nav-link',
+                      subActive && 'studio-nav-link--active'
+                    )}
+                  >
+                    <SubIcon className="size-4 shrink-0" />
+                    <span>{sub.label}</span>
+                  </Link>
+                </SidebarMenuItem>
+              );
+            })}
+        </SidebarMenu>
+      )}
+    </div>
+  );
+}
+
 export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { toggleSidebar, state } = useSidebar();
+
+  // Group nav items by parent
+  const topLevelItems = studioNavItems.filter((item) => !item.parent);
+  const subItems = studioNavItems.filter((item) => item.parent);
 
   return (
     <Sidebar collapsible="icon" className="studio-sidebar">
@@ -39,29 +121,14 @@ export function AppSidebar() {
 
       <SidebarContent className="px-2 py-3">
         <SidebarMenu>
-          {studioNavItems.map((item) => {
-            const Icon = item.icon;
-            const active =
-              pathname === item.href ||
-              (item.href !== '/dashboard' &&
-                pathname.startsWith(`${item.href}/`));
-            return (
-              <SidebarMenuItem key={item.href}>
-                <Link
-                  href={item.href}
-                  className={cn(
-                    'studio-nav-link',
-                    active && 'studio-nav-link--active'
-                  )}
-                >
-                  <Icon className="size-4 shrink-0" />
-                  <span className="group-data-[collapsible=icon]:hidden">
-                    {item.label}
-                  </span>
-                </Link>
-              </SidebarMenuItem>
-            );
-          })}
+          {topLevelItems.map((item) => (
+            <NavItem
+              key={item.href}
+              item={item}
+              subItems={subItems}
+              pathname={pathname}
+            />
+          ))}
         </SidebarMenu>
       </SidebarContent>
 

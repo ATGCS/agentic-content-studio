@@ -137,7 +137,7 @@ export default function DashboardPage() {
             <StudioCard contentClassName="overflow-hidden p-0">
               <div className="flex items-center justify-between px-5 py-4">
                 <h3 className="text-sm font-semibold text-[#1D2129]">
-                  最近内容项目列表
+                  最近内容管理列表
                 </h3>
                 <Link
                   href="/contents"
@@ -149,12 +149,12 @@ export default function DashboardPage() {
               {items.length === 0 && !loading ? (
                 <div className="py-10">
                   <EmptyState
-                    title="还没有内容项目"
-                    description="从新建内容项目开始你的运营流程"
+                    title="还没有内容"
+                    description="从新建内容开始你的运营流程"
                   />
                   <div className="flex justify-center pb-6">
                     <Button asChild>
-                      <Link href="/contents">新建内容项目</Link>
+                      <Link href="/contents">新建内容</Link>
                     </Button>
                   </div>
                 </div>
@@ -162,7 +162,7 @@ export default function DashboardPage() {
                 <Table className="studio-table">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>选题名称</TableHead>
+                      <TableHead>系列</TableHead>
                       <TableHead>目标平台</TableHead>
                       <TableHead>目标账号</TableHead>
                       <TableHead>当前状态</TableHead>

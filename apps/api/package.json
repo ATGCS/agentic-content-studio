@@ -8,6 +8,10 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "node --import tsx --test src/integration/**/*.test.ts",
+    "test:smoke": "node --import tsx --test src/integration/smoke.test.ts",
+    "test:api": "node --import tsx --test src/integration/api.test.ts",
+    "test:coverage": "node --import tsx --test --experimental-test-coverage src/integration/**/*.test.ts",
+    "test:api:http": "node --import tsx --test src/integration/api-http.test.ts",
     "test:api:setup": "pnpm --filter @acs/db db:test:push && pnpm --filter @acs/db db:test:seed"
   },
   "dependencies": {

@@ -41,6 +41,7 @@ export async function listContents(
             },
           },
           take: 3,
+          where: { accountId: { not: null } },
         },
       },
     }),

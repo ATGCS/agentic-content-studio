@@ -1,4 +1,8 @@
-import type { ImaConfig, KnowledgeProvider, KnowledgeSearchInput } from '../types.js';
+import type {
+  ImaConfig,
+  KnowledgeProvider,
+  KnowledgeSearchInput,
+} from '../types.js';
 import { imaRequest } from '../client.js';
 import { extractKnowledgeBases, extractSearchItems } from '../parsers.js';
 
@@ -9,13 +13,15 @@ export class ImaKnowledgeProvider implements KnowledgeProvider {
     const res = await imaRequest(
       this.config,
       'openapi/wiki/v1/search_knowledge_base',
-      { query: '', cursor: '', limit: 50 }
+      { query: '', cursor: '', limit: 20 }
     );
-    return extractKnowledgeBases(res).map(({ externalId, name, description }) => ({
-      externalId,
-      name,
-      description,
-    }));
+    return extractKnowledgeBases(res).map(
+      ({ externalId, name, description }) => ({
+        externalId,
+        name,
+        description,
+      })
+    );
   }
 
   async search(input: KnowledgeSearchInput) {

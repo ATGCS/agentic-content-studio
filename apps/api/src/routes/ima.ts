@@ -9,6 +9,7 @@ import {
   listKnowledgeBases,
   syncKnowledgeBasesFromIma,
   updateKnowledgeBase,
+  deleteKnowledgeBases,
 } from '@acs/ima-provider';
 import { getUser } from '../plugins/auth.js';
 
@@ -32,7 +33,6 @@ export async function imaRoutes(app: FastifyInstance) {
           clientId: z.string().optional(),
           apiKey: z.string().optional(),
           baseUrl: z.string().optional(),
-          useMock: z.boolean().optional(),
         })
         .parse(request.body);
       const saved = await saveImaConfig(body);
@@ -74,9 +74,25 @@ export async function imaRoutes(app: FastifyInstance) {
           enabled: z.boolean().optional(),
           isDefault: z.boolean().optional(),
           name: z.string().optional(),
+          agentType: z.string().optional(),
         })
         .parse(request.body);
       return reply.success(await updateKnowledgeBase(id, body));
+    }
+  );
+
+  app.post(
+    '/ima/knowledge-bases/batch-delete',
+    { onRequest: [app.authenticate] },
+    async (request, reply) => {
+      requireRoles(getUser(request), 'ADMIN');
+      const body = z
+        .object({
+          ids: z.array(z.string()),
+        })
+        .parse(request.body);
+      const deleted = await deleteKnowledgeBases(body.ids);
+      return reply.success({ deleted, count: deleted.length });
     }
   );
 

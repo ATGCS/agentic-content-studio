@@ -3,16 +3,20 @@ import cors from '@fastify/cors';
 import jwt from '@fastify/jwt';
 import { registerResponseHelpers } from './plugins/response.js';
 import { registerAuth } from './plugins/auth.js';
+import { registerRequestLogger } from './plugins/request-logger.js';
 import { authRoutes } from './routes/auth.js';
 import { topicRoutes } from './routes/topics.js';
 import { contentRoutes } from './routes/contents.js';
-import { materialRoutes, registerContentMaterialRoutes } from './routes/materials.js';
+import {
+  materialRoutes,
+  registerContentMaterialRoutes,
+} from './routes/materials.js';
 import { agentRoutes } from './routes/agents.js';
 import { accountRoutes, oauthRoutes } from './routes/accounts.js';
 import { imaRoutes } from './routes/ima.js';
 
 export async function buildApp(): Promise<FastifyInstance> {
-  const app = Fastify({ logger: false });
+  const app = Fastify({ logger: true });
 
   await app.register(cors, { origin: true });
   await app.register(jwt, {
@@ -21,6 +25,7 @@ export async function buildApp(): Promise<FastifyInstance> {
 
   registerResponseHelpers(app);
   registerAuth(app);
+  registerRequestLogger(app);
 
   await app.register(
     async (api) => {

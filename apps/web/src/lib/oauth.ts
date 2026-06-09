@@ -7,7 +7,7 @@ export function resolveAuthorizationUrl(url: string): string {
     const parsed = new URL(url);
     if (
       parsed.hostname === 'localhost' &&
-      (parsed.port === '3000' || parsed.port === '3002' || parsed.port === '3001')
+      (parsed.port === '3000' || parsed.port === '3001')
     ) {
       return `${parsed.pathname}${parsed.search}`;
     }

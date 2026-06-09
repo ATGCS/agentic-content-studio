@@ -7,7 +7,6 @@ const iconMap: Record<string, string> = {
   WEIXIN: 'simple-icons:wechat',
   XIAOHONGSHU: 'simple-icons:xiaohongshu',
   RED: 'simple-icons:xiaohongshu',
-  DOUYIN: 'simple-icons:douyin',
   VIDEO_CHANNEL: 'simple-icons:video',
   BILIBILI: 'simple-icons:bilibili',
   ZHIHU: 'simple-icons:zhihu',
@@ -81,7 +80,11 @@ export function PlatformBadge({
       title={label}
     >
       {platform === 'DOUYIN' ? (
-        <img src="/platform-icons/douyin.png" alt="" className="size-3.5 shrink-0 object-contain" />
+        <img
+          src="/platform-icons/douyin.png"
+          alt=""
+          className="size-3.5 shrink-0 object-contain"
+        />
       ) : iconKey ? (
         <Icon
           icon={iconKey}
