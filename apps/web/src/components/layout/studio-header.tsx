@@ -73,7 +73,16 @@ export function StudioHeader() {
               {breadcrumb.parent !== breadcrumb.child && (
                 <>
                   <ChevronRight className="size-3" />
-                  <span className="text-[#86909c]">{breadcrumb.parent}</span>
+                  {breadcrumb.parentHref ? (
+                    <Link
+                      href={breadcrumb.parentHref}
+                      className="text-[#86909c] hover:text-[#1664ff]"
+                    >
+                      {breadcrumb.parent}
+                    </Link>
+                  ) : (
+                    <span className="text-[#86909c]">{breadcrumb.parent}</span>
+                  )}
                 </>
               )}
               <ChevronRight className="size-3" />

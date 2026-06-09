@@ -255,7 +255,7 @@ export function AiProductionPanel({
         <div className={cn('space-y-2', embedded ? 'px-2 pb-2 pt-0' : 'p-4')}>
           {!embedded && (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-              <div>
+              <div className="min-w-0">
                 <label className="mb-1.5 block text-xs text-[#86909C]">
                   目标内容
                 </label>
@@ -264,23 +264,28 @@ export function AiProductionPanel({
                   onValueChange={setSelectedContentId}
                   disabled={loadingContents}
                 >
-                  <SelectTrigger className="h-9 bg-white text-sm">
+                  <SelectTrigger className="h-9 w-full min-w-0 bg-white text-sm">
                     <SelectValue
                       placeholder={
                         loadingContents ? '加载中…' : '选择要生成的内容'
                       }
                     />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-w-[var(--radix-select-trigger-width)]">
                     {contents.map((item) => (
-                      <SelectItem key={item.id} value={item.id}>
-                        {item.title}
+                      <SelectItem
+                        key={item.id}
+                        value={item.id}
+                        title={item.title}
+                        className="min-w-0"
+                      >
+                        <span className="block truncate">{item.title}</span>
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div>
+              <div className="min-w-0">
                 <label className="mb-1.5 block text-xs text-[#86909C]">
                   发布账号（可选）
                 </label>
@@ -288,14 +293,19 @@ export function AiProductionPanel({
                   value={accountId || 'ANY'}
                   onValueChange={(v) => setAccountId(v === 'ANY' ? '' : v)}
                 >
-                  <SelectTrigger className="h-9 bg-white text-sm">
+                  <SelectTrigger className="h-9 w-full min-w-0 bg-white text-sm">
                     <SelectValue placeholder="不指定账号" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-w-[var(--radix-select-trigger-width)]">
                     <SelectItem value="ANY">不指定</SelectItem>
                     {accounts.map((a) => (
-                      <SelectItem key={a.id} value={a.id}>
-                        {a.accountName}
+                      <SelectItem
+                        key={a.id}
+                        value={a.id}
+                        title={a.accountName}
+                        className="min-w-0"
+                      >
+                        <span className="block truncate">{a.accountName}</span>
                       </SelectItem>
                     ))}
                   </SelectContent>

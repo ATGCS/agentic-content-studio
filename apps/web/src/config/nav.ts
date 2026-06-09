@@ -112,21 +112,48 @@ export function getNavTitle(pathname: string): string {
   return '智能内容运营中台';
 }
 
+/** Resolve parent link for breadcrumb navigation */
+function resolveParentHref(parent: string, child: string): string | undefined {
+  if (parent === child) return undefined;
+  const nav = studioNavItems.find(
+    (item) => (item.title ?? item.label) === parent
+  );
+  return nav?.href;
+}
+
 /** Resolve breadcrumb for header display */
-export function getBreadcrumb(
-  pathname: string
-): { parent: string; child: string } | null {
+export function getBreadcrumb(pathname: string): {
+  parent: string;
+  child: string;
+  parentHref?: string;
+} | null {
   const exact = Object.keys(breadcrumbMap).find((key) => key === pathname);
-  if (exact) return breadcrumbMap[exact];
+  if (exact) {
+    const config = breadcrumbMap[exact];
+    return {
+      ...config,
+      parentHref: resolveParentHref(config.parent, config.child),
+    };
+  }
 
   if (/^\/contents\/[^/]+$/.test(pathname)) {
-    return { parent: '内容管理', child: '内容详情' };
+    return {
+      parent: '内容管理',
+      child: '内容详情',
+      parentHref: '/contents',
+    };
   }
 
   const matched = Object.keys(breadcrumbMap)
     .filter((key) => pathname.startsWith(`${key}/`))
     .sort((a, b) => b.length - a.length)[0];
-  if (matched) return breadcrumbMap[matched];
+  if (matched) {
+    const config = breadcrumbMap[matched];
+    return {
+      ...config,
+      parentHref: resolveParentHref(config.parent, config.child),
+    };
+  }
 
   return null;
 }
