@@ -1,4 +1,4 @@
-import type { Platform } from '@acs/db';
+import type { AgentType, Platform } from '@acs/db';
 import type { RuntimeVariables } from '../runtime/types.js';
 
 export type ContextBuildInput = {
@@ -8,6 +8,7 @@ export type ContextBuildInput = {
   platform?: Platform | string;
   count?: number;
   imageRole?: string;
+  agentType?: AgentType | string;
 };
 
 export type ContextProvider = {

@@ -2,6 +2,8 @@ import '@acs/db/test-env';
 import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert';
 import { prisma } from '@acs/db';
+import { studioOutputAppliers } from '@acs/studio-agents';
+import { outputApplierRegistry } from './output/applier-registry.js';
 import { runAgent, runAgentByType } from './task-engine.js';
 
 describe('runAgentByType', () => {
@@ -10,6 +12,7 @@ describe('runAgentByType', () => {
   let titleAgentEnabled: boolean;
 
   before(async () => {
+    outputApplierRegistry.registerMany(studioOutputAppliers);
     const admin = await prisma.user.findUniqueOrThrow({
       where: { email: 'admin@acs.local' },
     });
@@ -21,7 +24,9 @@ describe('runAgentByType', () => {
       },
     });
     contentId = content.id;
-    const titleAgent = await prisma.agent.findFirstOrThrow({ where: { type: 'TITLE' } });
+    const titleAgent = await prisma.agent.findFirstOrThrow({
+      where: { type: 'TITLE' },
+    });
     titleAgentId = titleAgent.id;
     titleAgentEnabled = titleAgent.enabled;
   });

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { AppError, ErrorCodes } from '@acs/core';
-import { orchestrateImageGeneration } from '@acs/ai-runtime';
+import { orchestrateImageGeneration } from '@acs/studio-workflows';
 import type { Platform } from '@acs/db';
 import '../../../../../env';
 

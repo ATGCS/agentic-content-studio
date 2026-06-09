@@ -123,6 +123,8 @@ async function main() {
 
 # 输入
 - 选题/主题：{{topicTitle}}
+- 同系列前序内容（标题角度勿重复，可形成系列递进）：
+{{seriesContext}}
 - 账号风格：{{accountStyle}}
 - 方法论参考（仅提炼钩子套路，禁止照搬原文）：
 {{imaSummary}}
@@ -153,22 +155,31 @@ async function main() {
   });
 
   const bodyTemplate = `# 任务
-撰写可发布的正文（Markdown）。
+撰写可发布的**标题与正文**（Markdown）。一次输出，减少多 Agent 串联损耗。
 
 # 输入
 - 选题：{{topicTitle}}
-- 已定标题：{{title}}
+- 系列说明：{{topicDesc}}
+- 同系列前序内容（保持连贯，避免重复，可递进深化）：
+{{seriesContext}}
 - 方法论参考（仅借鉴结构与节奏，禁止大段复制）：
 {{imaSummary}}
+- 账号风格：{{accountStyle}}；定位：{{accountPositioning}}；语气：{{accountTone}}
 
 # 优化目标（按优先级）
-1. 完读率/完播率：开头 3 秒/首段必须抓住注意力
-2. 防划走：每 2–3 段有小钩子、转折或信息增量
-3. 互动：适当提问、清单、可收藏的结构化信息
-4. 手机阅读：短段、小标题、列表，避免大 wall of text
+1. 点击率：标题让人产生「必须点开」的冲动
+2. 完读率/完播率：开头 3 秒/首段必须抓住注意力
+3. 防划走：每 2–3 段有小钩子、转折或信息增量
+4. 互动：适当提问、清单、可收藏的结构化信息
+5. 手机阅读：短段、小标题、列表，避免大 wall of text
+
+# 标题要求
+- 输出 1 个首选 title + 3–5 个备选 titles
+- 可用：数字+利益、冲突对立、痛点共鸣、反常识、具体场景
+- 禁止：空洞形容词、与正文无关的噱头
 
 # 输出
-仅 JSON：{"body":"markdown正文"}`;
+仅 JSON：{"title":"首选标题","titles":["备选1","备选2"],"body":"markdown正文"}`;
 
   const bodyPrompt = await prisma.prompt.upsert({
     where: { id: 'seed-prompt-body' },
@@ -184,25 +195,45 @@ async function main() {
   });
 
   const rewriteTemplate = `# 任务
-将母稿改写为 **{{platform}}** 平台独立版本（标题、正文、封面文案、标签均须重写，不可只替换几个词）。
+将母稿改写为 **{{platform}}** 平台独立版本（标题、正文、封面文案、标签、正文插图规划均须重写）。
 
 # 输入
 - 母稿标题：{{title}}
 - 母稿正文：{{body}}
 - 平台版本标题（如有）：{{versionTitle}}
 - 平台版本正文（如有）：{{versionBody}}
+- 同系列前序内容（平台改写时保持系列叙事连贯）：
+{{seriesContext}}
+- 方法论参考（仅借鉴结构与表达套路，禁止照搬）：
+{{imaSummary}}
+
+# 平台正文排版规范
+{{platformBodyGuide}}
 
 # 平台侧重点（{{platform}}）
 - 标题：Feed 流里 1 秒抓点击
-- 正文：该平台用户习惯的篇幅、语气、排版（emoji/分段/话题感等）
-- 封面文案 coverText：适合叠在封面上的 1 行主文案 + 可选副文案，提升点击率
+- 正文：严格按上述排版规范改写，不可只替换几个词
+- 封面文案 coverText：适合叠在封面上的 1 行主文案，提升点击率
 - 标签 tags：搜索与推荐兼顾
+
+# 正文插图规划（imageSlots，自动 0–3 张）
+- 根据正文信息密度规划：长文 2–3 张、短文 0–1 张；抖音/视频号偏 0–1 张
+- 每张图须有独立 id（如 fig-1）、可画的中文 prompt、alt 图说
+- 在 body 对应位置插入占位符 [[IMAGE:fig-1]]，与 imageSlots.id 一一对应
+- 无配图时 imageSlots 为 []，body 中不出现 [[IMAGE:...]]
 
 # 优化目标
 点击率 > 完读/完播 > 评论收藏转发
 
 # 输出
-仅 JSON：{"title":"","body":"","coverText":"","tags":[]}`;
+仅 JSON：
+{
+  "title": "",
+  "body": "含 [[IMAGE:slotId]] 占位符的正文",
+  "coverText": "",
+  "tags": [],
+  "imageSlots": [{ "id": "fig-1", "prompt": "配图画面描述", "alt": "图说" }]
+}`;
 
   const rewritePrompt = await prisma.prompt.upsert({
     where: { id: 'seed-prompt-rewrite' },
@@ -246,28 +277,49 @@ async function main() {
   });
 
   const imageTemplate = `# 任务
-为 **{{platform}}** 生成 **{{imageRole}}** 的 AI 绘图提示词（供 Seedream 出图）。
+为 **{{platform}}** 生成 **{{imageRole}}** 的 Seedream 绘图提示词。你的输出将直接生成图片——必须**贴合用户内容**，禁止无关泛化图。
 
-# 输入
-- 标题：{{title}}
+# 用户内容（必须从中提取可画的具体元素）
+- 选题/系列：{{topicTitle}}
+- 选题说明：{{topicDesc}}
+- 文章标题：{{title}}
+- 平台版本标题（优先参考）：{{versionTitle}}
 - 摘要：{{summary}}
-- 封面文案：{{versionCoverText}}
-- 正文摘要：{{body}}
-- 账号风格：{{accountStyle}}
-- 视觉方法论参考（仅借鉴构图/色彩套路，禁止复刻知识库配图）：
+- 封面文案（表达利益/情绪，勿把长句直接画进图）：{{versionCoverText}}
+- 版本标签：{{versionTags}}
+- 正文摘录（从中找 1–2 个可视觉化的信息点或场景）：
+{{bodyExcerpt}}
+- 账号风格：{{accountStyle}}；定位：{{accountPositioning}}；语气：{{accountTone}}
+- 平台封面规范：{{platformCoverGuide}}
+- 视觉方法论参考（只借鉴构图/色彩套路，禁止复刻无关配图）：
 {{imaSummary}}
 
-# 优化目标
-1. 点击率：Feed 缩略图一眼看懂主题与情绪
-2. 划走停留：主体突出、对比清晰、有视觉焦点
-3. 可叠字：构图预留标题区域，勿主体铺满
+# 你必须完成的思考（不要输出思考过程，只输出 JSON）
+1. 读者需求：这篇内容要解决什么问题/传达什么价值？封面应暗示什么？
+2. 必现元素：从标题+封面文案+正文摘提取 3–6 个**具体**视觉元素（例：「笔记本电脑+上升曲线+办公桌面」而非「科技感」）
+3. 主体与场景：谁/什么在哪里做什么？与主题如何一眼相关？
+4. 构图：{{imageRole}} 为 COVER 时，说明留白叠字区（如「上方 30% 浅蓝渐变留白」）
+5. 禁忌：列出与主题无关、易画成泛化图的内容（avoid）
 
-# 要求
-- 提示词 ≤300 字，描述主体、场景、光线、风格、画幅（如竖版 3:4）
-- 禁止侵权、真人无授权肖像
+# 反面示例（禁止）
+- ❌ 「一张精美的科技背景图」—— 与具体标题无关
+- ❌ 「简约商务风格封面」—— 无具体主体
+- ✅ 「年轻运营者在明亮工位前看笔记本屏幕，屏幕显示数据曲线上升，桌上有咖啡杯和便签，上方留白，小红书竖版 3:4，暖色自然光」
 
-# 输出
-仅 JSON：{"prompt":"绘图提示词","style":"风格","aspectRatio":"1728x2304"}`;
+# 输出 JSON（字段均必填，seedreamPrompt 150–450 字中文）
+{
+  "seedreamPrompt": "完整 Seedream 中文提示词：主体+场景+必现元素+光影+构图留白+色彩+画风+画幅",
+  "subject": "核心主体一句话",
+  "scene": "具体场景",
+  "keyElements": ["元素1","元素2","元素3"],
+  "mood": "情绪氛围",
+  "colorPalette": "主色与辅色",
+  "composition": "构图与留白说明",
+  "style": "画风",
+  "textOverlayZone": "叠字留白位置",
+  "avoid": ["不要出现的无关元素"],
+  "aspectRatio": "1728x2304"
+}`;
 
   const imagePrompt = await prisma.prompt.upsert({
     where: { id: 'seed-prompt-image' },

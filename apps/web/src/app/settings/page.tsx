@@ -33,7 +33,7 @@ type KnowledgeBase = {
 const settingCards = [
   {
     title: 'IMA 知识库配置',
-    description: '配置 IMA OpenAPI、同步知识库并设置默认知识库',
+    description: '配置 IMA OpenAPI、同步知识库与文档到本地并设置默认知识库',
     href: '/settings/ima',
     icon: Database,
     status: '已接入',
@@ -245,7 +245,7 @@ export default function SettingsPage() {
                 isLoading={syncing}
               >
                 <RefreshCw className="size-4" />
-                同步 IMA 知识库
+                同步到本地
               </Button>
               <Link href="/settings/ima" className="block">
                 <Button variant="outline" className="w-full justify-start">

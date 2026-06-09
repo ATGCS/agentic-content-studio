@@ -7,7 +7,6 @@ import { StudioLayout } from '@/components/StudioLayout';
 import { PageContainer } from '@/components/layout/page-container';
 import { PlatformBadge } from '@/components/platform-icon';
 
-import { EmptyState } from '@/components/studio/empty-state';
 import { CreationWorkflowGuide } from '@/components/studio/creation-workflow-guide';
 import { StatusBadge } from '@/components/studio/status-badge';
 import { StudioCard } from '@/components/studio/studio-card';
@@ -21,15 +20,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
+import {
+  StudioTable,
+  StudioTableBody,
+  StudioTableCell,
+  StudioTableEmpty,
+  StudioTableFrame,
+  StudioTableHead,
+  StudioTableHeader,
+  StudioTableRow,
+} from '@/components/studio/studio-table';
 import { api } from '@/lib/api';
 
 type Topic = {
@@ -213,36 +214,35 @@ export default function TopicsPage() {
           </div>
         </div>
 
-        <StudioCard contentClassName="overflow-hidden">
-          {loading ? (
-            <EmptyState title="系列加载中…" description="正在读取内容系列" />
-          ) : items.length === 0 ? (
-            <EmptyState
-              title="暂无系列"
-              description="创建第一个系列，开始内容规划"
-              actionLabel="新建系列"
-              onAction={openCreateForm}
-            />
-          ) : (
-            <Table className="studio-table">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>系列标题</TableHead>
-                  <TableHead>描述</TableHead>
-                  <TableHead>文章数</TableHead>
-                  <TableHead>目标平台</TableHead>
-                  <TableHead>状态</TableHead>
-                  <TableHead>创建时间</TableHead>
-                  <TableHead className="text-right">操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+        <StudioCard contentClassName="overflow-hidden p-0">
+          <StudioTableFrame
+            bare
+            loading={loading}
+            isEmpty={items.length === 0}
+            empty={{
+              title: '暂无系列',
+              description: '创建第一个系列，开始内容规划',
+              actionLabel: '新建系列',
+              onAction: openCreateForm,
+            }}
+            toolbar={<span>共 {items.length} 个系列</span>}
+          >
+            <StudioTable>
+              <StudioTableHeader>
+                <StudioTableRow>
+                  <StudioTableHead>系列标题</StudioTableHead>
+                  <StudioTableHead>描述</StudioTableHead>
+                  <StudioTableHead>文章数</StudioTableHead>
+                  <StudioTableHead>目标平台</StudioTableHead>
+                  <StudioTableHead>状态</StudioTableHead>
+                  <StudioTableHead>创建时间</StudioTableHead>
+                  <StudioTableHead align="right">操作</StudioTableHead>
+                </StudioTableRow>
+              </StudioTableHeader>
+              <StudioTableBody>
                 {items.map((t) => (
-                  <TableRow
-                    key={t.id}
-                    className="group cursor-pointer hover:bg-[#F7F8FA]"
-                  >
-                    <TableCell className="font-medium">
+                  <StudioTableRow key={t.id} className="group cursor-pointer">
+                    <StudioTableCell variant="primary">
                       <Link
                         href={`/topics/${t.id}`}
                         className="flex items-center gap-2 hover:text-[#1664FF]"
@@ -250,17 +250,20 @@ export default function TopicsPage() {
                         <FileText className="size-4 text-[#C9CDD4] group-hover:text-[#1664FF]" />
                         {t.title}
                       </Link>
-                    </TableCell>
-                    <TableCell className="max-w-sm truncate text-sm text-[#86909C]">
+                    </StudioTableCell>
+                    <StudioTableCell
+                      variant="muted"
+                      className="max-w-sm truncate"
+                    >
                       {t.description || '—'}
-                    </TableCell>
-                    <TableCell>
+                    </StudioTableCell>
+                    <StudioTableCell>
                       <span className="inline-flex items-center gap-1 rounded-full bg-[#F0F5FF] px-2.5 py-1 text-xs font-medium text-[#1664FF]">
                         <FileText className="size-3" />
                         {t.contentCount ?? 0}
                       </span>
-                    </TableCell>
-                    <TableCell>
+                    </StudioTableCell>
+                    <StudioTableCell>
                       <div className="flex flex-wrap gap-1">
                         {t.targetPlatforms && t.targetPlatforms.length > 0 ? (
                           t.targetPlatforms.map((p) => (
@@ -270,14 +273,14 @@ export default function TopicsPage() {
                           <span className="text-xs text-[#C9CDD4]">未指定</span>
                         )}
                       </div>
-                    </TableCell>
-                    <TableCell>
+                    </StudioTableCell>
+                    <StudioTableCell>
                       <StatusBadge status={t.status} />
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
+                    </StudioTableCell>
+                    <StudioTableCell variant="muted">
                       {new Date(t.createdAt).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell className="text-right">
+                    </StudioTableCell>
+                    <StudioTableCell variant="actions">
                       <div className="flex justify-end gap-2">
                         <Button
                           size="sm"
@@ -297,12 +300,12 @@ export default function TopicsPage() {
                           删除
                         </Button>
                       </div>
-                    </TableCell>
-                  </TableRow>
+                    </StudioTableCell>
+                  </StudioTableRow>
                 ))}
-              </TableBody>
-            </Table>
-          )}
+              </StudioTableBody>
+            </StudioTable>
+          </StudioTableFrame>
         </StudioCard>
       </PageContainer>
 

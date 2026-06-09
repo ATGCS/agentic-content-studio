@@ -30,14 +30,17 @@ import {
   type KanbanContent,
 } from '@/components/studio/workflow-kanban';
 import { Button } from '@/components/ui/button';
+
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  StudioTable,
+  StudioTableBody,
+  StudioTableCell,
+  StudioTableEmpty,
+  StudioTableFrame,
+  StudioTableHead,
+  StudioTableHeader,
+  StudioTableRow,
+} from '@/components/studio/studio-table';
 import { api } from '@/lib/api';
 
 type DashboardStats = {
@@ -189,62 +192,62 @@ export default function DashboardPage() {
                   </div>
                 </div>
               ) : (
-                <Table className="studio-table">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>系列</TableHead>
-                      <TableHead>目标平台</TableHead>
-                      <TableHead>目标账号</TableHead>
-                      <TableHead>当前状态</TableHead>
-                      <TableHead>负责人</TableHead>
-                      <TableHead>最近更新时间</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <StudioTable>
+                  <StudioTableHeader>
+                    <StudioTableRow>
+                      <StudioTableHead>系列</StudioTableHead>
+                      <StudioTableHead>目标平台</StudioTableHead>
+                      <StudioTableHead>目标账号</StudioTableHead>
+                      <StudioTableHead>当前状态</StudioTableHead>
+                      <StudioTableHead>负责人</StudioTableHead>
+                      <StudioTableHead>最近更新时间</StudioTableHead>
+                    </StudioTableRow>
+                  </StudioTableHeader>
+                  <StudioTableBody>
                     {items.slice(0, 10).map((c) => {
                       const version = c.versions?.[0];
                       const owner = c.creator?.name ?? c.creator?.email ?? '—';
                       return (
-                        <TableRow key={c.id}>
-                          <TableCell className="max-w-[200px]">
+                        <StudioTableRow key={c.id}>
+                          <StudioTableCell className="max-w-[200px]">
                             <Link
                               href={`/contents/${c.id}`}
                               className="truncate font-medium text-[#1664ff] hover:underline"
                             >
                               {c.title}
                             </Link>
-                          </TableCell>
-                          <TableCell>
+                          </StudioTableCell>
+                          <StudioTableCell>
                             {version?.platform ? (
                               <PlatformBadge platform={version.platform} />
                             ) : (
                               <span className="text-xs text-[#86909c]">—</span>
                             )}
-                          </TableCell>
-                          <TableCell className="text-sm text-[#4e5969]">
+                          </StudioTableCell>
+                          <StudioTableCell className="text-sm text-[#4e5969]">
                             {version?.account?.accountName ?? '—'}
-                          </TableCell>
-                          <TableCell>
+                          </StudioTableCell>
+                          <StudioTableCell>
                             <StatusDot status={c.status} />
-                          </TableCell>
-                          <TableCell>
+                          </StudioTableCell>
+                          <StudioTableCell>
                             <span className="inline-flex items-center gap-2 text-sm text-[#4e5969]">
                               <span className="flex size-6 items-center justify-center rounded-full bg-[#f0f5ff] text-[10px] font-medium text-[#1664ff]">
                                 {owner.slice(0, 1)}
                               </span>
                               {owner}
                             </span>
-                          </TableCell>
-                          <TableCell className="text-sm text-[#86909c]">
+                          </StudioTableCell>
+                          <StudioTableCell className="text-sm text-[#86909c]">
                             {new Date(c.updatedAt).toLocaleString('zh-CN', {
                               hour12: false,
                             })}
-                          </TableCell>
-                        </TableRow>
+                          </StudioTableCell>
+                        </StudioTableRow>
                       );
                     })}
-                  </TableBody>
-                </Table>
+                  </StudioTableBody>
+                </StudioTable>
               )}
             </StudioCard>
           </div>

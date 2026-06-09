@@ -1,0 +1,69 @@
+{
+  "id": "content.generate",
+  "name": "内容一键生成",
+  "steps": [
+    {
+      "id": "mark-generating",
+      "node": "content.setStatus",
+      "input": {
+        "status": "GENERATING"
+      }
+    },
+    {
+      "id": "body-agent",
+      "node": "agent.run",
+      "input": {
+        "agentType": "BODY"
+      }
+    },
+    {
+      "id": "platform-loop",
+      "foreach": "platforms",
+      "as": "platform",
+      "steps": [
+        {
+          "id": "ensure-version",
+          "node": "version.ensure"
+        },
+        {
+          "id": "rewrite-agent",
+          "node": "agent.run",
+          "input": {
+            "agentType": "REWRITE"
+          }
+        },
+        {
+          "id": "detect-slots",
+          "node": "image.detectSlots"
+        },
+        {
+          "id": "body-images",
+          "node": "image.bodySlots",
+          "when": "canGenerateImages && hasImageSlots"
+        },
+        {
+          "id": "render-html",
+          "node": "version.renderHtml"
+        }
+      ]
+    },
+    {
+      "id": "cover-images",
+      "node": "image.covers",
+      "when": "canGenerateImages"
+    },
+    {
+      "id": "mark-review",
+      "node": "content.setStatus",
+      "input": {
+        "status": "PENDING_REVIEW"
+      }
+    }
+  ],
+  "onError": {
+    "node": "content.setStatus",
+    "input": {
+      "status": "FAILED"
+    }
+  }
+}

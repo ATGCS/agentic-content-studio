@@ -25,8 +25,13 @@ async function authenticate(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const user = await authenticate(req);
-    const synced = await imaProvider.syncKnowledgeBasesFromIma();
-    return successResponse({ synced, count: synced.length });
+    const result = await imaProvider.syncAllFromIma();
+    return successResponse({
+      synced: result.knowledgeBases,
+      documents: result.documents,
+      count: result.knowledgeBases.length,
+      documentCount: result.documents.reduce((sum, row) => sum + row.count, 0),
+    });
   } catch (err) {
     if (err instanceof AppError) {
       return NextResponse.json(

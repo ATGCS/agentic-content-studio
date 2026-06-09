@@ -37,14 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+
 import { api, ApiError } from '@/lib/api';
 import {
   apiTypeToMaterialType,
@@ -58,6 +51,16 @@ import {
   type MaterialStats,
   type MaterialType,
 } from '@/lib/material-mappers';
+import {
+  StudioTable,
+  StudioTableBody,
+  StudioTableCell,
+  StudioTableEmpty,
+  StudioTableFrame,
+  StudioTableHead,
+  StudioTableHeader,
+  StudioTableRow,
+} from '@/components/studio/studio-table';
 import { cn } from '@/lib/utils';
 
 type MaterialListResponse = {
@@ -753,10 +756,10 @@ export default function MaterialsPage() {
                   </div>
                 </div>
 
-                <Table className="studio-table text-xs">
-                  <TableHeader>
-                    <TableRow className="border-[#EEF0F5]">
-                      <TableHead className="w-10 px-5">
+                <StudioTable size="compact">
+                  <StudioTableHeader>
+                    <StudioTableRow className="border-[#EEF0F5]">
+                      <StudioTableHead className="w-10 px-5">
                         <input
                           type="checkbox"
                           className="accent-[#1664FF]"
@@ -766,7 +769,7 @@ export default function MaterialsPage() {
                           }
                           onChange={toggleSelectAll}
                         />
-                      </TableHead>
+                      </StudioTableHead>
                       {[
                         '素材名称',
                         '类型',
@@ -779,61 +782,61 @@ export default function MaterialsPage() {
                         '状态',
                         '操作',
                       ].map((head) => (
-                        <TableHead
+                        <StudioTableHead
                           key={head}
                           className="h-10 whitespace-nowrap px-3 text-[11px] font-medium text-[#86909C]"
                         >
                           {head}
-                        </TableHead>
+                        </StudioTableHead>
                       ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                    </StudioTableRow>
+                  </StudioTableHeader>
+                  <StudioTableBody>
                     {loading ? (
-                      <TableRow>
-                        <TableCell
+                      <StudioTableRow>
+                        <StudioTableCell
                           colSpan={11}
                           className="py-8 text-center text-[#86909C]"
                         >
                           素材加载中…
-                        </TableCell>
-                      </TableRow>
+                        </StudioTableCell>
+                      </StudioTableRow>
                     ) : loadError ? (
-                      <TableRow>
-                        <TableCell
+                      <StudioTableRow>
+                        <StudioTableCell
                           colSpan={11}
                           className="py-8 text-center text-[#F53F3F]"
                         >
                           {loadError}
-                        </TableCell>
-                      </TableRow>
+                        </StudioTableCell>
+                      </StudioTableRow>
                     ) : materials.length === 0 ? (
-                      <TableRow>
-                        <TableCell
+                      <StudioTableRow>
+                        <StudioTableCell
                           colSpan={11}
                           className="py-8 text-center text-[#86909C]"
                         >
                           暂无素材
-                        </TableCell>
-                      </TableRow>
+                        </StudioTableCell>
+                      </StudioTableRow>
                     ) : (
                       materials.map((item, index) => {
                         const cfg = typeConfig[item.type];
                         const status = statusConfig[item.status];
                         return (
-                          <TableRow
+                          <StudioTableRow
                             key={item.id}
                             className="border-[#F5F7FA] hover:bg-[#F7F8FA]"
                           >
-                            <TableCell className="px-5">
+                            <StudioTableCell className="px-5">
                               <input
                                 type="checkbox"
                                 className="accent-[#1664FF]"
                                 checked={selectedIds.includes(item.id)}
                                 onChange={() => toggleSelect(item.id)}
                               />
-                            </TableCell>
-                            <TableCell className="min-w-[250px] px-3 py-3">
+                            </StudioTableCell>
+                            <StudioTableCell className="min-w-[250px] px-3 py-3">
                               <div className="flex items-center gap-3">
                                 <MaterialThumbnail
                                   type={item.type}
@@ -862,20 +865,20 @@ export default function MaterialsPage() {
                                   )}
                                 </div>
                               </div>
-                            </TableCell>
-                            <TableCell className="px-3 text-[#4E5969]">
+                            </StudioTableCell>
+                            <StudioTableCell className="px-3 text-[#4E5969]">
                               {cfg.label}
-                            </TableCell>
-                            <TableCell className="px-3 font-medium text-[#1D2129]">
+                            </StudioTableCell>
+                            <StudioTableCell className="px-3 font-medium text-[#1D2129]">
                               {item.format}
-                            </TableCell>
-                            <TableCell className="px-3 text-[#4E5969]">
+                            </StudioTableCell>
+                            <StudioTableCell className="px-3 text-[#4E5969]">
                               {item.size}
-                            </TableCell>
-                            <TableCell className="px-3 text-[#4E5969]">
+                            </StudioTableCell>
+                            <StudioTableCell className="px-3 text-[#4E5969]">
                               {item.source}
-                            </TableCell>
-                            <TableCell className="min-w-[145px] px-3">
+                            </StudioTableCell>
+                            <StudioTableCell className="min-w-[145px] px-3">
                               <div className="flex flex-wrap gap-1.5">
                                 {item.tags.length === 0 ? (
                                   <span className="text-[#A9AEB8]">-</span>
@@ -892,19 +895,19 @@ export default function MaterialsPage() {
                                   ))
                                 )}
                               </div>
-                            </TableCell>
-                            <TableCell className="px-3">
+                            </StudioTableCell>
+                            <StudioTableCell className="px-3">
                               <span className="inline-flex items-center gap-2 text-[#1D2129]">
                                 <span className="flex size-6 items-center justify-center rounded-full bg-[#F5D7C8] text-[10px] font-semibold text-[#8A3F2E]">
                                   {item.avatar}
                                 </span>
                                 {item.uploader}
                               </span>
-                            </TableCell>
-                            <TableCell className="whitespace-nowrap px-3 text-[#4E5969]">
+                            </StudioTableCell>
+                            <StudioTableCell className="whitespace-nowrap px-3 text-[#4E5969]">
                               {item.uploadedAt}
-                            </TableCell>
-                            <TableCell className="px-3">
+                            </StudioTableCell>
+                            <StudioTableCell className="px-3">
                               <span
                                 className={cn(
                                   'rounded-full px-2 py-1 text-[11px] font-semibold',
@@ -913,8 +916,8 @@ export default function MaterialsPage() {
                               >
                                 {status.label}
                               </span>
-                            </TableCell>
-                            <TableCell className="px-3">
+                            </StudioTableCell>
+                            <StudioTableCell className="px-3">
                               <div className="flex items-center gap-2 whitespace-nowrap text-xs font-medium text-[#1664FF]">
                                 <button
                                   type="button"
@@ -947,13 +950,13 @@ export default function MaterialsPage() {
                                   删除
                                 </button>
                               </div>
-                            </TableCell>
-                          </TableRow>
+                            </StudioTableCell>
+                          </StudioTableRow>
                         );
                       })
                     )}
-                  </TableBody>
-                </Table>
+                  </StudioTableBody>
+                </StudioTable>
 
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#EEF0F5] px-5 py-4 text-xs text-[#4E5969]">
                   <span>

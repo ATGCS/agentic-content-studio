@@ -28,8 +28,6 @@ interface ContentEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit?: (form: ContentEditForm) => Promise<string | void> | string | void;
-  /** 新建后跳转：detail=内容详情，generate=AI 生成页 */
-  redirectAfterCreate?: 'detail' | 'generate';
   defaultTopicId?: string;
   defaultPlatforms?: string[];
   content?: {
@@ -56,7 +54,6 @@ export function ContentEditDialog({
   open,
   onOpenChange,
   onSubmit,
-  redirectAfterCreate = 'detail',
   defaultTopicId,
   defaultPlatforms,
   content,
@@ -112,11 +109,7 @@ export function ContentEditDialog({
       onOpenChange(false);
 
       if (result && !content?.id) {
-        if (redirectAfterCreate === 'generate') {
-          router.push(`/ai-generate?contentId=${result}`);
-        } else {
-          router.push(`/contents/${result}`);
-        }
+        router.push(`/contents/${result}`);
       }
     } finally {
       setSubmitting(false);

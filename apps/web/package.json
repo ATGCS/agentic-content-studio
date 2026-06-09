@@ -14,9 +14,10 @@
     "@acs/content-center": "workspace:*",
     "@acs/core": "workspace:*",
     "@acs/db": "workspace:*",
-    "@acs/doubao-image-provider": "workspace:*",
+    "@acs/image-provider": "workspace:*",
     "@acs/ima-provider": "workspace:*",
     "@acs/review-center": "workspace:*",
+    "@acs/studio-butler": "workspace:*",
     "@prisma/client": "^6.9.0",
     "@iconify-json/simple-icons": "^1.2.85",
     "@iconify/react": "^6.0.2",
@@ -39,7 +40,9 @@
     "tailwind-merge": "^3.3.1",
     "jsonwebtoken": "^9.0.0",
     "bcryptjs": "^2.4.3",
-    "zod": "^3.23.0"
+    "zod": "^3.23.0",
+    "@acs/studio-workflows": "workspace:*",
+    "@acs/studio-agents": "workspace:*"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

@@ -1,6 +1,7 @@
-import { describe, it } from 'node:test';
+import { describe, it, before } from 'node:test';
 import assert from 'node:assert';
 import type { AgentType } from '@acs/db';
+import { studioOutputAppliers } from '@acs/studio-agents';
 import { agentSpecRegistry } from './registry.js';
 import { outputParserRegistry } from '../output/parser-registry.js';
 import { outputApplierRegistry } from '../output/applier-registry.js';
@@ -20,6 +21,10 @@ const agentTypes: AgentType[] = [
 ];
 
 describe('agentSpecRegistry', () => {
+  before(() => {
+    outputApplierRegistry.registerMany(studioOutputAppliers);
+  });
+
   it('has executable spec for every agent type', () => {
     for (const type of agentTypes) {
       const spec = agentSpecRegistry.get(type);

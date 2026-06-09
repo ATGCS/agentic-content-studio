@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { prisma } from '@acs/db';
 import { AppError, ErrorCodes } from '@acs/core';
 import { getImaConfig } from './config.js';
@@ -8,12 +9,23 @@ function isMockExternalId(externalId: string): boolean {
   return externalId.startsWith('mock-kb-');
 }
 
+/** 是否应调用 IMA 远程 API（排除 mock / 本地自建库） */
+export function isImaRemoteKnowledgeBase(kb: {
+  externalId: string;
+  source?: string | null;
+}): boolean {
+  if (kb.source === 'local') return false;
+  if (kb.externalId.startsWith('local-')) return false;
+  if (isMockExternalId(kb.externalId)) return false;
+  return Boolean(kb.externalId.trim());
+}
+
 async function findUsableKnowledgeBase() {
   const candidates = await prisma.imaKnowledgeBase.findMany({
     where: { enabled: true },
     orderBy: [{ isDefault: 'desc' }, { syncedAt: 'desc' }],
   });
-  return candidates.find((kb) => !isMockExternalId(kb.externalId));
+  return candidates.find((kb) => isImaRemoteKnowledgeBase(kb));
 }
 
 async function ensureSyncedKnowledgeBase(): Promise<string | undefined> {
@@ -33,6 +45,9 @@ export async function listKnowledgeBases(query?: { enabledOnly?: boolean }) {
   return prisma.imaKnowledgeBase.findMany({
     where,
     orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
+    include: {
+      _count: { select: { documents: true } },
+    },
   });
 }
 
@@ -56,7 +71,7 @@ export async function resolveExternalKnowledgeBaseId(
     where: { id: knowledgeBaseId },
   });
   if (byLocal) {
-    if (isMockExternalId(byLocal.externalId)) {
+    if (!isImaRemoteKnowledgeBase(byLocal)) {
       return ensureSyncedKnowledgeBase();
     }
     return byLocal.externalId;
@@ -66,13 +81,13 @@ export async function resolveExternalKnowledgeBaseId(
     where: { externalId: knowledgeBaseId },
   });
   if (byExternal) {
-    if (isMockExternalId(byExternal.externalId)) {
+    if (!isImaRemoteKnowledgeBase(byExternal)) {
       return ensureSyncedKnowledgeBase();
     }
     return byExternal.externalId;
   }
 
-  if (isMockExternalId(knowledgeBaseId)) {
+  if (!isImaRemoteKnowledgeBase({ externalId: knowledgeBaseId })) {
     return ensureSyncedKnowledgeBase();
   }
 
@@ -123,6 +138,7 @@ export async function syncKnowledgeBasesFromIma(options?: { all?: boolean }) {
             description: item.description,
             agentType: agentType,
             externalId: item.externalId,
+            source: 'ima',
             rawData: item.raw as object,
             syncedAt: new Date(),
           },
@@ -133,6 +149,7 @@ export async function syncKnowledgeBasesFromIma(options?: { all?: boolean }) {
             name: item.name,
             description: item.description,
             agentType: agentType,
+            source: 'ima',
             rawData: item.raw as object,
             syncedAt: new Date(),
           },
@@ -188,13 +205,52 @@ export async function syncKnowledgeBasesFromIma(options?: { all?: boolean }) {
   return synced;
 }
 
+/** 同步知识库元数据 + 文档正文到本地 */
+export async function syncAllFromIma(options?: { all?: boolean }) {
+  const synced = await syncKnowledgeBasesFromIma(options);
+  const { syncKnowledgeDocumentsFromIma } = await import('./sync-documents.js');
+  const documents = await syncKnowledgeDocumentsFromIma({
+    enabledOnly: true,
+  });
+  return { knowledgeBases: synced, documents };
+}
+
+export async function createLocalKnowledgeBase(data: {
+  name: string;
+  description?: string;
+  agentType?: string;
+}) {
+  const name = data.name.trim();
+  if (!name) {
+    throw new AppError(ErrorCodes.BAD_REQUEST, '知识库名称不能为空', 400);
+  }
+
+  const existing = await prisma.imaKnowledgeBase.findFirst({ where: { name } });
+  if (existing) {
+    throw new AppError(ErrorCodes.BAD_REQUEST, '知识库名称已存在', 400);
+  }
+
+  return prisma.imaKnowledgeBase.create({
+    data: {
+      externalId: `local-${randomUUID()}`,
+      name,
+      description: data.description?.trim() || null,
+      agentType: data.agentType || null,
+      source: 'local',
+      enabled: true,
+      syncedAt: new Date(),
+    },
+  });
+}
+
 export async function updateKnowledgeBase(
   id: string,
   data: Partial<{
     enabled: boolean;
     isDefault: boolean;
     name: string;
-    agentType: string;
+    agentType: string | null;
+    description: string | null;
   }>
 ) {
   await getKnowledgeBase(id);

@@ -1,4 +1,5 @@
 import type { ChatMessage, ChatOutput, ModelGateway } from '../types.js';
+import { streamOpenAIChatCompletions } from '../stream-openai.js';
 
 export class DeepSeekGateway implements ModelGateway {
   async chat(input: {
@@ -40,5 +41,23 @@ export class DeepSeekGateway implements ModelGateway {
           }
         : undefined,
     };
+  }
+
+  async *chatStream(input: {
+    model: string;
+    messages: ChatMessage[];
+    temperature?: number;
+  }): AsyncGenerator<string> {
+    const key = process.env.DEEPSEEK_API_KEY;
+    if (!key) throw new Error('DEEPSEEK_API_KEY not set');
+    yield* streamOpenAIChatCompletions(
+      'https://api.deepseek.com/chat/completions',
+      key,
+      {
+        model: input.model,
+        messages: input.messages,
+        temperature: input.temperature ?? 0.7,
+      }
+    );
   }
 }

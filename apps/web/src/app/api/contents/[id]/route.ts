@@ -65,18 +65,22 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await authenticate(req);
+    const user = await authenticate(req);
     const { id } = await params;
     const body = patchContentBody.parse(await req.json());
 
     if (body.versionId) {
       const { versionId, ...versionData } = body;
-      const data = await contents.updateVersion(versionId, versionData);
+      const data = await contents.updateVersion(versionId, versionData, {
+        createdBy: user.id,
+      });
       return successResponse(data);
     }
 
     const { versionId: _, ...contentData } = body;
-    const data = await contents.updateContent(id, contentData);
+    const data = await contents.updateContent(id, contentData, {
+      createdBy: user.id,
+    });
     return successResponse(data);
   } catch (err) {
     if (err instanceof AppError) {

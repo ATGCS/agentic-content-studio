@@ -1,6 +1,11 @@
 import { prisma } from '@acs/db';
 import { getProfileByAccountId } from '@acs/account-profile';
+import { buildImaSearchQuery, searchLocalKnowledge } from '@acs/ima-provider';
+import { resolveKbAgentTypes } from '../knowledge/kb-agent-resolver.js';
+import { getPlatformBodyGuide } from '../prompt/platform-body-guides.js';
+import { getPlatformCoverGuide } from '../prompt/platform-cover-guides.js';
 import { IMA_METHODOLOGY_PREFIX } from '../prompt/agent-system-prompts.js';
+import { buildSeriesContext, MAX_SIBLINGS } from './series-context.js';
 import type { ContextProvider } from './types.js';
 
 export const contentBasicProvider: ContextProvider = {
@@ -12,30 +17,95 @@ export const contentBasicProvider: ContextProvider = {
     });
     if (!content) throw new Error('content not found');
 
+    const bodyRaw = content.body ?? '';
+    const bodyExcerpt =
+      bodyRaw.length > 1600 ? `${bodyRaw.slice(0, 1600)}…` : bodyRaw;
+
     return {
       topicTitle: content.topic?.title ?? content.title,
       topicDesc: content.topic?.description ?? '',
       title: content.title,
-      body: content.body ?? '',
+      body: bodyRaw,
+      bodyExcerpt,
       summary: content.summary ?? '',
     };
   },
 };
 
-export const knowledgeImaLatestProvider: ContextProvider = {
-  id: 'knowledge.ima.latest',
+export const seriesSiblingsProvider: ContextProvider = {
+  id: 'series.siblings',
   async build(input) {
-    const lastIma = await prisma.imaSearchLog.findFirst({
-      where: { contentId: input.contentId },
-      orderBy: { createdAt: 'desc' },
+    const content = await prisma.content.findUnique({
+      where: { id: input.contentId },
+      include: { topic: true },
+    });
+    if (!content?.topicId) {
+      return { seriesContext: '', seriesSiblingCount: '0' };
+    }
+
+    const siblings = await prisma.content.findMany({
+      where: {
+        topicId: content.topicId,
+        id: { not: input.contentId },
+      },
+      orderBy: { createdAt: 'asc' },
+      take: MAX_SIBLINGS,
+      select: {
+        title: true,
+        summary: true,
+        body: true,
+        createdAt: true,
+      },
     });
 
-    const raw = lastIma?.resultSummary ?? '';
+    const withContent = siblings.filter(
+      (item) => item.summary?.trim() || item.body?.trim()
+    );
+
+    const topicTitle = content.topic?.title ?? content.title;
+    const seriesContext = buildSeriesContext({
+      topicTitle,
+      siblings: withContent,
+    });
+
+    return {
+      seriesContext,
+      seriesSiblingCount: String(withContent.length),
+    };
+  },
+};
+
+export const knowledgeLocalProvider: ContextProvider = {
+  id: 'knowledge.local',
+  async build(input) {
+    const content = await prisma.content.findUnique({
+      where: { id: input.contentId },
+      include: { topic: true },
+    });
+
+    const query = buildImaSearchQuery({
+      title: content?.title,
+      summary: content?.summary,
+      topicTitle: content?.topic?.title,
+      topicDesc: content?.topic?.description,
+      platform: input.platform,
+    });
+
+    const result = await searchLocalKnowledge({
+      query,
+      kbAgentTypes: resolveKbAgentTypes(input.agentType),
+      limit: 8,
+    });
+
+    const raw = result.summary;
     const imaSummary = raw ? `${IMA_METHODOLOGY_PREFIX}${raw}` : '';
 
     return { imaSummary };
   },
 };
+
+/** @deprecated 使用 knowledge.local */
+export const knowledgeImaLatestProvider = knowledgeLocalProvider;
 
 export const accountProfileProvider: ContextProvider = {
   id: 'account.profile',
@@ -62,10 +132,13 @@ export const accountProfileProvider: ContextProvider = {
 export const runtimeOverridesProvider: ContextProvider = {
   id: 'runtime.overrides',
   async build(input) {
+    const platform = String(input.platform ?? 'WECHAT');
     return {
-      platform: String(input.platform ?? 'WECHAT'),
+      platform,
       count: String(input.count ?? 5),
       imageRole: String(input.imageRole ?? 'COVER'),
+      platformCoverGuide: getPlatformCoverGuide(platform),
+      platformBodyGuide: getPlatformBodyGuide(platform),
     };
   },
 };
@@ -130,7 +203,8 @@ export const analyticsContentProvider: ContextProvider = {
 
 export const defaultContextProviders = [
   contentBasicProvider,
-  knowledgeImaLatestProvider,
+  seriesSiblingsProvider,
+  knowledgeLocalProvider,
   accountProfileProvider,
   runtimeOverridesProvider,
   versionCurrentProvider,

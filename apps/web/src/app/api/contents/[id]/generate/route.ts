@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { AppError, ErrorCodes } from '@acs/core';
-import { orchestrateGenerate } from '@acs/ai-runtime';
+import { orchestrateGenerate } from '@acs/studio-workflows';
 import type { Platform } from '@acs/db';
 import '../../../../../env';
+
+export const maxDuration = 300;
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 

@@ -1,4 +1,7 @@
 import './env.js';
+import { registerStudioAgents } from '@acs/studio-agents';
+
+registerStudioAgents();
 import { buildApp } from './app.js';
 
 const port = parseInt(process.env.API_PORT ?? '3001', 10);

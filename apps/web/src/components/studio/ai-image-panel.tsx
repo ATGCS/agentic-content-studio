@@ -1,14 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import {
-  ImageIcon,
-  Loader2,
-  Pencil,
-  RefreshCw,
-  Sparkles,
-  Wand2,
-} from 'lucide-react';
+import { Loader2, Sparkles, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -32,11 +25,20 @@ type Material = {
 
 const PLATFORM_OPTIONS = [
   { value: 'XIAOHONGSHU', label: '小红书' },
-  { value: 'WECHAT', label: '微信公众号' },
+  { value: 'WECHAT', label: '公众号' },
   { value: 'DOUYIN', label: '抖音' },
   { value: 'VIDEO_CHANNEL', label: '视频号' },
   { value: 'ZHIHU', label: '知乎' },
 ];
+
+function materialShortLabel(m: Material, index: number) {
+  if (m.role === 'COVER') {
+    const n = m.name?.match(/\d+/)?.[0];
+    return n ? `封面 ${n}` : '封面';
+  }
+  const slot = m.name?.match(/fig-\d+|slot[-\w]+/i)?.[0];
+  return slot ? slot.replace(/^slot/i, '位') : `配图 ${index + 1}`;
+}
 
 type AiImagePanelProps = {
   contentId: string;
@@ -68,9 +70,10 @@ export function AiImagePanel({
   const imageMaterials = materials.filter((m) => m.type === 'IMAGE' && m.url);
 
   useEffect(() => {
-    const cover = imageMaterials.find((m) => m.role === 'COVER');
-    setLatestUrl(cover?.url ?? imageMaterials[0]?.url ?? null);
-  }, [materials, imageMaterials]);
+    const imgs = materials.filter((m) => m.type === 'IMAGE' && m.url);
+    const cover = imgs.find((m) => m.role === 'COVER');
+    setLatestUrl(cover?.url ?? imgs[0]?.url ?? null);
+  }, [materials]);
 
   const runGenerate = useCallback(async () => {
     setGenerating(true);
@@ -92,7 +95,7 @@ export function AiImagePanel({
       setCustomPrompt('');
       onUpdated?.();
     } catch (e) {
-      setError(e instanceof Error ? e.message : '图片生成失败');
+      setError(e instanceof Error ? e.message : '生成失败');
     } finally {
       setGenerating(false);
     }
@@ -119,7 +122,7 @@ export function AiImagePanel({
       setEditInstruction('');
       onUpdated?.();
     } catch (e) {
-      setError(e instanceof Error ? e.message : '图片修改失败');
+      setError(e instanceof Error ? e.message : '修改失败');
     } finally {
       setEditing(false);
     }
@@ -129,34 +132,26 @@ export function AiImagePanel({
     <div
       className={cn(
         'rounded-lg border border-[#E5E8EF] bg-white',
-        compact ? 'p-4' : 'p-5'
+        compact ? 'p-3' : 'p-5'
       )}
     >
-      <div className="mb-4 flex items-center gap-2">
-        <div className="flex size-8 items-center justify-center rounded-lg bg-[#722ED1]/10 text-[#722ED1]">
-          <ImageIcon className="size-4" />
-        </div>
-        <div>
-          <h3 className="text-sm font-semibold text-[#1D2129]">AI 图片生成</h3>
-          <p className="text-xs text-[#86909C]">
-            豆包 Seedream 文生图 / 图生图，自动生成封面与配图
-          </p>
-        </div>
-      </div>
+      <h3 className="mb-3 text-sm font-semibold text-[#1D2129]">
+        补充生成图片
+      </h3>
 
-      {latestUrl && (
-        <div className="mb-4 overflow-hidden rounded-lg border border-[#E5E8EF] bg-[#FAFBFC]">
+      {latestUrl && !compact && (
+        <div className="mb-3 overflow-hidden rounded-lg border border-[#E5E8EF] bg-[#FAFBFC]">
           <img
             src={latestUrl}
-            alt="生成预览"
-            className="mx-auto max-h-64 w-full object-contain"
+            alt="预览"
+            className="mx-auto max-h-48 w-full object-contain"
           />
         </div>
       )}
 
-      <div className="mb-3 grid gap-3 sm:grid-cols-2">
+      <div className="mb-3 grid gap-2 sm:grid-cols-2">
         <div>
-          <Label className="text-xs text-[#86909C]">目标平台</Label>
+          <Label className="text-xs text-[#86909C]">平台</Label>
           <Select value={platform} onValueChange={setPlatform}>
             <SelectTrigger className="mt-1 h-9 text-sm">
               <SelectValue />
@@ -171,7 +166,7 @@ export function AiImagePanel({
           </Select>
         </div>
         <div>
-          <Label className="text-xs text-[#86909C]">图片用途</Label>
+          <Label className="text-xs text-[#86909C]">类型</Label>
           <Select
             value={role}
             onValueChange={(v) => setRole(v as 'COVER' | 'BODY')}
@@ -180,27 +175,25 @@ export function AiImagePanel({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="COVER">封面图</SelectItem>
-              <SelectItem value="BODY">正文配图</SelectItem>
+              <SelectItem value="COVER">封面</SelectItem>
+              <SelectItem value="BODY">配图</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
       <div className="mb-3">
-        <Label className="text-xs text-[#86909C]">
-          自定义提示词（可选，留空则由 AI 自动生成）
-        </Label>
+        <Label className="text-xs text-[#86909C]">画面描述（可选）</Label>
         <Textarea
-          className="mt-1 min-h-[72px] text-sm"
-          placeholder="例如：清新扁平插画，科技主题，蓝白配色，适合小红书封面"
+          className="mt-1 min-h-[56px] text-sm"
+          placeholder="不填则按文章自动生成"
           value={customPrompt}
           onChange={(e) => setCustomPrompt(e.target.value)}
         />
       </div>
 
       <Button
-        className="mb-4 h-9 gap-2 bg-[#722ED1] hover:bg-[#531DAB]"
+        className="h-9 w-full gap-2 bg-[#722ED1] hover:bg-[#531DAB] sm:w-auto"
         disabled={generating}
         onClick={runGenerate}
       >
@@ -213,19 +206,17 @@ export function AiImagePanel({
       </Button>
 
       {imageMaterials.length > 0 && (
-        <div className="border-t border-[#F2F3F5] pt-4">
-          <div className="mb-2 flex items-center gap-2 text-xs font-medium text-[#4E5969]">
-            <Pencil className="size-3.5" />
-            修改已有图片
-          </div>
-          <div className="mb-2 flex flex-wrap gap-2">
-            {imageMaterials.map((m) => (
+        <div className="mt-3 border-t border-[#F2F3F5] pt-3">
+          <p className="mb-2 text-xs font-medium text-[#4E5969]">改已有图</p>
+          <div className="mb-2 flex max-h-28 flex-wrap gap-2 overflow-y-auto">
+            {imageMaterials.map((m, index) => (
               <button
                 key={m.id}
                 type="button"
+                title={materialShortLabel(m, index)}
                 onClick={() => setEditMaterialId(m.id)}
                 className={cn(
-                  'overflow-hidden rounded-md border-2 transition-all',
+                  'flex flex-col items-center gap-0.5 overflow-hidden rounded-md border-2 transition-all',
                   editMaterialId === m.id
                     ? 'border-[#722ED1]'
                     : 'border-transparent opacity-80 hover:opacity-100'
@@ -233,15 +224,18 @@ export function AiImagePanel({
               >
                 <img
                   src={m.url!}
-                  alt={m.name ?? '素材'}
-                  className="size-14 object-cover"
+                  alt={materialShortLabel(m, index)}
+                  className="size-12 object-cover"
                 />
+                <span className="max-w-12 truncate px-0.5 text-[9px] text-[#86909C]">
+                  {materialShortLabel(m, index)}
+                </span>
               </button>
             ))}
           </div>
           <Textarea
-            className="mb-2 min-h-[60px] text-sm"
-            placeholder="描述要如何修改，例如：把背景改成暖色调、加上标题文字区域"
+            className="mb-2 min-h-[52px] text-sm"
+            placeholder="想怎么改？如：背景改暖色"
             value={editInstruction}
             onChange={(e) => setEditInstruction(e.target.value)}
           />
@@ -257,22 +251,15 @@ export function AiImagePanel({
             ) : (
               <Wand2 className="size-3" />
             )}
-            修改图片
+            应用修改
           </Button>
         </div>
       )}
 
       {error && (
-        <p className="mt-3 rounded-lg border border-[#FFCCC7] bg-[#FFF1F0] px-3 py-2 text-xs text-[#F53F3F]">
+        <p className="mt-2 rounded-lg border border-[#FFCCC7] bg-[#FFF1F0] px-3 py-2 text-xs text-[#F53F3F]">
           {error}
         </p>
-      )}
-
-      {!compact && imageMaterials.length > 0 && (
-        <div className="mt-4 flex items-center gap-2 text-xs text-[#86909C]">
-          <RefreshCw className="size-3" />
-          已生成 {imageMaterials.length} 张，可在发布预览中查看效果
-        </div>
       )}
     </div>
   );

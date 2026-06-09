@@ -115,8 +115,16 @@ export async function POST(req: NextRequest) {
       path[0] === 'knowledge-bases' &&
       path[1] === 'sync'
     ) {
-      const synced = await imaProvider.syncKnowledgeBasesFromIma();
-      return successResponse({ synced, count: synced.length });
+      const result = await imaProvider.syncAllFromIma();
+      return successResponse({
+        synced: result.knowledgeBases,
+        documents: result.documents,
+        count: result.knowledgeBases.length,
+        documentCount: result.documents.reduce(
+          (sum, row) => sum + row.count,
+          0
+        ),
+      });
     }
 
     // POST /api/ima/search

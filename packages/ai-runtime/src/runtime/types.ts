@@ -31,6 +31,7 @@ export type ApplyOutputInput = {
   type: AgentType;
   contentId: string;
   versionId?: string;
+  agentRunId?: string;
   output: unknown;
   overrides?: RunAgentInput['overrides'];
 };

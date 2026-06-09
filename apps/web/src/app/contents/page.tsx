@@ -29,14 +29,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  StudioTable,
+  StudioTableBody,
+  StudioTableCell,
+  StudioTableEmpty,
+  StudioTableFrame,
+  StudioTableHead,
+  StudioTableHeader,
+  StudioTableRow,
+} from '@/components/studio/studio-table';
 import { api } from '@/lib/api';
 import { getStatusLabel, getStatusStyle } from '@/lib/tokens';
 
@@ -354,10 +357,10 @@ export default function ContentsPage() {
               description="新建内容后可在这里管理内容"
             />
           ) : (
-            <Table className="studio-table">
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">
+            <StudioTable>
+              <StudioTableHeader>
+                <StudioTableRow>
+                  <StudioTableHead className="w-12">
                     <input
                       type="checkbox"
                       className="accent-[#1664ff]"
@@ -367,33 +370,33 @@ export default function ContentsPage() {
                       }
                       onChange={toggleAll}
                     />
-                  </TableHead>
-                  <TableHead>标题</TableHead>
-                  <TableHead>系列</TableHead>
-                  <TableHead>目标平台</TableHead>
-                  <TableHead>目标账号</TableHead>
-                  <TableHead>当前状态</TableHead>
-                  <TableHead>负责人</TableHead>
-                  <TableHead>最近更新时间</TableHead>
-                  <TableHead className="text-right">操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+                  </StudioTableHead>
+                  <StudioTableHead>标题</StudioTableHead>
+                  <StudioTableHead>系列</StudioTableHead>
+                  <StudioTableHead>目标平台</StudioTableHead>
+                  <StudioTableHead>目标账号</StudioTableHead>
+                  <StudioTableHead>当前状态</StudioTableHead>
+                  <StudioTableHead>负责人</StudioTableHead>
+                  <StudioTableHead>最近更新时间</StudioTableHead>
+                  <StudioTableHead className="text-right">操作</StudioTableHead>
+                </StudioTableRow>
+              </StudioTableHeader>
+              <StudioTableBody>
                 {filteredItems.map((c) => {
                   const firstPlatform = c.versions?.[0]?.platform || '';
                   const firstAccount =
                     c.versions?.[0]?.account?.accountName || '';
                   return (
-                    <TableRow key={c.id} className="h-14">
-                      <TableCell>
+                    <StudioTableRow key={c.id} className="h-14">
+                      <StudioTableCell>
                         <input
                           type="checkbox"
                           className="accent-[#1664ff]"
                           checked={selected.includes(c.id)}
                           onChange={() => toggleSelect(c.id)}
                         />
-                      </TableCell>
-                      <TableCell className="max-w-xs">
+                      </StudioTableCell>
+                      <StudioTableCell className="max-w-xs">
                         <Link
                           href={`/contents/${c.id}`}
                           className="font-medium text-[#1D2129] hover:text-[#1664ff] hover:underline"
@@ -405,8 +408,8 @@ export default function ContentsPage() {
                             {c.summary}
                           </p>
                         )}
-                      </TableCell>
-                      <TableCell>
+                      </StudioTableCell>
+                      <StudioTableCell>
                         {c.topic ? (
                           <Link
                             href={`/topics/${c.topic.id}`}
@@ -417,29 +420,29 @@ export default function ContentsPage() {
                         ) : (
                           <span className="text-xs text-[#C9CDD4]">—</span>
                         )}
-                      </TableCell>
-                      <TableCell>
+                      </StudioTableCell>
+                      <StudioTableCell>
                         {firstPlatform ? (
                           <PlatformBadge platform={firstPlatform} size="sm" />
                         ) : (
                           <span className="text-xs text-[#86909c]">未指定</span>
                         )}
-                      </TableCell>
-                      <TableCell className="text-sm text-[#4e5969]">
+                      </StudioTableCell>
+                      <StudioTableCell className="text-sm text-[#4e5969]">
                         {firstAccount || '未指定'}
-                      </TableCell>
-                      <TableCell>
+                      </StudioTableCell>
+                      <StudioTableCell>
                         <StatusBadge status={c.status} />
-                      </TableCell>
-                      <TableCell>
+                      </StudioTableCell>
+                      <StudioTableCell>
                         <span className="inline-flex items-center gap-2 text-sm text-[#4e5969]">
                           <span className="flex size-6 items-center justify-center rounded-full bg-[#f5f7fa] text-[11px] font-medium text-[#86909c]">
                             {(c.creator?.name || 'U').slice(0, 1)}
                           </span>
                           {c.creator?.name || '未分配'}
                         </span>
-                      </TableCell>
-                      <TableCell className="text-xs text-[#86909c]">
+                      </StudioTableCell>
+                      <StudioTableCell className="text-xs text-[#86909c]">
                         {new Date(c.updatedAt).toLocaleString('zh-CN', {
                           year: 'numeric',
                           month: '2-digit',
@@ -447,8 +450,8 @@ export default function ContentsPage() {
                           hour: '2-digit',
                           minute: '2-digit',
                         })}
-                      </TableCell>
-                      <TableCell className="text-right">
+                      </StudioTableCell>
+                      <StudioTableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button
                             size="sm"
@@ -468,12 +471,12 @@ export default function ContentsPage() {
                             编辑
                           </Button>
                         </div>
-                      </TableCell>
-                    </TableRow>
+                      </StudioTableCell>
+                    </StudioTableRow>
                   );
                 })}
-              </TableBody>
-            </Table>
+              </StudioTableBody>
+            </StudioTable>
           )}
 
           <div className="flex items-center justify-between border-t border-[#f5f7fa] px-2 py-3 text-xs text-[#86909c]">

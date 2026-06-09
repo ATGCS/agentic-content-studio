@@ -1,53 +1,34 @@
 import { prisma } from '@acs/db';
 import { AppError, ErrorCodes } from '@acs/core';
-import { getKnowledgeProvider } from './provider.js';
-import {
-  resolveExternalKnowledgeBaseId,
-  getKnowledgeBase,
-} from './knowledge-bases.js';
-import { formatKnowledgeSummary } from './summary.js';
+import { getKnowledgeBase } from './knowledge-bases.js';
+import { searchLocalKnowledge } from './local-search.js';
 
 export async function searchAndLog(
   contentId: string,
   query: string,
-  options: { limit?: number; knowledgeBaseId?: string } = {}
+  options: {
+    limit?: number;
+    knowledgeBaseId?: string;
+    agentType?: string;
+  } = {}
 ) {
   const limit = options.limit ?? 10;
-  const externalId = await resolveExternalKnowledgeBaseId(
-    options.knowledgeBaseId
-  );
+  const result = await searchLocalKnowledge({
+    query,
+    limit,
+    knowledgeBaseId: options.knowledgeBaseId,
+    agentType: options.agentType,
+  });
 
-  if (!externalId) {
+  if (result.knowledgeBaseIds.length === 0) {
     throw new AppError(
       ErrorCodes.BAD_REQUEST,
-      '未找到可用知识库，请前往「设置 → IMA 知识库」同步并设置默认知识库',
+      '未找到可用知识库，请前往「知识库」同步 IMA 内容到本地',
       400
     );
   }
 
-  const provider = await getKnowledgeProvider();
-  let result;
-  try {
-    result = await provider.search({
-      query,
-      limit,
-      knowledgeBaseId: externalId,
-    });
-  } catch (err) {
-    if (err instanceof Error) {
-      throw new AppError(
-        ErrorCodes.BAD_REQUEST,
-        `IMA 知识库检索失败: ${err.message}`,
-        400
-      );
-    }
-    throw err;
-  }
-
-  const { items, raw, mode } = result;
-  const summary = formatKnowledgeSummary(items);
-
-  let localKbId: string | undefined;
+  let localKbId = result.knowledgeBaseIds[0];
   if (options.knowledgeBaseId) {
     try {
       const kb = await getKnowledgeBase(options.knowledgeBaseId);
@@ -56,13 +37,8 @@ export async function searchAndLog(
       const kb = await prisma.imaKnowledgeBase.findUnique({
         where: { externalId: options.knowledgeBaseId },
       });
-      localKbId = kb?.id;
+      if (kb) localKbId = kb.id;
     }
-  } else if (externalId) {
-    const kb = await prisma.imaKnowledgeBase.findUnique({
-      where: { externalId },
-    });
-    localKbId = kb?.id;
   }
 
   const log = await prisma.imaSearchLog.create({
@@ -70,15 +46,21 @@ export async function searchAndLog(
       contentId,
       knowledgeBaseId: localKbId,
       query,
-      resultSummary: summary,
-      rawResult: { mode, items, raw } as object,
+      resultSummary: result.summary,
+      rawResult: {
+        mode: result.mode,
+        items: result.items,
+        source: 'local',
+        knowledgeBaseIds: result.knowledgeBaseIds,
+      } as object,
     },
   });
+
   return {
-    items,
+    items: result.items,
     log,
-    mode,
+    mode: result.mode,
     knowledgeBaseId: localKbId,
-    externalKnowledgeBaseId: externalId,
+    externalKnowledgeBaseId: undefined,
   };
 }

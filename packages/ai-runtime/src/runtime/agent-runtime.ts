@@ -23,7 +23,6 @@ import {
   loadPromptForAgent,
 } from '../prompt/prompt-loader.js';
 import { renderPrompt } from '../prompt/prompt-renderer.js';
-import { runImaSearch } from '../tool-engine.js';
 import { isAgentDebugEnabled } from './debug.js';
 import {
   agentRunRepository,
@@ -50,34 +49,6 @@ export class AgentRuntime {
       ? await loadPromptForAgent(input.agentId)
       : await loadPromptByType(input.agentType);
     const spec = this.specs.get(agent.type);
-    if (spec.contextProviders.includes('knowledge.ima.latest')) {
-      if (isAgentDebugEnabled()) {
-        logAgentSection('IMA 知识库检索');
-      }
-      try {
-        const imaResult = await runImaSearch(input.contentId, {
-          platform: input.overrides?.platform,
-        });
-        if (isAgentDebugEnabled()) {
-          console.log('检索关键词:', imaResult.log.query);
-          console.log('知识库 ID:', imaResult.knowledgeBaseId ?? '(未指定)');
-          console.log('检索模式:', imaResult.mode);
-          console.log('命中条数:', imaResult.items.length);
-          console.log('imaSummary:', imaResult.log.resultSummary || '(空)');
-          console.log(
-            'IMA 原始响应:',
-            JSON.stringify(imaResult.log.rawResult, null, 2)
-          );
-        }
-      } catch (error) {
-        if (isAgentDebugEnabled()) {
-          console.warn(
-            '检索失败:',
-            error instanceof Error ? error.message : String(error)
-          );
-        }
-      }
-    }
 
     const variables = await this.contexts.build(
       {
@@ -87,6 +58,7 @@ export class AgentRuntime {
         platform: input.overrides?.platform,
         count: input.overrides?.count,
         imageRole: input.overrides?.imageRole,
+        agentType: agent.type,
       },
       spec.contextProviders
     );
@@ -145,6 +117,7 @@ export class AgentRuntime {
         type: agent.type,
         contentId: input.contentId,
         versionId: input.versionId,
+        agentRunId: run.id,
         output,
         overrides: input.overrides,
       });

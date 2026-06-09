@@ -14,4 +14,9 @@ export interface ModelGateway {
     messages: ChatMessage[];
     temperature?: number;
   }): Promise<ChatOutput>;
+  chatStream?(input: {
+    model: string;
+    messages: ChatMessage[];
+    temperature?: number;
+  }): AsyncGenerator<string>;
 }

@@ -7,6 +7,10 @@ import {
   requireRoles,
 } from '@acs/core';
 import { assertTransition } from './status-machine.js';
+import {
+  snapshotDraftBeforeUpdate,
+  snapshotVersionBeforeUpdate,
+} from './revisions.js';
 
 export async function listContents(
   user: AuthUser,
@@ -95,12 +99,28 @@ export async function updateContent(
     body: string;
     coverText: string;
     status: ContentStatus;
-  }>
+  }>,
+  options?: { createdBy?: string }
 ) {
   const existing = await getContent(id);
   if (data.status && data.status !== existing.status) {
     assertTransition(existing.status, data.status);
   }
+
+  const hasContentChange =
+    (data.title !== undefined && data.title !== existing.title) ||
+    (data.summary !== undefined && data.summary !== existing.summary) ||
+    (data.body !== undefined && data.body !== existing.body) ||
+    (data.coverText !== undefined && data.coverText !== existing.coverText);
+
+  if (hasContentChange) {
+    await snapshotDraftBeforeUpdate(id, {
+      trigger: 'manual',
+      label: '手动保存前',
+      createdBy: options?.createdBy,
+    });
+  }
+
   return prisma.content.update({ where: { id }, data });
 }
 
@@ -139,7 +159,8 @@ export async function updateVersion(
     formatConfig: Record<string, unknown>;
     status: ContentStatus;
     accountId: string | null;
-  }>
+  }>,
+  options?: { createdBy?: string }
 ) {
   const version = await prisma.contentVersion.findUnique({
     where: { id: versionId },
@@ -149,6 +170,25 @@ export async function updateVersion(
   if (data.status && data.status !== version.status) {
     assertTransition(version.status, data.status);
   }
+
+  const hasContentChange =
+    (data.title !== undefined && data.title !== version.title) ||
+    (data.body !== undefined && data.body !== version.body) ||
+    (data.coverText !== undefined && data.coverText !== version.coverText) ||
+    (data.tags !== undefined &&
+      JSON.stringify(data.tags) !== JSON.stringify(version.tags)) ||
+    (data.formatConfig !== undefined &&
+      JSON.stringify(data.formatConfig) !==
+        JSON.stringify(version.formatConfig));
+
+  if (hasContentChange) {
+    await snapshotVersionBeforeUpdate(versionId, {
+      trigger: 'manual',
+      label: '手动保存前',
+      createdBy: options?.createdBy,
+    });
+  }
+
   return prisma.contentVersion.update({
     where: { id: versionId },
     data: {

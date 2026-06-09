@@ -1,10 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { ArrowLeft, Save, Send } from 'lucide-react';
+import { Save, Send } from 'lucide-react';
 import { AiProductionPanel } from '@/components/studio/ai-production-panel';
+import { ContentRevisionHistory } from '@/components/studio/content-revision-history';
 import { StudioLayout } from '@/components/StudioLayout';
 import { PageContainer } from '@/components/layout/page-container';
 import { PlatformBadge } from '@/components/studio/platform-badge';
@@ -22,15 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { api } from '@/lib/api';
+import { getPlatformLabel } from '@/lib/tokens';
 
 type Version = {
   id: string;
@@ -154,6 +147,14 @@ export default function ContentDetailPage() {
     }
   }
 
+  const defaultPlatforms = useMemo(
+    () =>
+      content?.versions.map((v) => v.platform).length
+        ? content!.versions.map((v) => v.platform)
+        : ['XIAOHONGSHU'],
+    [content?.versions]
+  );
+
   if (!content) {
     return (
       <StudioLayout>
@@ -168,7 +169,7 @@ export default function ContentDetailPage() {
     { value: 'draft', label: '总稿' },
     ...content.versions.map((v) => ({
       value: v.id,
-      label: v.platform,
+      label: getPlatformLabel(v.platform),
     })),
   ];
 
@@ -178,23 +179,13 @@ export default function ContentDetailPage() {
 
   return (
     <StudioLayout>
-      <PageContainer className="max-w-none">
-        <div className="mb-2">
-          <Link
-            href="/contents"
-            className="inline-flex items-center gap-1 text-sm text-[#86909c] hover:text-[#1664ff]"
-          >
-            <ArrowLeft className="size-4" />
-            返回内容管理列表
-          </Link>
-        </div>
-
-        <div className="flex flex-col gap-6 xl:flex-row">
+      <PageContainer className="max-w-none -mt-3 gap-1 !px-2 pb-3 pt-0 md:-mt-4 md:!px-2 md:pb-4">
+        <div className="flex flex-col gap-1 xl:flex-row xl:gap-1">
           {/* ===== 左侧：项目信息 ===== */}
-          <aside className="w-full shrink-0 xl:w-64">
-            <StudioCard contentClassName="space-y-4 p-4">
+          <aside className="-mt-2 w-full shrink-0 space-y-1 xl:w-60">
+            <StudioCard contentClassName="space-y-2 px-2 pb-2 pt-0">
               <h3 className="text-sm font-semibold text-[#1D2129]">项目信息</h3>
-              <div className="space-y-3 text-sm">
+              <div className="space-y-2 text-sm">
                 <div>
                   <p className="text-xs text-[#86909c]">系列标题</p>
                   <p className="font-medium text-[#1D2129]">{content.title}</p>
@@ -231,23 +222,25 @@ export default function ContentDetailPage() {
             </StudioCard>
 
             {/* 审核操作 */}
-            <StudioCard contentClassName="space-y-3 p-4">
+            <StudioCard contentClassName="space-y-2 px-2 pb-2 pt-0">
               <h3 className="text-sm font-semibold text-[#1D2129]">审核操作</h3>
+              <p className="text-xs leading-relaxed text-[#86909c]">
+                选择某个平台的改写版本提交至审核中心。审核员将检查该版本的标题、封面、正文、标签、图片版权及平台合规性，通过后可进入发布流程。
+              </p>
               <div className="space-y-2">
-                <Label className="text-xs text-[#86909c]">
-                  选择版本提交审核
-                </Label>
+                <Label className="text-xs text-[#86909c]">选择平台版本</Label>
                 <Select
                   value={selectedVersion}
                   onValueChange={setSelectedVersion}
                 >
                   <SelectTrigger className="studio-input">
-                    <SelectValue placeholder="选择版本" />
+                    <SelectValue placeholder="选择平台版本" />
                   </SelectTrigger>
                   <SelectContent>
                     {content.versions.map((v) => (
                       <SelectItem key={v.id} value={v.id}>
-                        {v.platform}
+                        {getPlatformLabel(v.platform)}
+                        {v.title ? ` · ${v.title}` : ''}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -263,21 +256,23 @@ export default function ContentDetailPage() {
                 </Button>
               </div>
             </StudioCard>
+
+            <ContentRevisionHistory contentId={id} onRestored={load} />
           </aside>
 
           {/* ===== 中间：AI 生成 + 编辑区 ===== */}
-          <div className="min-w-0 flex-1 space-y-4">
+          <div className="min-w-0 flex-1 space-y-1">
             <AiProductionPanel
               contentId={id}
               embedded
-              defaultPlatforms={content.versions.map((v) => v.platform)}
+              defaultPlatforms={defaultPlatforms}
               onGenerated={load}
             />
 
             <StudioTabs items={platformTabs} value={tab} onChange={setTab} />
 
             {tab === 'draft' ? (
-              <StudioCard contentClassName="space-y-5 p-5">
+              <StudioCard contentClassName="space-y-3 px-2 py-2">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-[#1D2129]">
                     总稿编辑
@@ -323,10 +318,10 @@ export default function ContentDetailPage() {
                 </div>
               </StudioCard>
             ) : currentVersion ? (
-              <StudioCard contentClassName="space-y-5 p-5">
+              <StudioCard contentClassName="space-y-3 px-2 py-2">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-[#1D2129]">
-                    {currentVersion.platform} 版本
+                    {getPlatformLabel(currentVersion.platform)} 版本
                   </h3>
                   <div className="flex items-center gap-2">
                     <StatusBadge status={currentVersion.status} />
@@ -387,58 +382,6 @@ export default function ContentDetailPage() {
                 )}
               </StudioCard>
             ) : null}
-
-            {/* 平台版本表格 */}
-            <StudioCard contentClassName="overflow-hidden">
-              <h3 className="border-b border-[#e5e8ef] px-5 py-3 text-sm font-semibold text-[#1D2129]">
-                平台版本
-              </h3>
-              {content.versions.length === 0 ? (
-                <div className="flex h-24 items-center justify-center">
-                  <p className="text-xs text-[#a9aeb8]">
-                    暂无版本，在上方 AI 生成面板选择平台后一键生成
-                  </p>
-                </div>
-              ) : (
-                <Table className="studio-table">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12" />
-                      <TableHead>平台</TableHead>
-                      <TableHead>标题</TableHead>
-                      <TableHead>状态</TableHead>
-                      <TableHead>创建时间</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {content.versions.map((v) => (
-                      <TableRow key={v.id}>
-                        <TableCell>
-                          <input
-                            type="radio"
-                            className="accent-[#1664ff]"
-                            checked={selectedVersion === v.id}
-                            onChange={() => setSelectedVersion(v.id)}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <PlatformBadge platform={v.platform} />
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {v.title ?? '—'}
-                        </TableCell>
-                        <TableCell>
-                          <StatusBadge status={v.status} />
-                        </TableCell>
-                        <TableCell className="text-sm text-[#86909c]">
-                          {new Date(v.createdAt).toLocaleDateString()}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </StudioCard>
           </div>
         </div>
       </PageContainer>

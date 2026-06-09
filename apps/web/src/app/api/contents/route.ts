@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { AppError, ErrorCodes } from '@acs/core';
 import { z } from 'zod';
 import * as contents from '@acs/content-center';
-import { orchestrateGenerate } from '@acs/ai-runtime';
+import { orchestrateGenerate } from '@acs/studio-workflows';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 

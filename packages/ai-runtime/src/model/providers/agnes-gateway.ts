@@ -1,4 +1,5 @@
 import type { ChatMessage, ChatOutput, ModelGateway } from '../types.js';
+import { streamOpenAIChatCompletions } from '../stream-openai.js';
 
 const AGNES_BASE_URL =
   process.env.AGNES_BASE_URL ?? 'https://apihub.agnes-ai.com/v1';
@@ -50,5 +51,23 @@ export class AgnesGateway implements ModelGateway {
           }
         : undefined,
     };
+  }
+
+  async *chatStream(input: {
+    model: string;
+    messages: ChatMessage[];
+    temperature?: number;
+  }): AsyncGenerator<string> {
+    const key = process.env.AGNES_API_KEY;
+    if (!key) throw new Error('AGNES_API_KEY not set');
+    yield* streamOpenAIChatCompletions(
+      `${AGNES_BASE_URL}/chat/completions`,
+      key,
+      {
+        model: input.model,
+        messages: input.messages,
+        temperature: input.temperature ?? 0.7,
+      }
+    );
   }
 }

@@ -17,15 +17,18 @@ import { PageContainer } from '@/components/layout/page-container';
 import { PlatformBadge } from '@/components/platform-icon';
 import { StudioCard } from '@/components/studio/studio-card';
 import { Button } from '@/components/ui/button';
-import { api } from '@/lib/api';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  StudioTable,
+  StudioTableBody,
+  StudioTableCell,
+  StudioTableEmpty,
+  StudioTableFrame,
+  StudioTableHead,
+  StudioTableHeader,
+  StudioTableRow,
+} from '@/components/studio/studio-table';
+import { api } from '@/lib/api';
+
 import { cn } from '@/lib/utils';
 
 /* ---------- types ---------- */
@@ -453,9 +456,9 @@ export default function AnalyticsPage() {
                 暂无内容数据
               </p>
             ) : (
-              <Table className="studio-table text-xs">
-                <TableHeader>
-                  <TableRow className="border-[#EEF0F5]">
+              <StudioTable size="compact">
+                <StudioTableHeader>
+                  <StudioTableRow className="border-[#EEF0F5]">
                     {[
                       '排名',
                       '内容标题',
@@ -464,43 +467,43 @@ export default function AnalyticsPage() {
                       '互动量',
                       '完读率',
                     ].map((header) => (
-                      <TableHead
+                      <StudioTableHead
                         key={header}
                         className="h-8 whitespace-nowrap px-2 text-[11px] font-medium text-[#86909C]"
                       >
                         {header}
-                      </TableHead>
+                      </StudioTableHead>
                     ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+                  </StudioTableRow>
+                </StudioTableHeader>
+                <StudioTableBody>
                   {top10.map((item, index) => (
-                    <TableRow key={item.contentId} className="border-0">
-                      <TableCell className="h-9 px-2 py-1 font-semibold text-[#1D2129]">
+                    <StudioTableRow key={item.contentId} className="border-0">
+                      <StudioTableCell className="h-9 px-2 py-1 font-semibold text-[#1D2129]">
                         {index + 1}
-                      </TableCell>
-                      <TableCell className="max-w-[220px] truncate px-2 py-1 font-medium text-[#1D2129]">
+                      </StudioTableCell>
+                      <StudioTableCell className="max-w-[220px] truncate px-2 py-1 font-medium text-[#1D2129]">
                         {item.title}
-                      </TableCell>
-                      <TableCell className="px-2 py-1">
+                      </StudioTableCell>
+                      <StudioTableCell className="px-2 py-1">
                         <PlatformBadge
                           platform={item.platform.toLowerCase()}
                           size="sm"
                         />
-                      </TableCell>
-                      <TableCell className="px-2 py-1 font-medium text-[#1D2129]">
+                      </StudioTableCell>
+                      <StudioTableCell className="px-2 py-1 font-medium text-[#1D2129]">
                         {item.views}
-                      </TableCell>
-                      <TableCell className="px-2 py-1 text-[#4E5969]">
+                      </StudioTableCell>
+                      <StudioTableCell className="px-2 py-1 text-[#4E5969]">
                         {item.interactions}
-                      </TableCell>
-                      <TableCell className="px-2 py-1 font-medium text-[#1D2129]">
+                      </StudioTableCell>
+                      <StudioTableCell className="px-2 py-1 font-medium text-[#1D2129]">
                         {item.completion}
-                      </TableCell>
-                    </TableRow>
+                      </StudioTableCell>
+                    </StudioTableRow>
                   ))}
-                </TableBody>
-              </Table>
+                </StudioTableBody>
+              </StudioTable>
             )}
           </StudioCard>
 
@@ -519,35 +522,35 @@ export default function AnalyticsPage() {
                 暂无分析报告
               </p>
             ) : (
-              <Table className="studio-table text-xs">
-                <TableHeader>
-                  <TableRow className="border-[#EEF0F5]">
+              <StudioTable size="compact">
+                <StudioTableHeader>
+                  <StudioTableRow className="border-[#EEF0F5]">
                     {['报告摘要', '生成时间', '来源'].map((header) => (
-                      <TableHead
+                      <StudioTableHead
                         key={header}
                         className="h-8 whitespace-nowrap px-2 text-[11px] font-medium text-[#86909C]"
                       >
                         {header}
-                      </TableHead>
+                      </StudioTableHead>
                     ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+                  </StudioTableRow>
+                </StudioTableHeader>
+                <StudioTableBody>
                   {reports.slice(0, 5).map((report) => (
-                    <TableRow key={report.id} className="border-0">
-                      <TableCell className="max-w-[280px] truncate px-2 py-2 font-medium text-[#1D2129]">
+                    <StudioTableRow key={report.id} className="border-0">
+                      <StudioTableCell className="max-w-[280px] truncate px-2 py-2 font-medium text-[#1D2129]">
                         {report.summary ?? '—'}
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap px-2 py-2 text-[#4E5969]">
+                      </StudioTableCell>
+                      <StudioTableCell className="whitespace-nowrap px-2 py-2 text-[#4E5969]">
                         {new Date(report.createdAt).toLocaleString('zh-CN')}
-                      </TableCell>
-                      <TableCell className="px-2 py-2 text-[#4E5969]">
+                      </StudioTableCell>
+                      <StudioTableCell className="px-2 py-2 text-[#4E5969]">
                         {report.createdByAgent ? 'Agent 生成' : '人工'}
-                      </TableCell>
-                    </TableRow>
+                      </StudioTableCell>
+                    </StudioTableRow>
                   ))}
-                </TableBody>
-              </Table>
+                </StudioTableBody>
+              </StudioTable>
             )}
           </StudioCard>
         </div>

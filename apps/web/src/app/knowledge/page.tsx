@@ -17,14 +17,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  StudioTable,
+  StudioTableBody,
+  StudioTableCell,
+  StudioTableEmpty,
+  StudioTableFrame,
+  StudioTableHead,
+  StudioTableHeader,
+  StudioTableRow,
+} from '@/components/studio/studio-table';
 import { api } from '@/lib/api';
 
 type KnowledgeItem = {
@@ -186,41 +189,43 @@ export default function KnowledgePage() {
                   description="同步知识库后可供内容流程调用"
                 />
               ) : (
-                <Table className="studio-table">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>名称</TableHead>
-                      <TableHead>类型</TableHead>
-                      <TableHead>适用平台</TableHead>
-                      <TableHead>启用</TableHead>
-                      <TableHead>最近更新</TableHead>
-                      <TableHead className="text-right">操作</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <StudioTable>
+                  <StudioTableHeader>
+                    <StudioTableRow>
+                      <StudioTableHead>名称</StudioTableHead>
+                      <StudioTableHead>类型</StudioTableHead>
+                      <StudioTableHead>适用平台</StudioTableHead>
+                      <StudioTableHead>启用</StudioTableHead>
+                      <StudioTableHead>最近更新</StudioTableHead>
+                      <StudioTableHead className="text-right">
+                        操作
+                      </StudioTableHead>
+                    </StudioTableRow>
+                  </StudioTableHeader>
+                  <StudioTableBody>
                     {filtered.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell className="font-medium">
+                      <StudioTableRow key={item.id}>
+                        <StudioTableCell className="font-medium">
                           <Link
                             href={`/knowledge/${item.id}`}
                             className="text-[#1664ff] hover:underline"
                           >
                             {item.name}
                           </Link>
-                        </TableCell>
-                        <TableCell>
+                        </StudioTableCell>
+                        <StudioTableCell>
                           <span className="rounded-md bg-[#f0f5ff] px-2 py-0.5 text-xs text-[#1664ff]">
                             {categoryLabels[item.agentType || ''] ?? '通用'}
                           </span>
-                        </TableCell>
-                        <TableCell>
+                        </StudioTableCell>
+                        <StudioTableCell>
                           {item.platform ? (
                             <PlatformBadge platform={item.platform} />
                           ) : (
                             <span className="text-xs text-[#86909c]">通用</span>
                           )}
-                        </TableCell>
-                        <TableCell>
+                        </StudioTableCell>
+                        <StudioTableCell>
                           <span
                             className={`text-xs font-medium ${
                               item.enabled ? 'text-[#00b42a]' : 'text-[#86909c]'
@@ -228,11 +233,11 @@ export default function KnowledgePage() {
                           >
                             {item.enabled ? '已启用' : '未启用'}
                           </span>
-                        </TableCell>
-                        <TableCell className="text-sm text-[#86909c]">
+                        </StudioTableCell>
+                        <StudioTableCell className="text-sm text-[#86909c]">
                           {new Date(item.updatedAt).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell className="text-right">
+                        </StudioTableCell>
+                        <StudioTableCell className="text-right">
                           <Button
                             size="sm"
                             variant="outline"
@@ -240,11 +245,11 @@ export default function KnowledgePage() {
                           >
                             {item.enabled ? '停用' : '启用'}
                           </Button>
-                        </TableCell>
-                      </TableRow>
+                        </StudioTableCell>
+                      </StudioTableRow>
                     ))}
-                  </TableBody>
-                </Table>
+                  </StudioTableBody>
+                </StudioTable>
               )}
             </StudioCard>
           </div>

@@ -15,15 +15,18 @@ import { PageContainer } from '@/components/layout/page-container';
 import { PlatformBadge } from '@/components/platform-icon';
 import { StudioCard } from '@/components/studio/studio-card';
 import { Button } from '@/components/ui/button';
-import { api } from '@/lib/api';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  StudioTable,
+  StudioTableBody,
+  StudioTableCell,
+  StudioTableEmpty,
+  StudioTableFrame,
+  StudioTableHead,
+  StudioTableHeader,
+  StudioTableRow,
+} from '@/components/studio/studio-table';
+import { api } from '@/lib/api';
+
 import { cn } from '@/lib/utils';
 
 /* ---------- types ---------- */
@@ -461,9 +464,9 @@ export default function PublishingPage() {
   }) {
     const display = showAll ? items : items.slice(0, 5);
     return (
-      <Table className="studio-table text-xs">
-        <TableHeader>
-          <TableRow className="border-[#EEF0F5]">
+      <StudioTable size="compact">
+        <StudioTableHeader>
+          <StudioTableRow className="border-[#EEF0F5]">
             {[
               '内容标题',
               '内容管理',
@@ -473,52 +476,52 @@ export default function PublishingPage() {
               '状态',
               '操作',
             ].map((head) => (
-              <TableHead
+              <StudioTableHead
                 key={head}
                 className="h-9 px-3 text-[11px] font-medium text-[#86909C]"
               >
                 {head}
-              </TableHead>
+              </StudioTableHead>
             ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
+          </StudioTableRow>
+        </StudioTableHeader>
+        <StudioTableBody>
           {display.length === 0 ? (
-            <TableRow className="border-0">
-              <TableCell
+            <StudioTableRow className="border-0">
+              <StudioTableCell
                 colSpan={7}
                 className="px-3 py-8 text-center text-[#86909C]"
               >
                 暂无待发布内容
-              </TableCell>
-            </TableRow>
+              </StudioTableCell>
+            </StudioTableRow>
           ) : (
             display.map((item) => (
-              <TableRow key={item.id} className="border-0">
-                <TableCell className="min-w-[180px] px-3 py-2">
+              <StudioTableRow key={item.id} className="border-0">
+                <StudioTableCell className="min-w-[180px] px-3 py-2">
                   <Link
                     href={`/contents/${item.id}`}
                     className="font-semibold text-[#1D2129] hover:text-[#1664FF] hover:underline"
                   >
                     {item.title}
                   </Link>
-                </TableCell>
-                <TableCell className="px-3 text-[#1664FF]">
+                </StudioTableCell>
+                <StudioTableCell className="px-3 text-[#1664FF]">
                   {item.project}
-                </TableCell>
-                <TableCell className="px-3">
+                </StudioTableCell>
+                <StudioTableCell className="px-3">
                   <PlatformMark platform={item.platforms[0]} />
-                </TableCell>
-                <TableCell className="px-3 text-[#4E5969]">
+                </StudioTableCell>
+                <StudioTableCell className="px-3 text-[#4E5969]">
                   {item.account}
-                </TableCell>
-                <TableCell className="whitespace-nowrap px-3 text-[#4E5969]">
+                </StudioTableCell>
+                <StudioTableCell className="whitespace-nowrap px-3 text-[#4E5969]">
                   {item.schedule}
-                </TableCell>
-                <TableCell className="px-3">
+                </StudioTableCell>
+                <StudioTableCell className="px-3">
                   <StatusPill value={item.status} />
-                </TableCell>
-                <TableCell className="px-3">
+                </StudioTableCell>
+                <StudioTableCell className="px-3">
                   <span className="flex gap-2 whitespace-nowrap font-semibold text-[#1664FF]">
                     <button
                       type="button"
@@ -537,69 +540,69 @@ export default function PublishingPage() {
                       取消
                     </button>
                   </span>
-                </TableCell>
-              </TableRow>
+                </StudioTableCell>
+              </StudioTableRow>
             ))
           )}
-        </TableBody>
-      </Table>
+        </StudioTableBody>
+      </StudioTable>
     );
   }
 
   function DraftSyncTable() {
     return (
-      <Table className="studio-table text-xs">
-        <TableHeader>
-          <TableRow className="border-[#EEF0F5]">
+      <StudioTable size="compact">
+        <StudioTableHeader>
+          <StudioTableRow className="border-[#EEF0F5]">
             {['草稿标题', '内容管理', '同步时间', '状态', '操作'].map(
               (head) => (
-                <TableHead
+                <StudioTableHead
                   key={head}
                   className="h-9 px-3 text-[11px] font-medium text-[#86909C]"
                 >
                   {head}
-                </TableHead>
+                </StudioTableHead>
               )
             )}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
+          </StudioTableRow>
+        </StudioTableHeader>
+        <StudioTableBody>
           {drafts.length === 0 ? (
-            <TableRow className="border-0">
-              <TableCell
+            <StudioTableRow className="border-0">
+              <StudioTableCell
                 colSpan={5}
                 className="px-3 py-8 text-center text-[#86909C]"
               >
                 暂无草稿
-              </TableCell>
-            </TableRow>
+              </StudioTableCell>
+            </StudioTableRow>
           ) : (
             drafts.slice(0, 5).map((item) => (
-              <TableRow key={item.id} className="border-0">
-                <TableCell className="max-w-[200px] truncate px-3 py-2">
+              <StudioTableRow key={item.id} className="border-0">
+                <StudioTableCell className="max-w-[200px] truncate px-3 py-2">
                   <span className="font-semibold text-[#1D2129]">
                     {item.title}
                   </span>
-                </TableCell>
-                <TableCell className="px-3 text-[#4E5969]">
+                </StudioTableCell>
+                <StudioTableCell className="px-3 text-[#4E5969]">
                   {item.project}
-                </TableCell>
-                <TableCell className="whitespace-nowrap px-3 text-[#4E5969]">
+                </StudioTableCell>
+                <StudioTableCell className="whitespace-nowrap px-3 text-[#4E5969]">
                   {item.syncedAt}
-                </TableCell>
-                <TableCell className="px-3">
+                </StudioTableCell>
+                <StudioTableCell className="px-3">
                   <StatusPill value={item.status} />
-                </TableCell>
-                <TableCell className="px-3">
+                </StudioTableCell>
+                <StudioTableCell className="px-3">
                   <span className="font-semibold text-[#1664FF] hover:underline cursor-pointer">
                     {item.status === 'failed' ? '重试' : '查看'}
                   </span>
-                </TableCell>
-              </TableRow>
+                </StudioTableCell>
+              </StudioTableRow>
             ))
           )}
-        </TableBody>
-      </Table>
+        </StudioTableBody>
+      </StudioTable>
     );
   }
 
@@ -612,47 +615,47 @@ export default function PublishingPage() {
   }) {
     const display = showAll ? items : items.slice(0, 5);
     return (
-      <Table className="studio-table text-xs">
-        <TableHeader>
-          <TableRow className="border-[#EEF0F5]">
+      <StudioTable size="compact">
+        <StudioTableHeader>
+          <StudioTableRow className="border-[#EEF0F5]">
             {['标题', '内容管理', '生成时间', '状态', '操作'].map((head) => (
-              <TableHead
+              <StudioTableHead
                 key={head}
                 className="h-9 px-3 text-[11px] font-medium text-[#86909C]"
               >
                 {head}
-              </TableHead>
+              </StudioTableHead>
             ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
+          </StudioTableRow>
+        </StudioTableHeader>
+        <StudioTableBody>
           {display.length === 0 ? (
-            <TableRow className="border-0">
-              <TableCell
+            <StudioTableRow className="border-0">
+              <StudioTableCell
                 colSpan={5}
                 className="px-3 py-8 text-center text-[#86909C]"
               >
                 暂无发布包
-              </TableCell>
-            </TableRow>
+              </StudioTableCell>
+            </StudioTableRow>
           ) : (
             display.map((item) => (
-              <TableRow key={item.id} className="border-0">
-                <TableCell className="max-w-[200px] truncate px-3 py-2">
+              <StudioTableRow key={item.id} className="border-0">
+                <StudioTableCell className="max-w-[200px] truncate px-3 py-2">
                   <span className="font-semibold text-[#1D2129] hover:text-[#1664FF]">
                     {item.title}
                   </span>
-                </TableCell>
-                <TableCell className="px-3 text-[#4E5969]">
+                </StudioTableCell>
+                <StudioTableCell className="px-3 text-[#4E5969]">
                   {item.project}
-                </TableCell>
-                <TableCell className="whitespace-nowrap px-3 text-[#4E5969]">
+                </StudioTableCell>
+                <StudioTableCell className="whitespace-nowrap px-3 text-[#4E5969]">
                   {item.time}
-                </TableCell>
-                <TableCell className="px-3">
+                </StudioTableCell>
+                <StudioTableCell className="px-3">
                   <StatusPill value={item.status} />
-                </TableCell>
-                <TableCell className="px-3">
+                </StudioTableCell>
+                <StudioTableCell className="px-3">
                   <span className="flex gap-3 whitespace-nowrap text-xs font-semibold text-[#1664FF]">
                     <span
                       className="cursor-pointer hover:underline"
@@ -668,20 +671,20 @@ export default function PublishingPage() {
                       <Clipboard className="size-3.5" />
                     </span>
                   </span>
-                </TableCell>
-              </TableRow>
+                </StudioTableCell>
+              </StudioTableRow>
             ))
           )}
-        </TableBody>
-      </Table>
+        </StudioTableBody>
+      </StudioTable>
     );
   }
 
   function RecordsTable({ items }: { items: PendingItem[] }) {
     return (
-      <Table className="studio-table text-xs">
-        <TableHeader>
-          <TableRow className="border-[#EEF0F5]">
+      <StudioTable size="compact">
+        <StudioTableHeader>
+          <StudioTableRow className="border-[#EEF0F5]">
             {[
               '内容标题',
               '内容管理',
@@ -691,101 +694,101 @@ export default function PublishingPage() {
               '状态',
               '操作',
             ].map((head) => (
-              <TableHead
+              <StudioTableHead
                 key={head}
                 className="h-9 px-3 text-[11px] font-medium text-[#86909C]"
               >
                 {head}
-              </TableHead>
+              </StudioTableHead>
             ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
+          </StudioTableRow>
+        </StudioTableHeader>
+        <StudioTableBody>
           {items.length === 0 ? (
-            <TableRow className="border-0">
-              <TableCell
+            <StudioTableRow className="border-0">
+              <StudioTableCell
                 colSpan={7}
                 className="px-3 py-8 text-center text-[#86909C]"
               >
                 暂无发布记录
-              </TableCell>
-            </TableRow>
+              </StudioTableCell>
+            </StudioTableRow>
           ) : (
             items.slice(0, 5).map((item) => (
-              <TableRow key={item.id} className="border-0">
-                <TableCell className="max-w-[200px] truncate px-3 py-2">
+              <StudioTableRow key={item.id} className="border-0">
+                <StudioTableCell className="max-w-[200px] truncate px-3 py-2">
                   <span className="font-semibold text-[#1D2129]">
                     {item.title}
                   </span>
-                </TableCell>
-                <TableCell className="px-3 text-[#4E5969]">
+                </StudioTableCell>
+                <StudioTableCell className="px-3 text-[#4E5969]">
                   {item.project}
-                </TableCell>
-                <TableCell className="px-3">
+                </StudioTableCell>
+                <StudioTableCell className="px-3">
                   <PlatformMark platform={item.platforms[0]} />
-                </TableCell>
-                <TableCell className="px-3 text-[#4E5969]">
+                </StudioTableCell>
+                <StudioTableCell className="px-3 text-[#4E5969]">
                   {item.account}
-                </TableCell>
-                <TableCell className="whitespace-nowrap px-3 text-[#4E5969]">
+                </StudioTableCell>
+                <StudioTableCell className="whitespace-nowrap px-3 text-[#4E5969]">
                   {item.schedule}
-                </TableCell>
-                <TableCell className="px-3">
+                </StudioTableCell>
+                <StudioTableCell className="px-3">
                   <StatusPill value={item.status} />
-                </TableCell>
-                <TableCell className="px-3">
+                </StudioTableCell>
+                <StudioTableCell className="px-3">
                   <span className="flex gap-2 whitespace-nowrap font-semibold text-[#1664FF]">
                     <Link href="/analytics">数据</Link>
                   </span>
-                </TableCell>
-              </TableRow>
+                </StudioTableCell>
+              </StudioTableRow>
             ))
           )}
-        </TableBody>
-      </Table>
+        </StudioTableBody>
+      </StudioTable>
     );
   }
 
   function AccountTable() {
     return (
-      <Table className="studio-table text-xs">
-        <TableHeader>
-          <TableRow className="border-[#EEF0F5]">
+      <StudioTable size="compact">
+        <StudioTableHeader>
+          <StudioTableRow className="border-[#EEF0F5]">
             {['平台', '账号名称', '授权状态', '操作'].map((head) => (
-              <TableHead
+              <StudioTableHead
                 key={head}
                 className="h-9 px-3 text-[11px] font-medium text-[#86909C]"
               >
                 {head}
-              </TableHead>
+              </StudioTableHead>
             ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
+          </StudioTableRow>
+        </StudioTableHeader>
+        <StudioTableBody>
           {accounts.length === 0 ? (
-            <TableRow className="border-0">
-              <TableCell
+            <StudioTableRow className="border-0">
+              <StudioTableCell
                 colSpan={4}
                 className="px-3 py-8 text-center text-[#86909C]"
               >
                 暂无账号
-              </TableCell>
-            </TableRow>
+              </StudioTableCell>
+            </StudioTableRow>
           ) : (
             accounts.slice(0, 5).map((acc) => (
-              <TableRow key={acc.id} className="border-0">
-                <TableCell className="px-3 py-2">
+              <StudioTableRow key={acc.id} className="border-0">
+                <StudioTableCell className="px-3 py-2">
                   <PlatformMark platform={acc.platform} />
-                </TableCell>
-                <TableCell className="px-3">
+                </StudioTableCell>
+                <StudioTableCell className="px-3">
                   <Link
                     href={`/accounts/${acc.id}`}
                     className="font-semibold text-[#1D2129] hover:text-[#1664FF]"
                   >
                     {acc.accountName}
                   </Link>
-                </TableCell>
-                <TableCell className="px-3">
+                </StudioTableCell>
+                <StudioTableCell className="px-3">
                   <span
                     className={cn(
                       'rounded-full px-2 py-1 text-[11px] font-semibold',
@@ -796,20 +799,20 @@ export default function PublishingPage() {
                   >
                     {acc.authStatus === 'active' ? '已授权' : '待授权'}
                   </span>
-                </TableCell>
-                <TableCell className="px-3">
+                </StudioTableCell>
+                <StudioTableCell className="px-3">
                   <Link
                     href="/accounts"
                     className="font-semibold text-[#1664FF] hover:underline"
                   >
                     管理
                   </Link>
-                </TableCell>
-              </TableRow>
+                </StudioTableCell>
+              </StudioTableRow>
             ))
           )}
-        </TableBody>
-      </Table>
+        </StudioTableBody>
+      </StudioTable>
     );
   }
 

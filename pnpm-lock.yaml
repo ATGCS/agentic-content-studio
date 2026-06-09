@@ -120,6 +120,12 @@ importers:
       '@acs/review-center':
         specifier: workspace:*
         version: link:../../packages/review-center
+      '@acs/studio-agents':
+        specifier: workspace:*
+        version: link:../../packages/studio-agents
+      '@acs/studio-workflows':
+        specifier: workspace:*
+        version: link:../../packages/studio-workflows
       '@acs/turbopush-adapter':
         specifier: workspace:*
         version: link:../../packages/turbopush-adapter
@@ -172,15 +178,24 @@ importers:
       '@acs/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@acs/doubao-image-provider':
-        specifier: workspace:*
-        version: link:../../packages/doubao-image-provider
       '@acs/ima-provider':
         specifier: workspace:*
         version: link:../../packages/ima-provider
+      '@acs/image-provider':
+        specifier: workspace:*
+        version: link:../../packages/image-provider
       '@acs/review-center':
         specifier: workspace:*
         version: link:../../packages/review-center
+      '@acs/studio-agents':
+        specifier: workspace:*
+        version: link:../../packages/studio-agents
+      '@acs/studio-butler':
+        specifier: workspace:*
+        version: link:../../packages/studio-butler
+      '@acs/studio-workflows':
+        specifier: workspace:*
+        version: link:../../packages/studio-workflows
       '@iconify-json/simple-icons':
         specifier: ^1.2.85
         version: 1.2.85
@@ -292,6 +307,19 @@ importers:
         specifier: ^5.8.3
         version: 5.9.3
 
+  packages/agnes-image-provider:
+    dependencies:
+      '@acs/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      tsx:
+        specifier: ^4.19.4
+        version: 4.22.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
   packages/ai-runtime:
     dependencies:
       '@acs/account-profile':
@@ -300,16 +328,19 @@ importers:
       '@acs/db':
         specifier: workspace:*
         version: link:../db
-      '@acs/doubao-image-provider':
-        specifier: workspace:*
-        version: link:../doubao-image-provider
       '@acs/ima-provider':
         specifier: workspace:*
         version: link:../ima-provider
+      '@acs/image-provider':
+        specifier: workspace:*
+        version: link:../image-provider
       zod:
         specifier: ^3.25.67
         version: 3.25.76
     devDependencies:
+      '@acs/studio-agents':
+        specifier: workspace:*
+        version: link:../studio-agents
       tsx:
         specifier: ^4.19.4
         version: 4.22.4
@@ -422,6 +453,22 @@ importers:
         specifier: ^5.8.3
         version: 5.9.3
 
+  packages/image-provider:
+    dependencies:
+      '@acs/agnes-image-provider':
+        specifier: workspace:*
+        version: link:../agnes-image-provider
+      '@acs/doubao-image-provider':
+        specifier: workspace:*
+        version: link:../doubao-image-provider
+    devDependencies:
+      tsx:
+        specifier: ^4.19.4
+        version: 4.22.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
   packages/review-center:
     dependencies:
       '@acs/content-center':
@@ -433,6 +480,90 @@ importers:
       '@acs/db':
         specifier: workspace:*
         version: link:../db
+    devDependencies:
+      tsx:
+        specifier: ^4.19.4
+        version: 4.22.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  packages/studio-agents:
+    dependencies:
+      '@acs/ai-runtime':
+        specifier: workspace:*
+        version: link:../ai-runtime
+      '@acs/content-center':
+        specifier: workspace:*
+        version: link:../content-center
+      '@acs/db':
+        specifier: workspace:*
+        version: link:../db
+      '@acs/image-provider':
+        specifier: workspace:*
+        version: link:../image-provider
+    devDependencies:
+      tsx:
+        specifier: ^4.19.4
+        version: 4.22.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  packages/studio-butler:
+    dependencies:
+      '@acs/ai-runtime':
+        specifier: workspace:*
+        version: link:../ai-runtime
+      '@acs/content-center':
+        specifier: workspace:*
+        version: link:../content-center
+      '@acs/core':
+        specifier: workspace:*
+        version: link:../core
+      '@acs/db':
+        specifier: workspace:*
+        version: link:../db
+      '@acs/ima-provider':
+        specifier: workspace:*
+        version: link:../ima-provider
+      '@acs/studio-agents':
+        specifier: workspace:*
+        version: link:../studio-agents
+      '@acs/studio-workflows':
+        specifier: workspace:*
+        version: link:../studio-workflows
+      zod:
+        specifier: ^3.25.67
+        version: 3.25.76
+    devDependencies:
+      tsx:
+        specifier: ^4.19.4
+        version: 4.22.4
+      typescript:
+        specifier: ^5.8.3
+        version: 5.9.3
+
+  packages/studio-workflows:
+    dependencies:
+      '@acs/ai-runtime':
+        specifier: workspace:*
+        version: link:../ai-runtime
+      '@acs/content-center':
+        specifier: workspace:*
+        version: link:../content-center
+      '@acs/db':
+        specifier: workspace:*
+        version: link:../db
+      '@acs/ima-provider':
+        specifier: workspace:*
+        version: link:../ima-provider
+      '@acs/image-provider':
+        specifier: workspace:*
+        version: link:../image-provider
+      '@acs/studio-agents':
+        specifier: workspace:*
+        version: link:../studio-agents
     devDependencies:
       tsx:
         specifier: ^4.19.4

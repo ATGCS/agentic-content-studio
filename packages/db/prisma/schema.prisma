@@ -88,6 +88,17 @@ enum MaterialRole {
   ATTACHMENT
 }
 
+enum ButlerMessageRole {
+  USER
+  ASSISTANT
+  TOOL
+}
+
+enum ContentRevisionScope {
+  DRAFT
+  VERSION
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -97,11 +108,13 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  topics        Topic[]
-  contents      Content[]         @relation("ContentCreator")
-  reviewTasks   ReviewTask[]      @relation("Reviewer")
-  ownedAccounts PlatformAccount[] @relation("AccountOwner")
-  oauthStates   SocialOAuthState[]
+  topics         Topic[]
+  contents       Content[]         @relation("ContentCreator")
+  reviewTasks    ReviewTask[]      @relation("Reviewer")
+  ownedAccounts  PlatformAccount[] @relation("AccountOwner")
+  oauthStates    SocialOAuthState[]
+  butlerSessions    ButlerSession[]
+  contentRevisions  ContentRevision[] @relation("RevisionCreator")
 
   @@map("users")
 }
@@ -245,6 +258,7 @@ model Topic {
   id              String        @id @default(cuid())
   title           String
   description     String?
+  outline         Json?
   source          String        @default("manual")
   targetPlatforms Json?
   status          ContentStatus @default(DRAFT)
@@ -252,11 +266,43 @@ model Topic {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
-  owner    User      @relation(fields: [ownerId], references: [id])
-  contents Content[]
+  owner          User            @relation(fields: [ownerId], references: [id])
+  contents       Content[]
+  butlerSessions ButlerSession[]
 
   @@index([ownerId, status, createdAt])
   @@map("topics")
+}
+
+model ButlerSession {
+  id        String   @id @default(cuid())
+  userId    String
+  topicId   String?
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic    Topic?          @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  messages ButlerMessage[]
+
+  @@index([userId, updatedAt])
+  @@index([topicId])
+  @@map("butler_sessions")
+}
+
+model ButlerMessage {
+  id        String            @id @default(cuid())
+  sessionId String
+  role      ButlerMessageRole
+  content   String
+  metadata  Json?
+  createdAt DateTime          @default(now())
+
+  session ButlerSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@map("butler_messages")
 }
 
 model Content {
@@ -282,6 +328,7 @@ model Content {
   publishingTasks  PublishingTask[]
   analyticsReports AnalyticsReport[]
   analyticsData    AnalyticsData[]
+  revisions        ContentRevision[]
 
   @@index([topicId, status, createdAt])
   @@index([createdBy])
@@ -309,6 +356,7 @@ model ContentVersion {
   publishingTasks PublishingTask[]
   analyticsData   AnalyticsData[]
   socialWorks     SocialContentWork[]
+  revisions       ContentRevision[]
 
   @@index([contentId, platform])
   @@index([accountId, status])
@@ -385,13 +433,38 @@ model AgentRun {
   startedAt     DateTime  @default(now())
   finishedAt    DateTime?
 
-  agent   Agent           @relation(fields: [agentId], references: [id])
-  content Content         @relation(fields: [contentId], references: [id], onDelete: Cascade)
-  version ContentVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
+  agent     Agent             @relation(fields: [agentId], references: [id])
+  content   Content           @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  version   ContentVersion?   @relation(fields: [versionId], references: [id], onDelete: SetNull)
+  revisions ContentRevision[]
 
   @@index([contentId, status, startedAt])
   @@index([agentId, startedAt])
   @@map("agent_runs")
+}
+
+model ContentRevision {
+  id         String               @id @default(cuid())
+  contentId  String
+  versionId  String?
+  scope      ContentRevisionScope
+  platform   Platform?
+  trigger    String
+  agentType  AgentType?
+  agentRunId String?
+  label      String?
+  snapshot   Json
+  createdBy  String?
+  createdAt  DateTime             @default(now())
+
+  content  Content          @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  version  ContentVersion?  @relation(fields: [versionId], references: [id], onDelete: SetNull)
+  agentRun AgentRun?        @relation(fields: [agentRunId], references: [id], onDelete: SetNull)
+  creator  User?            @relation("RevisionCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+
+  @@index([contentId, createdAt])
+  @@index([versionId, createdAt])
+  @@map("content_revisions")
 }
 
 model ImaKnowledgeBase {
@@ -400,6 +473,7 @@ model ImaKnowledgeBase {
   name        String    @unique
   description String?
   agentType   String?   // 绑定的 Agent 类型: TOPIC, TITLE, COVER, BODY, TAG, PLATFORM_RULE, ACCOUNT_STYLE, MATERIAL
+  source      String    @default("ima") // ima | local
   enabled     Boolean   @default(true)
   isDefault   Boolean   @default(false)
   rawData     Json?
@@ -407,9 +481,33 @@ model ImaKnowledgeBase {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
+  documents  ImaKnowledgeDocument[]
   searchLogs ImaSearchLog[]
 
+  @@index([source, enabled])
   @@map("ima_knowledge_bases")
+}
+
+model ImaKnowledgeDocument {
+  id              String   @id @default(cuid())
+  knowledgeBaseId String
+  externalMediaId String
+  title           String
+  summary         String?
+  content         String?
+  sourceUrl       String?
+  source          String   @default("ima") // ima | local
+  rawData         Json?
+  syncedAt        DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  knowledgeBase ImaKnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+
+  @@unique([knowledgeBaseId, externalMediaId])
+  @@index([knowledgeBaseId, syncedAt])
+  @@index([knowledgeBaseId, source])
+  @@map("ima_knowledge_documents")
 }
 
 model ImaSearchLog {

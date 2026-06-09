@@ -17,15 +17,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+
 import { Textarea } from '@/components/ui/textarea';
+import {
+  StudioTable,
+  StudioTableBody,
+  StudioTableCell,
+  StudioTableEmpty,
+  StudioTableFrame,
+  StudioTableHead,
+  StudioTableHeader,
+  StudioTableRow,
+} from '@/components/studio/studio-table';
 import { api } from '@/lib/api';
 
 const defaultPreviewVariables = {
@@ -196,36 +199,36 @@ export default function PromptsPage() {
               description="种子数据加载后将显示 Agent 提示词模板"
             />
           ) : (
-            <Table className="studio-table">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>名称</TableHead>
-                  <TableHead>类型</TableHead>
-                  <TableHead>版本</TableHead>
-                  <TableHead>变量</TableHead>
-                  <TableHead>启用</TableHead>
-                  <TableHead className="text-right">操作</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <StudioTable>
+              <StudioTableHeader>
+                <StudioTableRow>
+                  <StudioTableHead>名称</StudioTableHead>
+                  <StudioTableHead>类型</StudioTableHead>
+                  <StudioTableHead>版本</StudioTableHead>
+                  <StudioTableHead>变量</StudioTableHead>
+                  <StudioTableHead>启用</StudioTableHead>
+                  <StudioTableHead className="text-right">操作</StudioTableHead>
+                </StudioTableRow>
+              </StudioTableHeader>
+              <StudioTableBody>
                 {items.map((p) => (
-                  <TableRow key={p.id}>
-                    <TableCell>
+                  <StudioTableRow key={p.id}>
+                    <StudioTableCell>
                       <div className="font-medium">{p.name}</div>
                       <div className="mt-1 max-w-[420px] truncate text-xs text-[#86909C]">
                         {p.template}
                       </div>
-                    </TableCell>
-                    <TableCell>
+                    </StudioTableCell>
+                    <StudioTableCell>
                       <Badge className="border-0 bg-[#7C3AED]/10 text-[#7C3AED]">
                         {p.agentType}
                       </Badge>
-                    </TableCell>
-                    <TableCell>{p.version}</TableCell>
-                    <TableCell className="text-xs text-[#86909C]">
+                    </StudioTableCell>
+                    <StudioTableCell>{p.version}</StudioTableCell>
+                    <StudioTableCell className="text-xs text-[#86909C]">
                       {(p.variables ?? []).join(', ') || '—'}
-                    </TableCell>
-                    <TableCell>
+                    </StudioTableCell>
+                    <StudioTableCell>
                       <Badge
                         className={
                           p.enabled
@@ -235,8 +238,8 @@ export default function PromptsPage() {
                       >
                         {p.enabled ? '已启用' : '未启用'}
                       </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
+                    </StudioTableCell>
+                    <StudioTableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button
                           size="sm"
@@ -263,11 +266,11 @@ export default function PromptsPage() {
                           {p.enabled ? '停用' : '启用'}
                         </Button>
                       </div>
-                    </TableCell>
-                  </TableRow>
+                    </StudioTableCell>
+                  </StudioTableRow>
                 ))}
-              </TableBody>
-            </Table>
+              </StudioTableBody>
+            </StudioTable>
           )}
         </StudioCard>
       </PageContainer>

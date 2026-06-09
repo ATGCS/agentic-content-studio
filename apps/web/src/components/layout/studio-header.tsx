@@ -57,19 +57,25 @@ export function StudioHeader() {
   }
 
   return (
-    <header className="studio-header sticky top-0 z-20 flex h-[74px] shrink-0 items-center justify-between gap-4 px-8">
+    <header className="studio-header sticky top-0 z-20 flex h-[74px] shrink-0 items-center justify-between gap-4 px-4 md:px-5">
       <div className="min-w-0">
         {breadcrumb ? (
           <>
             <p className="truncate text-[22px] font-bold tracking-[-0.01em] text-[#1D2129]">
-              {breadcrumb.parent} - {breadcrumb.child}
+              {breadcrumb.parent === breadcrumb.child
+                ? breadcrumb.child
+                : `${breadcrumb.parent} - ${breadcrumb.child}`}
             </p>
             <nav className="mt-2 flex items-center gap-1.5 text-xs text-[#86909c]">
               <Link href="/dashboard" className="hover:text-[#1664ff]">
                 <Home className="size-3.5" />
               </Link>
-              <ChevronRight className="size-3" />
-              <span className="text-[#86909c]">{breadcrumb.parent}</span>
+              {breadcrumb.parent !== breadcrumb.child && (
+                <>
+                  <ChevronRight className="size-3" />
+                  <span className="text-[#86909c]">{breadcrumb.parent}</span>
+                </>
+              )}
               <ChevronRight className="size-3" />
               <span className="text-[#4e5969]">{breadcrumb.child}</span>
             </nav>

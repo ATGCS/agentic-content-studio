@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@acs/db';
+import { prisma, type AgentType, type RunStatus } from '@acs/db';
 
 function successResponse(data: unknown, message = 'success') {
   return NextResponse.json({ code: 0, message, data });
@@ -7,10 +7,24 @@ function successResponse(data: unknown, message = 'success') {
 
 export async function GET(req: NextRequest) {
   try {
-    const contentId =
-      new URL(req.url).searchParams.get('contentId') ?? undefined;
+    const params = new URL(req.url).searchParams;
+    const contentId = params.get('contentId') ?? undefined;
+    const status = params.get('status') as RunStatus | null;
+    const agentType = params.get('agentType') as AgentType | null;
+
+    const where: {
+      contentId?: string;
+      status?: RunStatus;
+      agent?: { type: AgentType };
+    } = {};
+    if (contentId) where.contentId = contentId;
+    if (status && status !== ('ALL' as RunStatus)) where.status = status;
+    if (agentType && agentType !== ('ALL' as AgentType)) {
+      where.agent = { type: agentType };
+    }
+
     const runs = await prisma.agentRun.findMany({
-      where: contentId ? { contentId } : undefined,
+      where: Object.keys(where).length > 0 ? where : undefined,
       include: {
         agent: { select: { id: true, name: true, type: true } },
         content: { select: { id: true, title: true, summary: true } },
@@ -27,15 +41,19 @@ export async function GET(req: NextRequest) {
       orderBy: { startedAt: 'desc' },
       take: contentId ? 20 : 100,
     });
+
     const data = runs.map((run) => ({
       id: run.id,
-      agentType: run.agent.type,
       status: run.status,
-      createdAt: run.startedAt.toISOString(),
+      model: run.model,
+      error: run.error,
+      startedAt: run.startedAt.toISOString(),
+      finishedAt: run.finishedAt?.toISOString() ?? null,
       agent: run.agent,
       content: run.content,
       version: run.version,
     }));
+
     return successResponse(data);
   } catch (err) {
     console.error('List agent runs error:', err);
@@ -46,7 +64,7 @@ export async function GET(req: NextRequest) {
   }
 }
 
-export async function POST(req: NextRequest) {
+export async function POST() {
   return NextResponse.json(
     { code: 405, message: 'Method not allowed', data: null },
     { status: 405 }

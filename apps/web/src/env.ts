@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { outputApplierRegistry, setKbAgentTypeResolver } from '@acs/ai-runtime';
+import { resolveKbAgentTypes, studioOutputAppliers } from '@acs/studio-agents';
 
 const repoRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -27,3 +29,14 @@ if (fs.existsSync(envFile)) {
     }
   }
 }
+
+let runtimeReady = false;
+
+export function ensureServerRuntime(): void {
+  if (runtimeReady) return;
+  outputApplierRegistry.registerMany(studioOutputAppliers);
+  setKbAgentTypeResolver(resolveKbAgentTypes);
+  runtimeReady = true;
+}
+
+ensureServerRuntime();

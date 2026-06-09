@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import jwt from 'jsonwebtoken';
+import { z } from 'zod';
 import { AppError, ErrorCodes } from '@acs/core';
 import * as topics from '@acs/content-center';
 
@@ -51,9 +52,34 @@ export async function GET(req: NextRequest) {
   }
 }
 
+const createTopicBody = z.object({
+  title: z.string().min(1),
+  description: z.string().optional(),
+  targetPlatforms: z.array(z.string()).optional(),
+  source: z.string().optional(),
+});
+
 export async function POST(req: NextRequest) {
-  return NextResponse.json(
-    { code: 405, message: 'Method not allowed', data: null },
-    { status: 405 }
-  );
+  try {
+    const user = await authenticate(req);
+    const body = createTopicBody.parse(await req.json());
+    const data = await topics.createTopic(user, body);
+    return successResponse(data);
+  } catch (err) {
+    if (err instanceof AppError) {
+      return NextResponse.json(
+        { code: err.code, message: err.message, data: null },
+        { status: err.httpStatus }
+      );
+    }
+    console.error('[topics POST] unexpected error:', err);
+    return NextResponse.json(
+      {
+        code: 50000,
+        message: err instanceof Error ? err.message : 'internal error',
+        data: null,
+      },
+      { status: 500 }
+    );
+  }
 }

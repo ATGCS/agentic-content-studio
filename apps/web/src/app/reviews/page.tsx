@@ -16,14 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+
 import {
   ChevronRight,
   ChevronLeft,
@@ -37,6 +30,16 @@ import {
   XOctagon,
   FileText,
 } from 'lucide-react';
+import {
+  StudioTable,
+  StudioTableBody,
+  StudioTableCell,
+  StudioTableEmpty,
+  StudioTableFrame,
+  StudioTableHead,
+  StudioTableHeader,
+  StudioTableRow,
+} from '@/components/studio/studio-table';
 import { api } from '@/lib/api';
 
 /* ---------- types ---------- */
@@ -542,105 +545,105 @@ export default function ReviewsPage() {
                 </div>
 
                 <div className="p-5">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="hover:bg-transparent border-[#E5E8EF]">
-                        <TableHead className="w-10 py-3">
+                  <StudioTable>
+                    <StudioTableHeader>
+                      <StudioTableRow className="hover:bg-transparent border-[#E5E8EF]">
+                        <StudioTableHead className="w-10 py-3">
                           <input
                             type="checkbox"
                             className="size-4 rounded border-[#C9CDD4] text-[#1664FF] focus:ring-[#1664FF]"
                           />
-                        </TableHead>
-                        <TableHead className="text-xs text-[#86909C] font-normal py-3">
+                        </StudioTableHead>
+                        <StudioTableHead className="text-xs text-[#86909C] font-normal py-3">
                           内容标题
-                        </TableHead>
-                        <TableHead className="text-xs text-[#86909C] font-normal py-3">
+                        </StudioTableHead>
+                        <StudioTableHead className="text-xs text-[#86909C] font-normal py-3">
                           平台
-                        </TableHead>
-                        <TableHead className="text-xs text-[#86909C] font-normal py-3">
+                        </StudioTableHead>
+                        <StudioTableHead className="text-xs text-[#86909C] font-normal py-3">
                           目标账号
-                        </TableHead>
-                        <TableHead className="text-xs text-[#86909C] font-normal py-3">
+                        </StudioTableHead>
+                        <StudioTableHead className="text-xs text-[#86909C] font-normal py-3">
                           审核类型
-                        </TableHead>
-                        <TableHead className="text-xs text-[#86909C] font-normal py-3">
+                        </StudioTableHead>
+                        <StudioTableHead className="text-xs text-[#86909C] font-normal py-3">
                           风险等级
-                        </TableHead>
-                        <TableHead className="text-xs text-[#86909C] font-normal py-3">
+                        </StudioTableHead>
+                        <StudioTableHead className="text-xs text-[#86909C] font-normal py-3">
                           提交时间
-                        </TableHead>
-                        <TableHead className="text-xs text-[#86909C] font-normal py-3">
+                        </StudioTableHead>
+                        <StudioTableHead className="text-xs text-[#86909C] font-normal py-3">
                           提交人来源
-                        </TableHead>
-                        <TableHead className="text-xs text-[#86909C] font-normal py-3">
+                        </StudioTableHead>
+                        <StudioTableHead className="text-xs text-[#86909C] font-normal py-3">
                           状态
-                        </TableHead>
-                        <TableHead className="text-xs text-[#86909C] font-normal py-3 text-right">
+                        </StudioTableHead>
+                        <StudioTableHead className="text-xs text-[#86909C] font-normal py-3 text-right">
                           操作
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                        </StudioTableHead>
+                      </StudioTableRow>
+                    </StudioTableHeader>
+                    <StudioTableBody>
                       {loading ? (
-                        <TableRow>
-                          <TableCell
+                        <StudioTableRow>
+                          <StudioTableCell
                             colSpan={10}
                             className="py-8 text-center text-[#86909C]"
                           >
                             加载中…
-                          </TableCell>
-                        </TableRow>
+                          </StudioTableCell>
+                        </StudioTableRow>
                       ) : items.length === 0 ? (
-                        <TableRow>
-                          <TableCell
+                        <StudioTableRow>
+                          <StudioTableCell
                             colSpan={10}
                             className="py-8 text-center text-[#86909C]"
                           >
                             暂无待审核内容
-                          </TableCell>
-                        </TableRow>
+                          </StudioTableCell>
+                        </StudioTableRow>
                       ) : (
                         items.map((item) => {
                           const isPending =
                             item.status === 'pending' ||
                             item.status === 'PENDING';
                           return (
-                            <TableRow
+                            <StudioTableRow
                               key={item.id}
                               className="hover:bg-[#F7F8FA] border-[#E5E8EF] group"
                             >
-                              <TableCell className="py-3">
+                              <StudioTableCell className="py-3">
                                 <input
                                   type="checkbox"
                                   className="size-4 rounded border-[#C9CDD4] text-[#1664FF] focus:ring-[#1664FF]"
                                 />
-                              </TableCell>
-                              <TableCell className="py-3">
+                              </StudioTableCell>
+                              <StudioTableCell className="py-3">
                                 <Link
                                   href={`/reviews/${item.id}`}
                                   className="text-sm font-medium text-[#1D2129] hover:text-[#1664FF] hover:underline max-w-[260px] truncate block"
                                 >
                                   {item.content?.title || item.title}
                                 </Link>
-                              </TableCell>
-                              <TableCell className="py-3">
+                              </StudioTableCell>
+                              <StudioTableCell className="py-3">
                                 <PlatformBadge platform={item.platform} />
-                              </TableCell>
-                              <TableCell className="py-3 text-sm text-[#4E5969]">
+                              </StudioTableCell>
+                              <StudioTableCell className="py-3 text-sm text-[#4E5969]">
                                 {item.account || '-'}
-                              </TableCell>
-                              <TableCell className="py-3">
+                              </StudioTableCell>
+                              <StudioTableCell className="py-3">
                                 <Badge
                                   variant="secondary"
                                   className="bg-[#F2F5FA] text-[#4E5969] hover:bg-[#F2F5FA] border-0"
                                 >
                                   {item.reviewType || '内容合规'}
                                 </Badge>
-                              </TableCell>
-                              <TableCell className="py-3">
+                              </StudioTableCell>
+                              <StudioTableCell className="py-3">
                                 {getRiskBadge(item.riskLevel || 'low')}
-                              </TableCell>
-                              <TableCell className="py-3 text-sm text-[#86909C]">
+                              </StudioTableCell>
+                              <StudioTableCell className="py-3 text-sm text-[#86909C]">
                                 {item.submittedAt
                                   ? new Date(item.submittedAt).toLocaleString(
                                       'zh-CN',
@@ -652,14 +655,14 @@ export default function ReviewsPage() {
                                       }
                                     )
                                   : '-'}
-                              </TableCell>
-                              <TableCell className="py-3 text-sm text-[#86909C]">
+                              </StudioTableCell>
+                              <StudioTableCell className="py-3 text-sm text-[#86909C]">
                                 {item.source || 'Agent生成'}
-                              </TableCell>
-                              <TableCell className="py-3">
+                              </StudioTableCell>
+                              <StudioTableCell className="py-3">
                                 {getStatusBadge(item.status)}
-                              </TableCell>
-                              <TableCell className="py-3 text-right">
+                              </StudioTableCell>
+                              <StudioTableCell className="py-3 text-right">
                                 <div className="flex items-center justify-end gap-3">
                                   {isPending ? (
                                     <>
@@ -692,13 +695,13 @@ export default function ReviewsPage() {
                                     <MoreHorizontal className="size-4" />
                                   </Link>
                                 </div>
-                              </TableCell>
-                            </TableRow>
+                              </StudioTableCell>
+                            </StudioTableRow>
                           );
                         })
                       )}
-                    </TableBody>
-                  </Table>
+                    </StudioTableBody>
+                  </StudioTable>
 
                   {/* 分页 */}
                   <div className="flex items-center justify-between mt-6">

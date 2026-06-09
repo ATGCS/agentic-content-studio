@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import * as contents from '@acs/content-center';
-import { orchestrateGenerate } from '@acs/ai-runtime';
+import { orchestrateGenerate } from '@acs/studio-workflows';
 import type { Platform } from '@acs/db';
 import { getUser } from '../plugins/auth.js';
 

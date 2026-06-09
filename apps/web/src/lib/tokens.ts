@@ -62,7 +62,7 @@ export function getStatusLabel(status: string) {
 }
 
 export const platformLabels: Record<string, string> = {
-  WECHAT: '公众号',
+  WECHAT: '微信公众号',
   XIAOHONGSHU: '小红书',
   DOUYIN: '抖音',
   VIDEO_CHANNEL: '视频号',
@@ -70,6 +70,10 @@ export const platformLabels: Record<string, string> = {
   ZHIHU: '知乎',
   OTHER: '其他',
 };
+
+export function getPlatformLabel(platform: string) {
+  return platformLabels[platform] ?? platform;
+}
 
 export const platformColors: Record<string, string> = {
   WECHAT: 'bg-green-500',

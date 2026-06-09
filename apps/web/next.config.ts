@@ -18,9 +18,14 @@ const nextConfig: NextConfig = {
     '@acs/content-center',
     '@acs/ai-runtime',
     '@acs/account-profile',
+    '@acs/image-provider',
+    '@acs/agnes-image-provider',
     '@acs/doubao-image-provider',
     '@acs/ima-provider',
     '@acs/review-center',
+    '@acs/studio-agents',
+    '@acs/studio-workflows',
+    '@acs/studio-butler',
   ],
   // Force rebuild to detect new API routes
   webpack: (config) => {

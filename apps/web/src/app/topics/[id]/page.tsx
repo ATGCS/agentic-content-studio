@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, ExternalLink, Layers, Plus } from 'lucide-react';
+import { ArrowLeft, Bot, ExternalLink, Layers, Plus } from 'lucide-react';
 import {
   ContentEditDialog,
   type ContentEditForm,
@@ -32,10 +32,24 @@ type ContentItem = {
   }>;
 };
 
+type TopicOutlineArticle = {
+  order: number;
+  title: string;
+  summary: string;
+  keyPoints?: string[];
+};
+
+type TopicOutline = {
+  summary: string;
+  articles: TopicOutlineArticle[];
+  plannedAt?: string;
+};
+
 type TopicDetail = {
   id: string;
   title: string;
   description?: string | null;
+  outline?: TopicOutline | null;
   status: string;
   source?: string | null;
   targetPlatforms?: string[];
@@ -156,7 +170,20 @@ export default function TopicDetailPage() {
                 </div>
               </div>
             </div>
-            <StatusBadge status={topic.status} />
+            <div className="flex shrink-0 items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+                asChild
+              >
+                <Link href={`/butler?topicId=${topic.id}`}>
+                  <Bot className="size-3.5" />
+                  打开对话
+                </Link>
+              </Button>
+              <StatusBadge status={topic.status} />
+            </div>
           </div>
           <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-[#86909c]">
             <span>来源：{topic.source === 'ai' ? 'AI 推荐' : '手动创建'}</span>
@@ -174,6 +201,32 @@ export default function TopicDetailPage() {
             )}
           </div>
         </StudioCard>
+
+        {topic.outline && topic.outline.articles.length > 0 && (
+          <StudioCard contentClassName="p-5">
+            <h2 className="text-sm font-bold text-[#1D2129]">系列大纲</h2>
+            <p className="mt-2 text-xs text-[#4E5969]">
+              {topic.outline.summary}
+            </p>
+            <div className="mt-3 space-y-2">
+              {[...topic.outline.articles]
+                .sort((a, b) => a.order - b.order)
+                .map((article) => (
+                  <div
+                    key={article.order}
+                    className="rounded-lg border border-[#E5E8EF] px-3 py-2"
+                  >
+                    <p className="text-sm font-medium text-[#1D2129]">
+                      {article.order}. {article.title}
+                    </p>
+                    <p className="mt-1 text-xs text-[#86909c]">
+                      {article.summary}
+                    </p>
+                  </div>
+                ))}
+            </div>
+          </StudioCard>
+        )}
 
         {/* 文章列表 */}
         <div className="flex items-center justify-between">
@@ -257,7 +310,6 @@ export default function TopicDetailPage() {
         open={createOpen}
         onOpenChange={setCreateOpen}
         onSubmit={createArticle}
-        redirectAfterCreate="detail"
         defaultTopicId={topic.id}
         defaultPlatforms={topic.targetPlatforms ?? []}
       />

@@ -2,7 +2,8 @@ import type { AgentSpec } from '../runtime/types.js';
 
 const contentGenerationContext = [
   'content.basic',
-  'knowledge.ima.latest',
+  'series.siblings',
+  'knowledge.local',
   'account.profile',
   'runtime.overrides',
 ];
@@ -24,7 +25,9 @@ export const defaultAgentSpecs: AgentSpec[] = [
     type: 'REWRITE',
     contextProviders: [
       'content.basic',
+      'series.siblings',
       'version.current',
+      'knowledge.local',
       'account.profile',
       'runtime.overrides',
     ],
@@ -62,8 +65,9 @@ export const defaultAgentSpecs: AgentSpec[] = [
     type: 'IMAGE',
     contextProviders: [
       'content.basic',
+      'series.siblings',
       'version.current',
-      'knowledge.ima.latest',
+      'knowledge.local',
       'account.profile',
       'runtime.overrides',
     ],

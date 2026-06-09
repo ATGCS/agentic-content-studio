@@ -7,7 +7,7 @@ import {
   publicImaConfig,
   searchAndLog,
   listKnowledgeBases,
-  syncKnowledgeBasesFromIma,
+  syncAllFromIma,
   updateKnowledgeBase,
   deleteKnowledgeBases,
 } from '@acs/ima-provider';
@@ -58,8 +58,16 @@ export async function imaRoutes(app: FastifyInstance) {
     { onRequest: [app.authenticate] },
     async (request, reply) => {
       requireRoles(getUser(request), 'ADMIN', 'OPERATOR');
-      const synced = await syncKnowledgeBasesFromIma();
-      return reply.success({ synced, count: synced.length });
+      const result = await syncAllFromIma();
+      return reply.success({
+        synced: result.knowledgeBases,
+        documents: result.documents,
+        count: result.knowledgeBases.length,
+        documentCount: result.documents.reduce(
+          (sum, row) => sum + row.count,
+          0
+        ),
+      });
     }
   );
 

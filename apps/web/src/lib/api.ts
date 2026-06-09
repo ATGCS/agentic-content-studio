@@ -73,16 +73,16 @@ export async function api<T>(
   try {
     json = JSON.parse(text);
   } catch {
-    console.error('[API Response Error]', {
-      status: res.status,
-      statusText: res.statusText,
-      url: path,
-      contentType: res.headers.get('content-type'),
-      bodyPreview: text.slice(0, 500) || '(empty body)',
-    });
+    const preview = text.slice(0, 500) || '(empty body)';
+    console.error(
+      `[API Response Error] ${path} HTTP ${res.status} ${res.statusText}`,
+      preview
+    );
     throw new ApiError(
       res.status === 401 ? UNAUTHORIZED_CODE : 50000,
-      `HTTP ${res.status}: ${res.statusText}`
+      preview === '(empty body)'
+        ? `HTTP ${res.status}: ${res.statusText || '服务器无响应内容，可能超时或进程崩溃'}`
+        : `HTTP ${res.status}: ${res.statusText}`
     );
   }
 

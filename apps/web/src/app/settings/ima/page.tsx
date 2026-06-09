@@ -9,14 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+
 import {
   Select,
   SelectContent,
@@ -34,6 +27,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  StudioTable,
+  StudioTableBody,
+  StudioTableCell,
+  StudioTableEmpty,
+  StudioTableFrame,
+  StudioTableHead,
+  StudioTableHeader,
+  StudioTableRow,
+} from '@/components/studio/studio-table';
 import { api } from '@/lib/api';
 
 type ImaConfig = {
@@ -301,10 +304,10 @@ export default function ImaSettingsPage() {
               </Button>
             )}
           </div>
-          <Table className="studio-table">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">
+          <StudioTable>
+            <StudioTableHeader>
+              <StudioTableRow>
+                <StudioTableHead className="w-12">
                   <Checkbox
                     checked={isAllSelected}
                     onCheckedChange={toggleSelectAll}
@@ -313,30 +316,32 @@ export default function ImaSettingsPage() {
                       isIndeterminate ? 'data-[state=checked]:bg-[#1664ff]' : ''
                     }
                   />
-                </TableHead>
-                <TableHead>名称</TableHead>
-                <TableHead>外部 ID</TableHead>
-                <TableHead>绑定 Agent</TableHead>
-                <TableHead>默认</TableHead>
-                <TableHead>启用</TableHead>
-                <TableHead className="text-right">操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+                </StudioTableHead>
+                <StudioTableHead>名称</StudioTableHead>
+                <StudioTableHead>外部 ID</StudioTableHead>
+                <StudioTableHead>绑定 Agent</StudioTableHead>
+                <StudioTableHead>默认</StudioTableHead>
+                <StudioTableHead>启用</StudioTableHead>
+                <StudioTableHead className="text-right">操作</StudioTableHead>
+              </StudioTableRow>
+            </StudioTableHeader>
+            <StudioTableBody>
               {kbs.map((kb) => (
-                <TableRow key={kb.id}>
-                  <TableCell>
+                <StudioTableRow key={kb.id}>
+                  <StudioTableCell>
                     <Checkbox
                       checked={selectedIds.has(kb.id)}
                       onCheckedChange={() => toggleSelect(kb.id)}
                       aria-label={`选择 ${kb.name}`}
                     />
-                  </TableCell>
-                  <TableCell className="font-medium">{kb.name}</TableCell>
-                  <TableCell className="text-muted-foreground text-xs">
+                  </StudioTableCell>
+                  <StudioTableCell className="font-medium">
+                    {kb.name}
+                  </StudioTableCell>
+                  <StudioTableCell className="text-muted-foreground text-xs">
                     {kb.externalId}
-                  </TableCell>
-                  <TableCell>
+                  </StudioTableCell>
+                  <StudioTableCell>
                     <Select
                       value={kb.agentType || 'UNBOUND'}
                       onValueChange={(value) =>
@@ -354,10 +359,10 @@ export default function ImaSettingsPage() {
                         ))}
                       </SelectContent>
                     </Select>
-                  </TableCell>
-                  <TableCell>{kb.isDefault ? '是' : '—'}</TableCell>
-                  <TableCell>{kb.enabled ? '是' : '否'}</TableCell>
-                  <TableCell className="space-x-2 text-right">
+                  </StudioTableCell>
+                  <StudioTableCell>{kb.isDefault ? '是' : '—'}</StudioTableCell>
+                  <StudioTableCell>{kb.enabled ? '是' : '否'}</StudioTableCell>
+                  <StudioTableCell className="space-x-2 text-right">
                     {!kb.isDefault && (
                       <Button
                         size="sm"
@@ -374,11 +379,11 @@ export default function ImaSettingsPage() {
                     >
                       {kb.enabled ? '禁用' : '启用'}
                     </Button>
-                  </TableCell>
-                </TableRow>
+                  </StudioTableCell>
+                </StudioTableRow>
               ))}
-            </TableBody>
-          </Table>
+            </StudioTableBody>
+          </StudioTable>
           {kbs.length === 0 && (
             <p className="text-muted-foreground py-6 text-center text-sm">
               暂无知识库，请点击「同步知识库列表」
