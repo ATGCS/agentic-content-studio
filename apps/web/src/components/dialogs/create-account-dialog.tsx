@@ -1,7 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { PlatformIcon, platformIconMeta, type PlatformIconKey } from '@/components/platform-icon';
+import {
+  PlatformLogoMark,
+  platformIconMeta,
+  type PlatformIconKey,
+} from '@/components/platform-icon';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { DialogWrapper } from '@/components/dialog-wrapper';
@@ -35,7 +39,11 @@ const platformKeyMap: Record<string, PlatformIconKey> = {
   KUAISHOU: 'kuaishou',
 };
 
-export function CreateAccountDialog({ open, onOpenChange, onSuccess }: CreateAccountDialogProps) {
+export function CreateAccountDialog({
+  open,
+  onOpenChange,
+  onSuccess,
+}: CreateAccountDialogProps) {
   const [selectedPlatform, setSelectedPlatform] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<string>('');
@@ -50,13 +58,16 @@ export function CreateAccountDialog({ open, onOpenChange, onSuccess }: CreateAcc
     setLoading(true);
     setStatus('正在发起授权...');
     try {
-      const res = await api<{ authorizationUrl: string; state: string }>('/api/accounts/bind/start', {
-        method: 'POST',
-        body: JSON.stringify({
-          platform: selectedPlatform,
-          redirectAfterBind: '/accounts/bind/result?success=true',
-        }),
-      });
+      const res = await api<{ authorizationUrl: string; state: string }>(
+        '/api/accounts/bind/start',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            platform: selectedPlatform,
+            redirectAfterBind: '/accounts/bind/result?success=true',
+          }),
+        }
+      );
 
       if (res.data?.authorizationUrl) {
         setStatus('跳转授权页...');
@@ -76,7 +87,7 @@ export function CreateAccountDialog({ open, onOpenChange, onSuccess }: CreateAcc
       open={open}
       onOpenChange={onOpenChange}
       title="新增平台账号"
-      description="选择平台后点击授权；本地开发将使用 Mock 授权完成绑定"
+      description="选择平台后，将跳转官方页面授权绑定您自己的账号"
       className="sm:max-w-[480px]"
     >
       <div className="space-y-4">
@@ -106,12 +117,17 @@ export function CreateAccountDialog({ open, onOpenChange, onSuccess }: CreateAcc
                   )}
                 >
                   <div
-                    className="flex h-10 w-10 items-center justify-center rounded-lg text-sm font-semibold"
+                    className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-lg text-sm font-semibold"
                     style={{ backgroundColor: meta.bg, color: meta.color }}
                   >
-                    {meta.icon ? <PlatformIcon icon={meta.icon} size={20} /> : meta.short}
+                    <PlatformLogoMark
+                      platform={iconKey}
+                      size={meta.image ? 40 : 20}
+                    />
                   </div>
-                  <span className="text-[11px] text-[#4E5969]">{platform.label}</span>
+                  <span className="text-[11px] text-[#4E5969]">
+                    {platform.label}
+                  </span>
                 </button>
               );
             })}
@@ -122,7 +138,9 @@ export function CreateAccountDialog({ open, onOpenChange, onSuccess }: CreateAcc
           <div
             className={cn(
               'rounded-lg p-3 text-xs',
-              status.includes('失败') ? 'bg-[#FFF1F0] text-[#F53F3F]' : 'bg-[#F0F5FF] text-[#1664FF]'
+              status.includes('失败')
+                ? 'bg-[#FFF1F0] text-[#F53F3F]'
+                : 'bg-[#F0F5FF] text-[#1664FF]'
             )}
           >
             {status}

@@ -21,9 +21,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
+import type { StudioNoticeType } from '@/components/studio/studio-notice';
 import { api } from '@/lib/api';
 import { getPlatformLabel } from '@/lib/tokens';
+import { cn } from '@/lib/utils';
 
 const PLATFORM_OPTIONS = [
   { value: 'WECHAT', label: '微信公众号' },
@@ -56,8 +57,12 @@ type AiProductionPanelProps = {
   contentId?: string;
   /** 默认选中的平台 */
   defaultPlatforms?: string[];
+  /** 与父级平台 Tab 同步（嵌入内容详情时使用） */
+  activePlatform?: string;
   /** 生成完成后回调（刷新父页面） */
   onGenerated?: () => void;
+  /** 操作反馈（嵌入内容详情时使用） */
+  onNotice?: (type: StudioNoticeType, message: string) => void;
   /** 嵌入模式：隐藏内容选择器 */
   embedded?: boolean;
 };
@@ -65,7 +70,9 @@ type AiProductionPanelProps = {
 export function AiProductionPanel({
   contentId: fixedContentId,
   defaultPlatforms = ['XIAOHONGSHU'],
+  activePlatform,
   onGenerated,
+  onNotice,
   embedded = false,
 }: AiProductionPanelProps) {
   const [contents, setContents] = useState<ContentOption[]>([]);
@@ -195,8 +202,11 @@ export function AiProductionPanel({
       await loadContentDetail(effectiveContentId);
       if (platforms[0]) setPreviewPlatform(platforms[0]);
       onGenerated?.();
+      onNotice?.('success', '生成完成，请检查右侧预览，确认无误后提交审核。');
     } catch (e) {
-      setError(e instanceof Error ? e.message : '一键生成失败，请稍后重试');
+      const msg = e instanceof Error ? e.message : '一键生成失败，请稍后重试';
+      setError(msg);
+      onNotice?.('error', msg);
       setActiveStep(-1);
     } finally {
       window.clearInterval(stepTimer);
@@ -229,13 +239,30 @@ export function AiProductionPanel({
       });
       await loadContentDetail(effectiveContentId);
       onGenerated?.();
+      onNotice?.('success', '重做完成');
     } catch (e) {
-      setError(e instanceof Error ? e.message : '优化失败');
+      const msg = e instanceof Error ? e.message : '优化失败';
+      setError(msg);
+      onNotice?.('error', msg);
     } finally {
       setRefining(null);
     }
   }
 
+  useEffect(() => {
+    if (activePlatform && activePlatform !== 'draft') {
+      setPreviewPlatform(activePlatform);
+    }
+  }, [activePlatform]);
+
+  const imageTargetPlatform =
+    previewPlatform !== 'draft'
+      ? previewPlatform
+      : (platforms[0] ?? 'XIAOHONGSHU');
+
+  const imageTargetVersionId = contentDetail?.versions?.find(
+    (v) => v.platform === imageTargetPlatform
+  )?.id;
   const previewVisible = contentDetail && (hasDraft || hasVersions);
 
   return (
@@ -248,13 +275,13 @@ export function AiProductionPanel({
           'grid lg:items-stretch lg:divide-x lg:divide-[#E5E8EF]',
           embedded
             ? 'lg:grid-cols-[minmax(0,280px)_minmax(0,2.5fr)] lg:min-h-[70vh]'
-            : 'lg:min-h-[75vh] lg:grid-cols-[minmax(0,360px)_minmax(0,2fr)]'
+            : 'lg:min-h-[75vh] lg:grid-cols-[minmax(0,320px)_minmax(0,2fr)]'
         )}
       >
         {/* 左侧：功能操作 */}
-        <div className={cn('space-y-2', embedded ? 'px-2 pb-2 pt-0' : 'p-4')}>
+        <div className={cn('space-y-4', embedded ? 'px-2 pb-2 pt-0' : 'p-4')}>
           {!embedded && (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
               <div className="min-w-0">
                 <label className="mb-1.5 block text-xs text-[#86909C]">
                   目标内容
@@ -316,20 +343,17 @@ export function AiProductionPanel({
 
           <div>
             <label className="mb-2 block text-xs text-[#86909C]">平台</label>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5">
               {PLATFORM_OPTIONS.map((p) => (
                 <button
                   key={p.value}
                   type="button"
                   onClick={() => togglePlatform(p.value)}
                   className={cn(
-                    'rounded-lg border px-3 py-1.5 text-xs transition-all',
+                    'rounded-md px-3 py-1.5 text-xs transition-all',
                     platforms.includes(p.value)
-                      ? 'border-[#1664FF] bg-[#F0F5FF] text-[#1664FF] font-medium'
-                      : 'border-[#E5E8EF] text-[#4E5969] hover:border-[#C9D8FF]',
-                    previewPlatform === p.value &&
-                      previewVisible &&
-                      'ring-2 ring-[#1664FF]/30'
+                      ? 'bg-[#7B61FF] text-white font-medium'
+                      : 'bg-[#F2F3F5] text-[#4E5969] hover:bg-[#E5E8EF]'
                   )}
                 >
                   {p.label}
@@ -338,15 +362,11 @@ export function AiProductionPanel({
             </div>
           </div>
 
-          {error && (
-            <p className="rounded-lg border border-[#FFCCC7] bg-[#FFF1F0] px-3 py-2 text-xs text-[#F53F3F]">
-              {error}
-            </p>
-          )}
+          {error && <p className="text-xs text-[#F53F3F]">{error}</p>}
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Button
-              className="h-10 gap-2 bg-[#1664FF] px-6 hover:bg-[#0E52D9]"
+              className="h-9 gap-2 bg-[#7B61FF] px-5 hover:bg-[#6A50E6]"
               disabled={producing || !effectiveContentId}
               onClick={runProduction}
             >
@@ -355,7 +375,7 @@ export function AiProductionPanel({
               ) : (
                 <Sparkles className="size-4" />
               )}
-              {producing ? '生成中…' : hasDraft ? '重新一键生成' : '一键生成'}
+              {producing ? '生成中…' : hasDraft ? '重新生成' : '一键生成'}
             </Button>
             {hasDraft && !producing && (
               <span className="text-xs text-[#86909C]">会覆盖已有内容</span>
@@ -363,7 +383,7 @@ export function AiProductionPanel({
           </div>
 
           {(producing || activeStep >= 0) && (
-            <div className="flex flex-wrap gap-3 rounded-lg border border-[#E5E8EF] bg-[#FAFBFC] px-4 py-3">
+            <div className="flex flex-wrap gap-3">
               {PRODUCTION_STEPS.map((step, index) => {
                 const done =
                   !producing && activeStep >= PRODUCTION_STEPS.length
@@ -374,18 +394,18 @@ export function AiProductionPanel({
                   <div
                     key={step.id}
                     className={cn(
-                      'flex items-center gap-2 text-xs',
+                      'flex items-center gap-1.5 text-xs',
                       done && 'text-[#00B42A]',
-                      active && 'font-medium text-[#1664FF]',
+                      active && 'font-medium text-[#7B61FF]',
                       !done && !active && 'text-[#C9CDD4]'
                     )}
                   >
                     <span
                       className={cn(
-                        'flex size-5 items-center justify-center rounded-full border',
-                        done && 'border-[#00B42A] bg-[#E8FFEA]',
-                        active && 'border-[#1664FF] bg-[#E8F3FF]',
-                        !done && !active && 'border-[#E5E8EF]'
+                        'flex size-4 items-center justify-center rounded-full text-[10px]',
+                        done && 'bg-[#00B42A] text-white',
+                        active && 'bg-[#7B61FF] text-white',
+                        !done && !active && 'bg-[#F2F3F5] text-[#C9CDD4]'
                       )}
                     >
                       {done ? (
@@ -407,12 +427,8 @@ export function AiProductionPanel({
             <AiImagePanel
               contentId={effectiveContentId}
               materials={contentDetail.materials}
-              defaultPlatform={platforms[0] ?? 'XIAOHONGSHU'}
-              versionId={
-                contentDetail.versions?.find(
-                  (v) => v.platform === previewPlatform
-                )?.id ?? contentDetail.versions?.[0]?.id
-              }
+              defaultPlatform={imageTargetPlatform}
+              versionId={imageTargetVersionId}
               onUpdated={() => {
                 refreshContentDetail().catch(console.error);
               }}
@@ -420,83 +436,83 @@ export function AiProductionPanel({
             />
           )}
 
-          <div className="border-t border-[#F2F3F5] pt-3">
-            <button
-              type="button"
-              className="flex w-full items-center justify-between text-left text-xs text-[#4E5969] hover:text-[#1664FF]"
-              onClick={() => setRefineOpen((v) => !v)}
-            >
-              <span className="font-medium">单独重做</span>
-              {refineOpen ? (
-                <ChevronUp className="size-4" />
-              ) : (
-                <ChevronDown className="size-4" />
-              )}
-            </button>
-            {refineOpen && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 text-xs"
-                  disabled={!!refining || !effectiveContentId}
-                  onClick={() => refineAgent('TITLE')}
-                >
-                  {refining === 'TITLE' ? (
-                    <RefreshCw className="size-3 animate-spin" />
-                  ) : null}
-                  重做标题
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 text-xs"
-                  disabled={!!refining || !effectiveContentId}
-                  onClick={() => refineAgent('BODY')}
-                >
-                  {refining === 'BODY' ? (
-                    <RefreshCw className="size-3 animate-spin" />
-                  ) : null}
-                  重做正文
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 text-xs"
-                  disabled={!!refining || !effectiveContentId}
-                  onClick={() =>
-                    refineAgent(
-                      'IMAGE',
-                      contentDetail?.versions?.find(
-                        (v) => v.platform === previewPlatform
-                      )?.id,
-                      previewPlatform
-                    )
-                  }
-                >
-                  {refining === 'IMAGE' ? (
-                    <RefreshCw className="size-3 animate-spin" />
-                  ) : null}
-                  重做封面
-                </Button>
-                {contentDetail?.versions?.map((v) => (
+          {!embedded && (
+            <div className="pt-2">
+              <button
+                type="button"
+                className="flex w-full items-center justify-between text-left text-xs text-[#4E5969] hover:text-[#7B61FF]"
+                onClick={() => setRefineOpen((v) => !v)}
+              >
+                <span className="font-medium">单独重做</span>
+                {refineOpen ? (
+                  <ChevronUp className="size-4" />
+                ) : (
+                  <ChevronDown className="size-4" />
+                )}
+              </button>
+              {refineOpen && (
+                <div className="mt-3 flex flex-wrap gap-2">
                   <Button
-                    key={v.id}
                     variant="outline"
                     size="sm"
-                    className="h-8 text-xs"
+                    className="h-7 text-xs"
                     disabled={!!refining || !effectiveContentId}
-                    onClick={() => refineAgent('REWRITE', v.id, v.platform)}
+                    onClick={() => refineAgent('TITLE')}
                   >
-                    {refining === 'REWRITE' ? (
+                    {refining === 'TITLE' ? (
                       <RefreshCw className="size-3 animate-spin" />
                     ) : null}
-                    重做 {getPlatformLabel(v.platform)}
+                    重做标题
                   </Button>
-                ))}
-              </div>
-            )}
-          </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    disabled={!!refining || !effectiveContentId}
+                    onClick={() => refineAgent('BODY')}
+                  >
+                    {refining === 'BODY' ? (
+                      <RefreshCw className="size-3 animate-spin" />
+                    ) : null}
+                    重做正文
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs"
+                    disabled={!!refining || !effectiveContentId}
+                    onClick={() =>
+                      refineAgent(
+                        'IMAGE',
+                        imageTargetVersionId,
+                        imageTargetPlatform
+                      )
+                    }
+                  >
+                    {refining === 'IMAGE' ? (
+                      <RefreshCw className="size-3 animate-spin" />
+                    ) : null}
+                    重做封面
+                  </Button>
+                  {contentDetail?.versions?.map((v) => (
+                    <Button
+                      key={v.id}
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                      disabled={!!refining || !effectiveContentId}
+                      onClick={() => refineAgent('REWRITE', v.id, v.platform)}
+                    >
+                      {refining === 'REWRITE' ? (
+                        <RefreshCw className="size-3 animate-spin" />
+                      ) : null}
+                      重做 {getPlatformLabel(v.platform)}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 右侧：发布预览 */}
@@ -510,8 +526,8 @@ export function AiProductionPanel({
         >
           {producing && (
             <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-[1px]">
-              <div className="flex flex-col items-center gap-2 rounded-xl bg-white px-6 py-4 shadow-sm">
-                <Loader2 className="size-6 animate-spin text-[#1664FF]" />
+              <div className="flex flex-col items-center gap-2">
+                <Loader2 className="size-6 animate-spin text-[#7B61FF]" />
                 <p className="text-sm text-[#4E5969]">AI 生成中，请稍候…</p>
               </div>
             </div>
@@ -529,7 +545,7 @@ export function AiProductionPanel({
               />
             </div>
           ) : (
-            <div className="flex min-h-0 flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-[#E5E8EF] bg-white px-6 text-center">
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6 text-center">
               <p className="text-sm font-medium text-[#4E5969]">预览区</p>
               <p className="mt-2 max-w-xs text-xs leading-relaxed text-[#86909C]">
                 选好平台后点「一键生成」

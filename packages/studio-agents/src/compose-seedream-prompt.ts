@@ -73,8 +73,14 @@ export function composeSeedreamPrompt(
   }
 
   if (ctx.imageRole === 'BODY') {
-    segments.push('正文配图：与段落内容强相关，信息点可视化，非泛化装饰图');
+    segments.push(
+      '正文配图：小红书手绘信息图/步骤卡片/生活场景，单信息点可视化，禁止商务 isometric 插图与泛化装饰'
+    );
   }
+
+  segments.push(
+    '全局禁止：商务风、企业宣传风、深蓝科技渐变、西装会议室、抽象科技球、SaaS 落地页风、stock 商务人像'
+  );
 
   return segments.join('。').slice(0, 800);
 }
@@ -91,7 +97,7 @@ export function enrichUserImagePrompt(
   if (ctx.coverText) parts.push(`封面文案：${ctx.coverText}`);
   if (ctx.platform) parts.push(getPlatformCoverGuide(ctx.platform));
   parts.push(
-    '要求：画面元素必须与上述内容主题严格相关，禁止无关泛化图、禁止随机装饰'
+    '要求：小红书原生笔记风（大字报/备忘录/手绘信息图/生活场景），画面与主题严格相关；禁止商务企业风、深蓝渐变、西装会议室、无关泛化图'
   );
   return parts.join('。').slice(0, 800);
 }

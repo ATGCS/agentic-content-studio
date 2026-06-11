@@ -1,4 +1,4 @@
-﻿import { addCollection, Icon } from '@iconify/react';
+import { addCollection, Icon } from '@iconify/react';
 import simpleIcons from '@iconify-json/simple-icons/icons.json';
 import { cn } from '@/lib/utils';
 
@@ -83,7 +83,7 @@ export function PlatformBadge({
         <img
           src="/platform-icons/douyin.png"
           alt=""
-          className="size-3.5 shrink-0 object-contain"
+          className="size-3.5 shrink-0 rounded-[3px] object-cover"
         />
       ) : iconKey ? (
         <Icon

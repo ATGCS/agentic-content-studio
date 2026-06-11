@@ -58,7 +58,36 @@ const patchContentBody = z.object({
   coverText: z.string().optional(),
   status: z.string().optional(),
   versionId: z.string().optional(),
+  topicId: z.string().nullable().optional(),
 });
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await authenticate(req);
+    const { id } = await params;
+    await contents.deleteContent(user, id);
+    return successResponse(null);
+  } catch (err) {
+    if (err instanceof AppError) {
+      return NextResponse.json(
+        { code: err.code, message: err.message, data: null },
+        { status: err.httpStatus }
+      );
+    }
+    console.error('[contents id DELETE] unexpected error:', err);
+    return NextResponse.json(
+      {
+        code: 50000,
+        message: err instanceof Error ? err.message : 'internal error',
+        data: null,
+      },
+      { status: 500 }
+    );
+  }
+}
 
 export async function PATCH(
   req: NextRequest,

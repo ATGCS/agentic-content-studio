@@ -1,15 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  CheckCircle2,
-  Clipboard,
-  Download,
-  MessageCircle,
-  Send,
-  X,
-} from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Clipboard, Download, Send, X } from 'lucide-react';
 import { StudioLayout } from '@/components/StudioLayout';
 import { PageContainer } from '@/components/layout/page-container';
 import { PlatformBadge } from '@/components/platform-icon';
@@ -26,8 +20,23 @@ import {
   StudioTableRow,
 } from '@/components/studio/studio-table';
 import { api } from '@/lib/api';
+import { getPlatformLabel } from '@/lib/tokens';
 
 import { cn } from '@/lib/utils';
+
+const PACKAGE_PLATFORMS = [
+  { value: 'XIAOHONGSHU', label: '小红书' },
+  { value: 'DOUYIN', label: '抖音' },
+] as const;
+
+type PackagePlatform = (typeof PACKAGE_PLATFORMS)[number]['value'];
+
+function formatPackageTime(value: string) {
+  if (!value || value === '—') return '—';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('zh-CN', { hour12: false });
+}
 
 /* ---------- types ---------- */
 
@@ -114,7 +123,8 @@ const statusConfig: Record<string, { label: string; className: string }> = {
   syncing: { label: '同步中', className: 'bg-[#E8F3FF] text-[#1664FF]' },
   failed: { label: '同步失败', className: 'bg-[#FFF1F0] text-[#F53F3F]' },
   draft: { label: '草稿', className: 'bg-[#F2F3F5] text-[#86909C]' },
-  generated: { label: '已生成', className: 'bg-[#E8FFEA] text-[#00B42A]' },
+  generated: { label: '待发布', className: 'bg-[#FFF7E6] text-[#FF7D00]' },
+  approved: { label: '已通过', className: 'bg-[#E8FFEA] text-[#00B42A]' },
   published: { label: '已发布', className: 'bg-[#E8FFEA] text-[#00B42A]' },
   PENDING: { label: '待发布', className: 'bg-[#FFF7E6] text-[#FF7D00]' },
   PUBLISHING: { label: '发布中', className: 'bg-[#E8F3FF] text-[#1664FF]' },
@@ -243,6 +253,8 @@ function PlatformMark({ platform }: { platform: string }) {
 /* ---------- page ---------- */
 
 export default function PublishingPage() {
+  const searchParams = useSearchParams();
+  const packagesSectionRef = useRef<HTMLDivElement>(null);
   const [tasks, setTasks] = useState<ApiPublishingTask[]>([]);
   const [drafts, setDrafts] = useState<DraftItem[]>([]);
   const [redPackages, setRedPackages] = useState<PackageItem[]>([]);
@@ -251,8 +263,10 @@ export default function PublishingPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [showAllPending, setShowAllPending] = useState(false);
-  const [showAllRed, setShowAllRed] = useState(false);
-  const [showAllDouyin, setShowAllDouyin] = useState(false);
+  const [packagePlatform, setPackagePlatform] =
+    useState<PackagePlatform>('XIAOHONGSHU');
+  const [showAllPackages, setShowAllPackages] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [notifications, setNotifications] = useState<
     (Notification & { id: number })[]
   >([]);
@@ -294,6 +308,21 @@ export default function PublishingPage() {
     loadAll().catch(console.error);
   }, [loadAll]);
 
+  const packagesByPlatform = useMemo(
+    () => ({
+      XIAOHONGSHU: redPackages,
+      DOUYIN: douyinPackages,
+    }),
+    [redPackages, douyinPackages]
+  );
+  const activePackages = packagesByPlatform[packagePlatform];
+  const packageCount = activePackages.length;
+
+  useEffect(() => {
+    if (searchParams.get('packages') !== '1') return;
+    packagesSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [searchParams, loading, packageCount]);
+
   /* ---- computed ---- */
   const taskItems = useMemo(() => tasks.map(mapPublishingTask), [tasks]);
   const pendingTaskItems = taskItems.filter(
@@ -306,45 +335,9 @@ export default function PublishingPage() {
       item.status === 'CANCELLED'
   );
 
-  const summaryCards = [
-    {
-      label: '待发布内容',
-      value: String(pendingTaskItems.length),
-      icon: Send,
-      bg: '#E8F3FF',
-      color: '#1664FF',
-    },
-    {
-      label: '公众号草稿',
-      value: String(drafts.length),
-      icon: MessageCircle,
-      bg: '#E8FFEA',
-      color: '#00B42A',
-    },
-    {
-      label: '小红书发布包',
-      value: String(redPackages.length),
-      text: '小红',
-      bg: '#FFF0F0',
-      color: '#FE2C55',
-    },
-    {
-      label: '抖音发布包',
-      value: String(douyinPackages.length),
-      text: '抖',
-      bg: '#F5F7FA',
-      color: '#111827',
-    },
-    {
-      label: '今日已发布',
-      value: String(
-        recordItems.filter((item) => item.status === 'SUCCESS').length
-      ),
-      icon: CheckCircle2,
-      bg: '#E8F3FF',
-      color: '#1664FF',
-    },
-  ];
+  const publishedTodayCount = recordItems.filter(
+    (item) => item.status === 'SUCCESS'
+  ).length;
 
   /* ---- actions ---- */
   async function handlePublish(item: PendingItem) {
@@ -492,7 +485,12 @@ export default function PublishingPage() {
                 colSpan={7}
                 className="px-3 py-8 text-center text-[#86909C]"
               >
-                暂无待发布内容
+                <div className="space-y-1">
+                  <p>暂无待发布任务</p>
+                  <p className="text-[11px] font-normal text-[#C9CDD4]">
+                    一键发布需先绑定平台账号并创建发布任务。未绑定时请使用下方「发布包导出」复制或下载后手动发布。
+                  </p>
+                </div>
               </StudioTableCell>
             </StudioTableRow>
           ) : (
@@ -754,21 +752,23 @@ export default function PublishingPage() {
       <StudioTable size="compact">
         <StudioTableHeader>
           <StudioTableRow className="border-[#EEF0F5]">
-            {['平台', '账号名称', '授权状态', '操作'].map((head) => (
-              <StudioTableHead
-                key={head}
-                className="h-9 px-3 text-[11px] font-medium text-[#86909C]"
-              >
-                {head}
-              </StudioTableHead>
-            ))}
+            {['平台', '账号名称', '授权状态', '绑定时间', '操作'].map(
+              (head) => (
+                <StudioTableHead
+                  key={head}
+                  className="h-9 px-3 text-[11px] font-medium text-[#86909C]"
+                >
+                  {head}
+                </StudioTableHead>
+              )
+            )}
           </StudioTableRow>
         </StudioTableHeader>
         <StudioTableBody>
           {accounts.length === 0 ? (
             <StudioTableRow className="border-0">
               <StudioTableCell
-                colSpan={4}
+                colSpan={5}
                 className="px-3 py-8 text-center text-[#86909C]"
               >
                 暂无账号
@@ -800,6 +800,16 @@ export default function PublishingPage() {
                     {acc.authStatus === 'active' ? '已授权' : '待授权'}
                   </span>
                 </StudioTableCell>
+                <StudioTableCell className="px-3 text-[11px] text-[#86909C]">
+                  {acc.boundAt
+                    ? new Date(acc.boundAt).toLocaleString('zh-CN', {
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : '—'}
+                </StudioTableCell>
                 <StudioTableCell className="px-3">
                   <Link
                     href="/accounts"
@@ -819,7 +829,7 @@ export default function PublishingPage() {
   function SummaryCard({ item }: { item: (typeof summaryCards)[number] }) {
     const Icon = 'icon' in item && item.icon ? item.icon : null;
     return (
-      <StudioCard contentClassName="flex items-center justify-between p-5">
+      <StudioCard contentClassName="flex items-center justify-between p-4">
         <div>
           <p className="text-sm font-semibold text-[#4E5969]">{item.label}</p>
           <p className="mt-2 text-2xl font-bold leading-none text-[#1D2129]">
@@ -839,7 +849,7 @@ export default function PublishingPage() {
   /* ---- render ---- */
   return (
     <StudioLayout>
-      <PageContainer className="max-w-none gap-4 p-6">
+      <PageContainer className="max-w-none gap-2 p-4">
         {/* ---- notification bar ---- */}
         {notifications.length > 0 && (
           <div className="fixed right-6 top-6 z-50 flex flex-col gap-2">
@@ -869,125 +879,158 @@ export default function PublishingPage() {
           <p className="py-4 text-sm text-[#F53F3F]">{loadError}</p>
         ) : (
           <>
-            <div className="grid grid-cols-5 gap-4">
-              {summaryCards.map((item) => (
-                <SummaryCard key={item.label} item={item} />
-              ))}
-            </div>
-
-            <div className="grid grid-cols-[1.12fr_0.88fr] gap-4">
-              <StudioCard contentClassName="p-5">
-                <SectionHeader
-                  title="待发布内容"
-                  action={
-                    showAllPending
-                      ? '收起'
-                      : `查看全部（${pendingTaskItems.length}）`
-                  }
-                  onAction={() => setShowAllPending((v) => !v)}
-                />
-                <PendingTable
-                  items={pendingTaskItems}
-                  showAll={showAllPending}
-                />
-              </StudioCard>
-              <StudioCard contentClassName="p-5">
-                <SectionHeader
-                  title="公众号草稿同步"
-                  action="同步设置"
-                  onAction={() => window.open('/settings/ima', '_blank')}
-                />
-                <DraftSyncTable />
-                <div className="mt-4 text-center">
+            <StudioCard contentClassName="p-4">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h2 className="text-sm font-bold text-[#1D2129]">
+                    一键发布任务
+                  </h2>
+                  <p className="mt-1 text-xs text-[#86909C]">
+                    需已绑定平台账号且已创建发布任务；点击「发布」推送到对应平台。
+                    {publishedTodayCount > 0 &&
+                      ` 今日已成功发布 ${publishedTodayCount} 篇。`}
+                  </p>
+                </div>
+                <span className="flex items-center gap-2 rounded-full bg-[#E8F3FF] px-3 py-1 text-xs font-semibold text-[#1664FF]">
+                  <Send className="size-3.5" />
+                  {pendingTaskItems.length} 个任务
+                </span>
+              </div>
+              <PendingTable
+                items={pendingTaskItems}
+                showAll={showAllPending || pendingTaskItems.length <= 5}
+              />
+              {pendingTaskItems.length > 5 && (
+                <div className="mt-2 text-center">
                   <button
+                    type="button"
                     className="text-xs font-semibold text-[#1664FF]"
-                    onClick={() => loadAll()}
+                    onClick={() => setShowAllPending((v) => !v)}
                   >
-                    刷新列表
+                    {showAllPending
+                      ? '收起'
+                      : `查看全部（${pendingTaskItems.length}）`}
                   </button>
                 </div>
-              </StudioCard>
-            </div>
+              )}
+            </StudioCard>
 
-            <div className="grid grid-cols-2 gap-4">
-              <StudioCard contentClassName="p-5">
-                <SectionHeader
-                  title="小红书发布包"
-                  action={showAllRed ? '收起' : '下载全部'}
-                  download
-                  onAction={
-                    showAllRed
-                      ? () => setShowAllRed(false)
-                      : () => handleDownloadAllPackages(redPackages, '小红书')
-                  }
-                />
-                <PackageTable items={redPackages} showAll={showAllRed} />
-                <div className="mt-4 text-center">
-                  {redPackages.length > 5 && (
-                    <button
-                      className="text-xs font-semibold text-[#1664FF]"
-                      onClick={() => setShowAllRed((v) => !v)}
-                    >
-                      {showAllRed
-                        ? '收起'
-                        : `查看全部（${redPackages.length}）`}
-                    </button>
-                  )}
-                </div>
-              </StudioCard>
-              <StudioCard contentClassName="p-5">
-                <SectionHeader
-                  title="抖音发布包"
-                  action={showAllDouyin ? '收起' : '下载全部'}
-                  download
-                  onAction={
-                    showAllDouyin
-                      ? () => setShowAllDouyin(false)
-                      : () => handleDownloadAllPackages(douyinPackages, '抖音')
-                  }
-                />
-                <PackageTable items={douyinPackages} showAll={showAllDouyin} />
-                <div className="mt-4 text-center">
-                  {douyinPackages.length > 5 && (
-                    <button
-                      className="text-xs font-semibold text-[#1664FF]"
-                      onClick={() => setShowAllDouyin((v) => !v)}
-                    >
-                      {showAllDouyin
-                        ? '收起'
-                        : `查看全部（${douyinPackages.length}）`}
-                    </button>
-                  )}
-                </div>
-              </StudioCard>
-            </div>
-
-            <div className="grid grid-cols-[1.12fr_0.88fr] gap-4">
-              <StudioCard contentClassName="p-5">
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-sm font-bold text-[#1D2129]">发布记录</h2>
-                  <div className="flex items-center gap-3">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-8 gap-1 border-[#E5E8EF] text-xs"
-                      onClick={() => handleExportRecords(recordItems)}
-                    >
-                      <Download className="size-3.5" />
-                      导出
-                    </Button>
+            <div ref={packagesSectionRef}>
+              <StudioCard contentClassName="p-4">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2 border-b border-[#EEF0F5] pb-2">
+                  <div>
+                    <h2 className="text-sm font-bold text-[#1D2129]">
+                      发布包导出
+                    </h2>
+                    <p className="mt-0.5 text-xs text-[#86909C]">
+                      审核通过后导出 .md 或复制，到对应 App 手动发布。
+                    </p>
                   </div>
+                  <span className="rounded-full bg-[#E8FFEA] px-2.5 py-0.5 text-xs font-semibold text-[#00B42A]">
+                    {getPlatformLabel(packagePlatform)} {packageCount} 个
+                  </span>
                 </div>
-                <RecordsTable items={recordItems} />
-              </StudioCard>
-              <StudioCard contentClassName="p-5">
-                <SectionHeader
-                  title="账号授权状态"
-                  action="管理账号 >"
-                  onAction={() => (window.location.href = '/accounts')}
+
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-1">
+                    {PACKAGE_PLATFORMS.map((platform) => (
+                      <button
+                        key={platform.value}
+                        type="button"
+                        className={cn(
+                          'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                          packagePlatform === platform.value
+                            ? 'bg-[#E8F3FF] text-[#1664FF]'
+                            : 'text-[#4E5969] hover:bg-[#F5F7FA]'
+                        )}
+                        onClick={() => {
+                          setPackagePlatform(platform.value);
+                          setShowAllPackages(false);
+                        }}
+                      >
+                        {platform.label}
+                        <span className="ml-1 text-[#86909C]">
+                          ({packagesByPlatform[platform.value].length})
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-[#1664FF]"
+                    onClick={
+                      showAllPackages
+                        ? () => setShowAllPackages(false)
+                        : () =>
+                            handleDownloadAllPackages(
+                              activePackages,
+                              getPlatformLabel(packagePlatform)
+                            )
+                    }
+                  >
+                    <Download className="size-3.5" />
+                    {showAllPackages ? '收起' : '下载全部'}
+                  </button>
+                </div>
+
+                <PackageTable
+                  items={activePackages}
+                  showAll={showAllPackages}
                 />
-                <AccountTable />
               </StudioCard>
+            </div>
+
+            <div className="rounded-xl border border-[#E5E8EF] bg-white">
+              <button
+                type="button"
+                className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm font-semibold text-[#4E5969] hover:text-[#1664FF]"
+                onClick={() => setAdvancedOpen((v) => !v)}
+              >
+                <span>高级选项（草稿同步 / 发布记录 / 账号状态）</span>
+                <span className="text-xs font-normal text-[#86909C]">
+                  {advancedOpen ? '收起' : '展开'}
+                </span>
+              </button>
+              {advancedOpen && (
+                <div className="space-y-2 border-t border-[#EEF0F5] p-4">
+                  <div className="grid grid-cols-[1.12fr_0.88fr] gap-2">
+                    <StudioCard contentClassName="p-4">
+                      <SectionHeader
+                        title="公众号草稿同步"
+                        action="同步设置"
+                        onAction={() => window.open('/settings/ima', '_blank')}
+                      />
+                      <DraftSyncTable />
+                    </StudioCard>
+                    <StudioCard contentClassName="p-4">
+                      <SectionHeader
+                        title="账号授权状态"
+                        action="管理账号 >"
+                        onAction={() => (window.location.href = '/accounts')}
+                      />
+                      <AccountTable />
+                    </StudioCard>
+                  </div>
+
+                  <StudioCard contentClassName="p-4">
+                    <div className="mb-2 flex items-center justify-between">
+                      <h2 className="text-sm font-bold text-[#1D2129]">
+                        发布记录
+                      </h2>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-1 border-[#E5E8EF] text-xs"
+                        onClick={() => handleExportRecords(recordItems)}
+                      >
+                        <Download className="size-3.5" />
+                        导出
+                      </Button>
+                    </div>
+                    <RecordsTable items={recordItems} />
+                  </StudioCard>
+                </div>
+              )}
             </div>
           </>
         )}

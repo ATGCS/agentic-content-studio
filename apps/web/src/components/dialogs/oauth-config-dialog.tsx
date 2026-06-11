@@ -106,18 +106,20 @@ export function OAuthConfigDialog({ open, onOpenChange }: Props) {
     <DialogWrapper
       open={open}
       onOpenChange={onOpenChange}
-      title="平台 OAuth 配置"
-      description="配置各平台的开发者凭证，用于用户授权绑定。首次使用需前往各平台开发者后台注册应用获取。"
+      title="平台 OAuth 配置（管理员）"
+      description="配置本系统在抖音/微信等平台的开发者应用凭证。保存后，所有登录用户均可各自授权绑定自己的账号，无需修改服务器文件。"
       className="sm:max-w-[560px]"
     >
       <div className="space-y-4">
         <div className="rounded-lg bg-[#FFF7E6] p-3 text-xs text-[#FF7D00]">
-          <strong>首次使用？</strong>{' '}
-          每个平台都需要先在对应开发者后台注册应用，拿到 AppID 和 Secret
-          后填到这里。
+          <strong>说明：</strong>
+          这里是<strong>全站级</strong>
+          配置（类似你在抖音开放平台注册的一个「应用」），不是某个运营同学的私人账号。
           <br />
-          点击各平台名称旁的 <ExternalLink className="inline size-3" />{' '}
-          图标可直接跳转到注册页面。
+          配置完成后，每位用户点击「新增账号 → 去授权」，绑定的是
+          <strong>自己的</strong>抖音/公众号。
+          <br />
+          凭证保存在系统数据库中，普通用户无需接触 .env 或服务器配置。
         </div>
 
         {platformMeta.map((p) => {

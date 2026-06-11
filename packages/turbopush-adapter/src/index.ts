@@ -35,8 +35,73 @@ export interface PublishProvider {
   syncMetrics(publishRecordId: string): Promise<MetricsResult>;
 }
 
+/**
+ * 模拟发布提供者 — 用于开发/演示环境
+ * 生产环境请替换为真实的 turbopush 或平台发布 API
+ */
+class StubPublishProvider implements PublishProvider {
+  async listAccounts(ownerId: string): Promise<PlatformAccountDTO[]> {
+    const rows = await prisma.platformAccount.findMany({
+      where: { ownerId, authStatus: 'active' },
+      select: {
+        id: true,
+        platform: true,
+        accountName: true,
+        accountType: true,
+        authStatus: true,
+      },
+    });
+    return rows.map((r) => ({
+      id: r.id,
+      platform: r.platform,
+      accountName: r.accountName,
+      accountType: r.accountType ?? undefined,
+      authStatus: r.authStatus,
+    }));
+  }
+
+  async publish(input: PublishInput): Promise<PublishResult> {
+    // 模拟发布：生成一个模拟的外部帖子 ID 和 URL
+    const version = await prisma.contentVersion.findUnique({
+      where: { id: input.versionId },
+      include: { content: true },
+    });
+    const mockId = `stub_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    return {
+      success: true,
+      externalPostId: mockId,
+      externalUrl: `https://stub.${input.platform.toLowerCase()}.example.com/post/${mockId}`,
+      raw: {
+        stub: true,
+        title: version?.title ?? version?.content?.title ?? '',
+        publishedAt: new Date().toISOString(),
+        message: '模拟发布成功，请集成真实发布 API 以实际发布到平台',
+      },
+    };
+  }
+
+  async syncMetrics(_publishRecordId: string): Promise<MetricsResult> {
+    // 模拟指标数据
+    return {
+      views: Math.floor(Math.random() * 1000),
+      likes: Math.floor(Math.random() * 100),
+      comments: Math.floor(Math.random() * 20),
+      shares: Math.floor(Math.random() * 10),
+    };
+  }
+}
+
+let _provider: PublishProvider | null = null;
+
 export function getPublishProvider(): PublishProvider {
-  throw new Error('内容发布引擎未配置：请集成真实的 turbopush 或平台发布 API');
+  if (!_provider) {
+    _provider = new StubPublishProvider();
+  }
+  return _provider;
+}
+
+export function setPublishProvider(provider: PublishProvider): void {
+  _provider = provider;
 }
 
 export async function syncAccountsToDb(

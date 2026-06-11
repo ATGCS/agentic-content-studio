@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import jwt from 'jsonwebtoken';
 import { AppError, ErrorCodes } from '@acs/core';
 import * as materials from '@acs/content-center';
@@ -38,6 +39,31 @@ function handleError(err: unknown) {
     { code: 50000, message: 'internal error', data: null },
     { status: 500 }
   );
+}
+
+const patchBodySchema = z.object({
+  type: z.enum(['IMAGE', 'VIDEO', 'AUDIO', 'FILE']).optional(),
+  role: z.enum(['COVER', 'BODY', 'ATTACHMENT']).optional(),
+  name: z.string().optional(),
+  url: z.string().optional(),
+  localPath: z.string().optional(),
+  source: z.string().optional(),
+  meta: z.record(z.unknown()).optional(),
+});
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await authenticate(req);
+    const { id } = await params;
+    const body = patchBodySchema.parse(await req.json());
+    const data = await materials.updateMaterial(user, id, body);
+    return successResponse(data);
+  } catch (err) {
+    return handleError(err);
+  }
 }
 
 export async function DELETE(

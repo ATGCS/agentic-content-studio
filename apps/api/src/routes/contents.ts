@@ -59,6 +59,15 @@ export async function contentRoutes(app: FastifyInstance) {
     }
   );
 
+  app.delete(
+    '/contents/:id',
+    { onRequest: [app.authenticate] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      return reply.success(await contents.deleteContent(getUser(request), id));
+    }
+  );
+
   app.post(
     '/contents/:id/generate',
     { onRequest: [app.authenticate] },

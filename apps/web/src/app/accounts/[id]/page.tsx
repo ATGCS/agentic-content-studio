@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
@@ -94,10 +94,10 @@ export default function AccountDetailPage() {
   const [notifications, setNotifications] = useState<
     { id: number; type: 'success' | 'error'; message: string }[]
   >([]);
-  let notifId = 0;
+  const notifIdRef = useRef(0);
 
   function notify(type: 'success' | 'error', message: string) {
-    const id = ++notifId;
+    const id = ++notifIdRef.current;
     setNotifications((prev) => [...prev, { type, message, id }]);
     setTimeout(
       () => setNotifications((prev) => prev.filter((n) => n.id !== id)),
@@ -133,6 +133,9 @@ export default function AccountDetailPage() {
         method: 'PUT',
         body: JSON.stringify(profile),
       });
+      notify('success', '画像保存成功');
+    } catch {
+      notify('error', '画像保存失败，请稍后重试');
     } finally {
       setSaving(false);
     }

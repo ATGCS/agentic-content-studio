@@ -10,6 +10,11 @@ import {
   splitInlineFormatting,
   type PreviewMaterial,
 } from '@/lib/preview-body';
+import {
+  getCompactCoverThumbWidth,
+  getPlatformCoverInfo,
+  pickCoverUrl,
+} from '@/lib/platform-cover';
 
 export type GenerationPreviewData = {
   title: string;
@@ -36,72 +41,6 @@ export type GenerationPreviewData = {
   agentRuns?: unknown[];
 };
 
-/** 各平台封面能力说明（与 image-generation / platform-cover-guides 对齐） */
-const PLATFORM_COVER_INFO: Record<
-  string,
-  {
-    aspect: string;
-    aspectLabel: string;
-    coverTextOnImage: boolean;
-    description: string;
-  }
-> = {
-  XIAOHONGSHU: {
-    aspect: 'aspect-[3/4]',
-    aspectLabel: '3:4 竖版',
-    coverTextOnImage: true,
-    description: '笔记首图，封面文案叠在图上',
-  },
-  WECHAT: {
-    aspect: 'aspect-[4/3]',
-    aspectLabel: '4:3 横版小图',
-    coverTextOnImage: false,
-    description: '订阅号列表：标题在左、封面缩略图在右',
-  },
-  DOUYIN: {
-    aspect: 'aspect-[9/16]',
-    aspectLabel: '9:16 竖版',
-    coverTextOnImage: true,
-    description: '视频封面/首帧，可叠大字标题',
-  },
-  VIDEO_CHANNEL: {
-    aspect: 'aspect-[9/16]',
-    aspectLabel: '9:16 竖版',
-    coverTextOnImage: true,
-    description: '视频封面/首帧，风格略偏真实场景',
-  },
-  ZHIHU: {
-    aspect: 'aspect-video',
-    aspectLabel: '16:9 横版',
-    coverTextOnImage: false,
-    description: '文章头图，封面文案作副标题',
-  },
-  BILIBILI: {
-    aspect: 'aspect-video',
-    aspectLabel: '16:9 横版',
-    coverTextOnImage: true,
-    description: '视频/专栏封面，标题叠在图上',
-  },
-};
-
-const DEFAULT_COVER_INFO = {
-  aspect: 'aspect-video',
-  aspectLabel: '16:9 横版',
-  coverTextOnImage: false,
-  description: '头图 + 封面文案',
-};
-
-function getCoverInfo(platform: string) {
-  return PLATFORM_COVER_INFO[platform] ?? DEFAULT_COVER_INFO;
-}
-
-/** 紧凑模式下按平台比例设置缩略图宽度 */
-function getCompactCoverThumbWidth(aspect: string) {
-  if (aspect === 'aspect-video') return 'w-[220px]';
-  if (aspect === 'aspect-[9/16]') return 'w-[100px]';
-  return 'w-[120px]';
-}
-
 function normalizeTags(tags: unknown): string[] {
   if (Array.isArray(tags)) {
     return tags.filter((t): t is string => typeof t === 'string');
@@ -113,34 +52,6 @@ function normalizeTags(tags: unknown): string[] {
       .filter(Boolean);
   }
   return [];
-}
-
-function pickCoverUrl(
-  materials: GenerationPreviewData['materials'],
-  options?: { platform?: string; versionId?: string }
-): string | null {
-  const covers =
-    materials?.filter(
-      (m) => m.role === 'COVER' && m.url && m.type !== 'VIDEO'
-    ) ?? [];
-
-  if (options?.versionId) {
-    const matched = covers.find((m) => {
-      const meta = m.meta as { versionId?: string } | null;
-      return meta?.versionId === options.versionId;
-    });
-    if (matched?.url) return matched.url;
-  }
-
-  if (options?.platform) {
-    const matched = covers.find((m) => {
-      const meta = m.meta as { platform?: string } | null;
-      return meta?.platform === options.platform;
-    });
-    if (matched?.url) return matched.url;
-  }
-
-  return covers[0]?.url ?? null;
 }
 
 /** 公众号消息列表：封面 + 正文配图，最多 3 张（多图横排样式） */
@@ -188,17 +99,17 @@ function WechatFeedListCard({
   const account = accountName ?? '公众号名称';
 
   return (
-    <div className="bg-white px-4 py-3.5">
+    <div className="bg-white px-3 py-3">
       {multiImage ? (
         <>
           <p className="line-clamp-2 text-[15px] font-medium leading-[1.45] text-[#1D2129]">
             {title}
           </p>
-          <div className="mt-2.5 grid grid-cols-3 gap-1.5">
+          <div className="mt-2 grid grid-cols-3 gap-1">
             {images.slice(0, 3).map((url, i) => (
               <div
                 key={i}
-                className="aspect-[4/3] overflow-hidden rounded-[2px] bg-[#F2F3F5]"
+                className="aspect-[4/3] overflow-hidden bg-[#F2F3F5]"
               >
                 <img
                   src={url}
@@ -208,7 +119,7 @@ function WechatFeedListCard({
               </div>
             ))}
           </div>
-          <div className="mt-2.5 flex items-center justify-between">
+          <div className="mt-2 flex items-center justify-between">
             <span className="text-xs text-[#B2B2B2]">{account}</span>
             <span className="text-xs text-[#D9D9D9]">×</span>
           </div>
@@ -221,7 +132,7 @@ function WechatFeedListCard({
             </p>
             <span className="mt-2 text-xs text-[#B2B2B2]">{account}</span>
           </div>
-          <div className="h-[72px] w-[96px] shrink-0 overflow-hidden rounded-[2px] bg-[#F2F3F5]">
+          <div className="h-[72px] w-[96px] shrink-0 overflow-hidden bg-[#F2F3F5]">
             <WechatFeedThumb url={images[0] ?? null} />
           </div>
         </div>
@@ -384,7 +295,7 @@ function CoverArea({
   return (
     <div
       className={cn(
-        'flex w-full flex-col items-center justify-center rounded-lg bg-gradient-to-br from-[#E8F3FF] to-[#F0F5FF] p-6 text-center',
+        'flex w-full flex-col items-center justify-center rounded-lg bg-[#F2F3F5] p-6 text-center',
         aspect
       )}
     >
@@ -420,7 +331,7 @@ function XiaohongshuPreview({
   return (
     <div
       className={cn(
-        'w-full overflow-hidden rounded-2xl border border-[#E5E8EF] bg-white shadow-sm',
+        'w-full overflow-hidden',
         fill && 'flex min-h-0 flex-1 flex-col'
       )}
     >
@@ -430,7 +341,7 @@ function XiaohongshuPreview({
         aspect="aspect-[3/4]"
         overlay={Boolean(coverText?.trim())}
       />
-      <div className={cn('p-5', fill && 'flex min-h-0 flex-1 flex-col')}>
+      <div className={cn('p-4', fill && 'flex min-h-0 flex-1 flex-col')}>
         <p className="shrink-0 text-lg font-bold leading-snug text-[#1D2129]">
           {title}
         </p>
@@ -448,7 +359,7 @@ function XiaohongshuPreview({
             ))}
           </div>
         )}
-        <div className="mt-4 flex items-center justify-between border-t border-[#F2F3F5] pt-3 text-[#86909C]">
+        <div className="mt-4 flex items-center justify-between pt-3 text-[#86909C]">
           <div className="flex items-center gap-0.5">
             <div className="size-6 rounded-full bg-[#FFE4E8]" />
             <span className="ml-1.5 text-xs">{accountName ?? '你的账号'}</span>
@@ -493,14 +404,14 @@ function WechatPreview({
   return (
     <div
       className={cn(
-        'w-full overflow-hidden rounded-lg border border-[#E5E8EF]',
+        'w-full overflow-hidden',
         fill && 'flex min-h-0 flex-1 flex-col'
       )}
     >
-      {/* 订阅号消息列表（与用户截图一致的左文右图 / 多图横排） */}
+      {/* 订阅号消息列表 */}
       <div className="shrink-0 bg-[#EDEDED] p-3">
         <p className="mb-2 text-[11px] text-[#888]">订阅号消息列表</p>
-        <div className="overflow-hidden rounded-sm">
+        <div className="overflow-hidden">
           <WechatFeedListCard
             title={title}
             accountName={accountName}
@@ -518,7 +429,7 @@ function WechatPreview({
       {hasArticleBody && (
         <div
           className={cn(
-            'border-t border-[#E5E8EF] bg-white px-5 py-4',
+            'bg-white px-5 py-4',
             fill && 'flex min-h-0 flex-1 flex-col'
           )}
         >
@@ -568,7 +479,7 @@ function DouyinPreview({
   return (
     <div
       className={cn(
-        'w-full overflow-hidden rounded-2xl border border-[#1D2129] bg-black shadow-lg',
+        'w-full overflow-hidden rounded-xl bg-black',
         fill && 'flex min-h-0 flex-1 items-center justify-center'
       )}
     >
@@ -651,17 +562,17 @@ function GenericArticlePreview({
   return (
     <div
       className={cn(
-        'w-full overflow-hidden rounded-lg border border-[#E5E8EF] bg-white shadow-sm',
+        'w-full overflow-hidden',
         fill && 'flex min-h-0 flex-1 flex-col'
       )}
     >
-      <div className="flex shrink-0 items-center gap-2 border-b border-[#F2F3F5] px-5 py-3">
+      <div className="flex shrink-0 items-center gap-2 pb-3">
         <PlatformBadge platform={platform} size="sm" />
         <span className="text-xs text-[#86909C]">
           {accountName ?? '平台账号'}
         </span>
       </div>
-      <div className={cn('p-5', fill && 'flex min-h-0 flex-1 flex-col')}>
+      <div className={cn('p-4', fill && 'flex min-h-0 flex-1 flex-col')}>
         <h2 className="shrink-0 text-lg font-bold text-[#1D2129]">{title}</h2>
         {(summary || coverText) && (
           <p className="mt-2 shrink-0 text-sm text-[#86909C]">
@@ -700,28 +611,21 @@ function CoverAssetsPreview({
   tags: string[];
   compact?: boolean;
 }) {
-  const info = getCoverInfo(platform);
+  const info = getPlatformCoverInfo(platform);
   const text = coverText?.trim();
 
   return (
-    <div
-      className={cn(
-        'shrink-0 rounded-lg border border-[#E5E8EF] bg-[#FAFBFC]',
-        compact ? 'p-3' : 'p-4'
-      )}
-    >
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+    <div className={cn('shrink-0', compact ? 'mb-3' : 'mb-4')}>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h4 className="text-xs font-semibold text-[#1D2129]">
           封面预览 · {getPlatformLabel(platform)}
         </h4>
-        <span className="text-xs text-[#86909C]">
-          {info.aspectLabel} · {info.description}
-        </span>
+        <span className="text-xs text-[#86909C]">{info.aspectLabel}</span>
       </div>
 
       <div
         className={cn(
-          'gap-4',
+          'gap-3',
           compact
             ? 'flex flex-wrap items-start'
             : 'grid lg:grid-cols-[minmax(0,220px)_1fr]'
@@ -733,11 +637,11 @@ function CoverAssetsPreview({
             compact ? getCompactCoverThumbWidth(info.aspect) : 'w-full'
           )}
         >
-          <p className="mb-1.5 text-xs font-medium text-[#86909C]">封面图</p>
+          <p className="mb-1 text-xs text-[#86909C]">封面图</p>
           {coverUrl ? (
             <div
               className={cn(
-                'relative w-full overflow-hidden rounded-lg border border-[#E5E8EF] bg-white',
+                'relative w-full overflow-hidden rounded-lg bg-[#F2F3F5]',
                 info.aspect
               )}
             >
@@ -757,7 +661,7 @@ function CoverAssetsPreview({
           ) : (
             <div
               className={cn(
-                'flex w-full flex-col items-center justify-center rounded-lg border border-dashed border-[#D9DCE0] bg-white px-2 py-4 text-center',
+                'flex w-full flex-col items-center justify-center rounded-lg bg-[#F2F3F5] px-2 py-4 text-center',
                 info.aspect
               )}
             >
@@ -773,21 +677,16 @@ function CoverAssetsPreview({
 
         <div className={cn('min-w-0 space-y-2', compact && 'flex-1')}>
           <div>
-            <p className="mb-1 text-xs font-medium text-[#86909C]">封面文案</p>
+            <p className="mb-1 text-xs text-[#86909C]">封面文案</p>
             <p
-              className={cn(
-                'rounded-lg border border-[#E5E8EF] bg-white text-[#1D2129]',
-                compact ? 'px-2.5 py-2 text-xs' : 'px-3 py-2.5 text-sm'
-              )}
+              className={cn('text-[#1D2129]', compact ? 'text-xs' : 'text-sm')}
             >
               {text || '（分平台改写步骤产出，一键生成后显示）'}
             </p>
           </div>
           {tags.length > 0 && (
             <div>
-              <p className="mb-1 text-xs font-medium text-[#86909C]">
-                话题标签
-              </p>
+              <p className="mb-1 text-xs text-[#86909C]">话题标签</p>
               <p className="text-xs text-[#1677FF]">
                 {tags.map((t) => `#${t.replace(/^#/, '')}`).join(' ')}
               </p>
@@ -930,30 +829,27 @@ export function GenerationResultPreview({
   });
 
   return (
-    <div
-      className={cn(fill ? 'flex h-full min-h-0 flex-col gap-1' : 'space-y-4')}
-    >
+    <div className={cn(fill ? 'flex h-full min-h-0 flex-col' : 'space-y-4')}>
       {showHeader && (
         <div>
           <h3 className="text-sm font-semibold text-[#1D2129]">发布预览</h3>
           <p className="mt-0.5 text-xs text-[#86909C]">
-            切换平台 Tab 查看封面图、封面文案与 Feed 效果；总稿 Tab
-            不含分平台封面
+            切换平台 Tab 查看封面图、封面文案与 Feed 效果
           </p>
         </div>
       )}
 
-      <div className="flex shrink-0 flex-wrap gap-2" role="tablist">
+      <div className="flex shrink-0 flex-wrap gap-1.5" role="tablist">
         <button
           type="button"
           role="tab"
           aria-selected={activeTab === 'draft'}
           onClick={() => setActiveTab('draft')}
           className={cn(
-            'rounded-lg border px-3 py-1.5 text-xs font-medium transition-all',
+            'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
             activeTab === 'draft'
-              ? 'border-[#1664FF] bg-[#1664FF] text-white shadow-sm'
-              : 'border-[#E5E8EF] bg-white text-[#4E5969] hover:border-[#1664FF]/40'
+              ? 'bg-[#7B61FF] text-white'
+              : 'bg-[#F2F3F5] text-[#4E5969] hover:bg-[#E5E8EF]'
           )}
         >
           总稿
@@ -966,10 +862,10 @@ export function GenerationResultPreview({
             aria-selected={activeTab === platform}
             onClick={() => setActiveTab(platform)}
             className={cn(
-              'rounded-lg border px-3 py-1.5 text-xs font-medium transition-all',
+              'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
               activeTab === platform
-                ? 'border-[#1664FF] bg-[#1664FF] text-white shadow-sm'
-                : 'border-[#E5E8EF] bg-white text-[#4E5969] hover:border-[#1664FF]/40'
+                ? 'bg-[#7B61FF] text-white'
+                : 'bg-[#F2F3F5] text-[#4E5969] hover:bg-[#E5E8EF]'
             )}
           >
             {getPlatformLabel(platform)}
@@ -980,21 +876,18 @@ export function GenerationResultPreview({
       <div
         key={activeTab}
         className={cn(
-          'flex min-h-0 flex-col rounded-xl border border-[#E5E8EF] bg-white',
-          fill
-            ? 'min-h-0 flex-1 overflow-hidden px-2 pb-2 pt-0'
-            : 'bg-[#F7F8FA] p-4 sm:p-5 lg:p-6'
+          'flex min-h-0 flex-col',
+          fill && 'flex-1 overflow-hidden'
         )}
       >
         {!isDraft && !activeVersion && (
-          <p className="mb-3 shrink-0 rounded-lg border border-dashed border-[#E5E8EF] bg-[#F7F8FA] px-3 py-2 text-center text-xs text-[#86909C]">
+          <p className="mb-3 shrink-0 text-center text-xs text-[#86909C]">
             该平台版本尚未生成，请先一键生成或勾选该平台后重新生成
           </p>
         )}
         {isDraft && (
-          <p className="mb-3 shrink-0 rounded-lg border border-[#E8F3FF] bg-[#F0F5FF] px-3 py-2 text-xs text-[#4E5969]">
-            「总稿」为 AI 原始正文。封面图与封面文案在各平台 Tab
-            独立预览（小红书、抖音、视频号、公众号、知乎等均支持封面）。
+          <p className="mb-3 shrink-0 text-xs text-[#86909C]">
+            「总稿」为 AI 原始正文。封面图与封面文案在各平台 Tab 独立预览。
           </p>
         )}
         {!isDraft && activeVersion && (
@@ -1044,8 +937,7 @@ export function GenerationResultPreview({
 
       {!isDraft && !coverUrl && (
         <p className="shrink-0 text-xs text-[#86909C]">
-          提示：当前平台封面未生成（检查图片服务配置或查看终端 [cover-image]
-          日志），也可在素材管理中手动上传
+          提示：当前平台封面未生成，也可在素材管理中手动上传
         </p>
       )}
     </div>

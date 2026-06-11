@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ChevronDown,
@@ -20,6 +19,17 @@ import {
 import { EditMaterialDialog } from '@/components/dialogs/edit-material-dialog';
 import { MaterialPreviewDialog } from '@/components/dialogs/material-preview-dialog';
 import { UploadMaterialDialog } from '@/components/dialogs/upload-material-dialog';
+import { MaterialGridCard } from '@/components/studio/material-grid-card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { StudioLayout } from '@/components/StudioLayout';
 import { PageContainer } from '@/components/layout/page-container';
 import { StudioCard } from '@/components/studio/studio-card';
@@ -51,16 +61,6 @@ import {
   type MaterialStats,
   type MaterialType,
 } from '@/lib/material-mappers';
-import {
-  StudioTable,
-  StudioTableBody,
-  StudioTableCell,
-  StudioTableEmpty,
-  StudioTableFrame,
-  StudioTableHead,
-  StudioTableHeader,
-  StudioTableRow,
-} from '@/components/studio/studio-table';
 import { cn } from '@/lib/utils';
 
 type MaterialListResponse = {
@@ -70,7 +70,7 @@ type MaterialListResponse = {
   pageSize: number;
 };
 
-const PAGE_SIZE_OPTIONS = [10, 20, 50];
+const PAGE_SIZE_OPTIONS = [12, 24, 48];
 
 const statCardConfig = [
   {
@@ -128,12 +128,6 @@ const typeConfig: Record<
   other: { label: '其他', bg: '#F5F7FA', color: '#4E5969', icon: FolderPlus },
 };
 
-const statusConfig = {
-  enabled: { label: '已启用', className: 'bg-[#E8FFEA] text-[#00B42A]' },
-  disabled: { label: '已禁用', className: 'bg-[#F4F4F5] text-[#9099A6]' },
-  reviewing: { label: '审核中', className: 'bg-[#E8F5FF] text-[#1664FF]' },
-};
-
 const storageColors: Record<string, string> = {
   IMAGE: '#1664FF',
   VIDEO: '#14C9C9',
@@ -148,13 +142,11 @@ const storageLabels: Record<string, string> = {
   AUDIO: '音频',
 };
 
-function MaterialThumbnail({
+function RecentUploadThumb({
   type,
-  index,
   url,
 }: {
   type: MaterialType;
-  index: number;
   url?: string | null;
 }) {
   const cfg = typeConfig[type];
@@ -163,34 +155,22 @@ function MaterialThumbnail({
   if (type === 'image' && url) {
     return (
       // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={url}
-        alt=""
-        className="size-12 rounded-md object-cover shadow-sm"
-      />
+      <img src={url} alt="" className="size-12 rounded-md object-cover" />
     );
   }
 
-  if (type === 'image' || type === 'video') {
-    const gradients = [
-      'from-[#78A8FF] via-[#E8F3FF] to-[#FFB7A8]',
-      'from-[#3B1F6D] via-[#5141A0] to-[#FF7D00]',
-      'from-[#B9E7FF] via-[#F3F7FF] to-[#FFB66E]',
-      'from-[#E8D2B4] via-[#C6E7D8] to-[#9BB8F6]',
-      'from-[#111827] via-[#334155] to-[#64748B]',
-    ];
+  if (type === 'video' && url) {
     return (
-      <div
-        className={cn(
-          'relative size-12 overflow-hidden rounded-md bg-gradient-to-br shadow-sm',
-          gradients[index % gradients.length]
-        )}
-      >
-        {type === 'video' && (
-          <span className="absolute inset-0 m-auto flex size-5 items-center justify-center rounded-full bg-black/45 text-[8px] text-white">
-            ▶
-          </span>
-        )}
+      <div className="relative size-12 overflow-hidden rounded-md bg-[#111827]">
+        <video
+          src={url}
+          className="size-full object-cover"
+          muted
+          preload="metadata"
+        />
+        <span className="absolute inset-0 flex items-center justify-center bg-black/30 text-[10px] text-white">
+          ▶
+        </span>
       </div>
     );
   }
@@ -200,7 +180,7 @@ function MaterialThumbnail({
       className="flex size-12 items-center justify-center rounded-md"
       style={{ backgroundColor: cfg.bg, color: cfg.color }}
     >
-      <Icon className="size-6" />
+      <Icon className="size-5" />
     </div>
   );
 }
@@ -378,7 +358,7 @@ function SidebarTitle({
   onAction?: () => void;
 }) {
   return (
-    <div className="mb-4 flex items-center justify-between">
+    <div className="mb-2 flex items-center justify-between">
       <h3 className="text-sm font-bold text-[#1D2129]">{title}</h3>
       {action && (
         <button
@@ -402,13 +382,16 @@ export default function MaterialsPage() {
   const [statsLoading, setStatsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<
+    { type: 'single'; id: string } | { type: 'batch' } | null
+  >(null);
 
   const [activeTab, setActiveTab] = useState<string>(MATERIAL_TABS[0]);
   const [sourceFilter, setSourceFilter] = useState('all');
   const [searchInput, setSearchInput] = useState('');
   const [keyword, setKeyword] = useState('');
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(24);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -540,32 +523,38 @@ export default function MaterialsPage() {
     }
   }
 
-  async function deleteMaterial(id: string) {
-    if (!window.confirm('确定删除该素材吗？')) return;
-    setActionError(null);
-    try {
-      await api(`/api/materials/${id}`, { method: 'DELETE' });
-      await refreshAll();
-    } catch (error) {
-      setActionError(error instanceof ApiError ? error.message : '删除失败');
-    }
+  function deleteMaterial(id: string) {
+    setDeleteDialog({ type: 'single', id });
   }
 
-  async function batchDelete() {
+  function batchDelete() {
     if (selectedIds.length === 0) return;
-    if (!window.confirm(`确定删除选中的 ${selectedIds.length} 个素材吗？`))
-      return;
+    setDeleteDialog({ type: 'batch' });
+  }
+
+  async function confirmDelete() {
+    if (!deleteDialog) return;
+    const dialog = deleteDialog;
+    setDeleteDialog(null);
     setActionError(null);
     try {
-      await Promise.all(
-        selectedIds.map((id) =>
-          api(`/api/materials/${id}`, { method: 'DELETE' })
-        )
-      );
+      if (dialog.type === 'single') {
+        await api(`/api/materials/${dialog.id}`, { method: 'DELETE' });
+      } else {
+        await Promise.all(
+          selectedIds.map((id) =>
+            api(`/api/materials/${id}`, { method: 'DELETE' })
+          )
+        );
+      }
       await refreshAll();
     } catch (error) {
       setActionError(
-        error instanceof ApiError ? error.message : '批量删除失败'
+        error instanceof ApiError
+          ? error.message
+          : dialog.type === 'batch'
+            ? '批量删除失败'
+            : '删除失败'
       );
     }
   }
@@ -599,7 +588,7 @@ export default function MaterialsPage() {
 
   return (
     <StudioLayout>
-      <PageContainer className="max-w-none gap-4 p-6">
+      <PageContainer className="max-w-none gap-2 p-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <Button
@@ -650,17 +639,20 @@ export default function MaterialsPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-[1fr_270px] gap-4">
-          <div className="space-y-4">
-            <div className="grid grid-cols-6 gap-4">
+        <div className="grid grid-cols-[1fr_270px] gap-2">
+          <div className="space-y-2">
+            <div className="grid grid-cols-6 gap-2">
               {dynamicStats.map((item) => {
                 const Icon = item.icon;
                 return (
                   <StudioCard
                     key={item.label}
-                    contentClassName="flex cursor-pointer items-center gap-4 p-5"
+                    contentClassName="flex cursor-pointer items-center gap-3 p-4"
                     onClick={() => {
-                      setActiveTab(item.label);
+                      if (item.key === 'other') return;
+                      setActiveTab(
+                        item.key === 'total' ? '全部素材' : item.label
+                      );
                       scrollToTable();
                     }}
                   >
@@ -683,32 +675,31 @@ export default function MaterialsPage() {
               })}
             </div>
 
-            <StudioCard contentClassName="p-0">
-              <div className="flex border-b border-[#EEF0F5] px-5">
-                {MATERIAL_TABS.map((tab) => (
-                  <button
-                    key={tab}
-                    type="button"
-                    className={cn(
-                      'relative px-5 py-4 text-sm font-semibold text-[#4E5969]',
-                      activeTab === tab && 'text-[#1664FF]'
-                    )}
-                    onClick={() => setActiveTab(tab)}
-                  >
-                    {tab}
-                    {activeTab === tab && (
-                      <span className="absolute inset-x-5 bottom-0 h-0.5 rounded-full bg-[#1664FF]" />
-                    )}
-                  </button>
-                ))}
-              </div>
-            </StudioCard>
-
             <div ref={tableRef}>
               <StudioCard contentClassName="p-0">
-                <div className="flex flex-wrap items-center gap-3 border-b border-[#EEF0F5] px-5 py-4">
+                <div className="flex flex-wrap items-center gap-2 border-b border-[#EEF0F5] px-4 py-3">
+                  <div className="flex flex-wrap items-center gap-1">
+                    {MATERIAL_TABS.map((tab) => (
+                      <button
+                        key={tab}
+                        type="button"
+                        className={cn(
+                          'rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                          activeTab === tab
+                            ? 'bg-[#E8F3FF] text-[#1664FF]'
+                            : 'text-[#4E5969] hover:bg-[#F5F7FA]'
+                        )}
+                        onClick={() => setActiveTab(tab)}
+                      >
+                        {tab}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="hidden h-5 w-px shrink-0 bg-[#E5E8EF] md:block" />
+
                   <Select value={sourceFilter} onValueChange={setSourceFilter}>
-                    <SelectTrigger className="h-9 w-36 text-xs">
+                    <SelectTrigger className="h-8 w-[min(160px,28vw)] text-xs">
                       <SelectValue placeholder="全部来源" />
                     </SelectTrigger>
                     <SelectContent>
@@ -724,21 +715,21 @@ export default function MaterialsPage() {
                     </SelectContent>
                   </Select>
 
-                  <div className="relative w-80">
-                    <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#A9AEB8]" />
+                  <div className="relative min-w-[180px] flex-1 md:max-w-xs">
+                    <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-[#A9AEB8]" />
                     <input
                       value={searchInput}
                       onChange={(e) => setSearchInput(e.target.value)}
-                      className="h-9 w-full rounded-md border border-[#E5E8EF] bg-white pl-9 pr-3 text-xs outline-none placeholder:text-[#A9AEB8]"
+                      className="h-8 w-full rounded-md border border-[#E5E8EF] bg-white pl-8 pr-3 text-xs outline-none placeholder:text-[#A9AEB8]"
                       placeholder="搜索素材名称、标签..."
                     />
                   </div>
 
-                  <div className="ml-auto flex items-center gap-3">
+                  <div className="flex items-center gap-2 md:ml-auto">
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-9 border-[#E5E8EF] text-xs"
+                      className="h-8 border-[#E5E8EF] px-3 text-xs"
                       onClick={resetFilters}
                     >
                       重置
@@ -746,7 +737,7 @@ export default function MaterialsPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="h-9 border-[#E5E8EF] text-xs"
+                      className="h-8 border-[#E5E8EF] px-3 text-xs"
                       disabled={selectedIds.length === 0}
                       onClick={() => batchDelete()}
                     >
@@ -756,207 +747,55 @@ export default function MaterialsPage() {
                   </div>
                 </div>
 
-                <StudioTable size="compact">
-                  <StudioTableHeader>
-                    <StudioTableRow className="border-[#EEF0F5]">
-                      <StudioTableHead className="w-10 px-5">
-                        <input
-                          type="checkbox"
-                          className="accent-[#1664FF]"
-                          checked={
-                            materials.length > 0 &&
-                            selectedIds.length === materials.length
-                          }
-                          onChange={toggleSelectAll}
-                        />
-                      </StudioTableHead>
-                      {[
-                        '素材名称',
-                        '类型',
-                        '格式',
-                        '大小',
-                        '来源',
-                        '标签',
-                        '上传人',
-                        '上传时间',
-                        '状态',
-                        '操作',
-                      ].map((head) => (
-                        <StudioTableHead
-                          key={head}
-                          className="h-10 whitespace-nowrap px-3 text-[11px] font-medium text-[#86909C]"
-                        >
-                          {head}
-                        </StudioTableHead>
-                      ))}
-                    </StudioTableRow>
-                  </StudioTableHeader>
-                  <StudioTableBody>
-                    {loading ? (
-                      <StudioTableRow>
-                        <StudioTableCell
-                          colSpan={11}
-                          className="py-8 text-center text-[#86909C]"
-                        >
-                          素材加载中…
-                        </StudioTableCell>
-                      </StudioTableRow>
-                    ) : loadError ? (
-                      <StudioTableRow>
-                        <StudioTableCell
-                          colSpan={11}
-                          className="py-8 text-center text-[#F53F3F]"
-                        >
-                          {loadError}
-                        </StudioTableCell>
-                      </StudioTableRow>
-                    ) : materials.length === 0 ? (
-                      <StudioTableRow>
-                        <StudioTableCell
-                          colSpan={11}
-                          className="py-8 text-center text-[#86909C]"
-                        >
-                          暂无素材
-                        </StudioTableCell>
-                      </StudioTableRow>
-                    ) : (
-                      materials.map((item, index) => {
-                        const cfg = typeConfig[item.type];
-                        const status = statusConfig[item.status];
-                        return (
-                          <StudioTableRow
-                            key={item.id}
-                            className="border-[#F5F7FA] hover:bg-[#F7F8FA]"
-                          >
-                            <StudioTableCell className="px-5">
-                              <input
-                                type="checkbox"
-                                className="accent-[#1664FF]"
-                                checked={selectedIds.includes(item.id)}
-                                onChange={() => toggleSelect(item.id)}
-                              />
-                            </StudioTableCell>
-                            <StudioTableCell className="min-w-[250px] px-3 py-3">
-                              <div className="flex items-center gap-3">
-                                <MaterialThumbnail
-                                  type={item.type}
-                                  index={index}
-                                  url={item.url}
-                                />
-                                <div className="min-w-0">
-                                  <button
-                                    type="button"
-                                    className="truncate text-left text-sm font-semibold text-[#1D2129] hover:text-[#1664FF]"
-                                    onClick={() => setPreviewMaterial(item)}
-                                  >
-                                    {item.name}
-                                  </button>
-                                  {item.contentId ? (
-                                    <Link
-                                      href={`/contents/${item.contentId}`}
-                                      className="mt-1 block truncate text-[11px] text-[#1664FF] hover:underline"
-                                    >
-                                      {item.contentTitle ?? '查看所属内容'}
-                                    </Link>
-                                  ) : (
-                                    <p className="mt-1 truncate text-[11px] text-[#86909C]">
-                                      {item.file}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                            </StudioTableCell>
-                            <StudioTableCell className="px-3 text-[#4E5969]">
-                              {cfg.label}
-                            </StudioTableCell>
-                            <StudioTableCell className="px-3 font-medium text-[#1D2129]">
-                              {item.format}
-                            </StudioTableCell>
-                            <StudioTableCell className="px-3 text-[#4E5969]">
-                              {item.size}
-                            </StudioTableCell>
-                            <StudioTableCell className="px-3 text-[#4E5969]">
-                              {item.source}
-                            </StudioTableCell>
-                            <StudioTableCell className="min-w-[145px] px-3">
-                              <div className="flex flex-wrap gap-1.5">
-                                {item.tags.length === 0 ? (
-                                  <span className="text-[#A9AEB8]">-</span>
-                                ) : (
-                                  item.tags.map((tag) => (
-                                    <button
-                                      key={tag}
-                                      type="button"
-                                      className="rounded bg-[#E8F3FF] px-2 py-1 text-[11px] font-medium text-[#1664FF] hover:bg-[#D6E8FF]"
-                                      onClick={() => handleTagClick(tag)}
-                                    >
-                                      {tag}
-                                    </button>
-                                  ))
-                                )}
-                              </div>
-                            </StudioTableCell>
-                            <StudioTableCell className="px-3">
-                              <span className="inline-flex items-center gap-2 text-[#1D2129]">
-                                <span className="flex size-6 items-center justify-center rounded-full bg-[#F5D7C8] text-[10px] font-semibold text-[#8A3F2E]">
-                                  {item.avatar}
-                                </span>
-                                {item.uploader}
-                              </span>
-                            </StudioTableCell>
-                            <StudioTableCell className="whitespace-nowrap px-3 text-[#4E5969]">
-                              {item.uploadedAt}
-                            </StudioTableCell>
-                            <StudioTableCell className="px-3">
-                              <span
-                                className={cn(
-                                  'rounded-full px-2 py-1 text-[11px] font-semibold',
-                                  status.className
-                                )}
-                              >
-                                {status.label}
-                              </span>
-                            </StudioTableCell>
-                            <StudioTableCell className="px-3">
-                              <div className="flex items-center gap-2 whitespace-nowrap text-xs font-medium text-[#1664FF]">
-                                <button
-                                  type="button"
-                                  onClick={() => setPreviewMaterial(item)}
-                                >
-                                  预览
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setEditMaterial(item)}
-                                >
-                                  编辑
-                                </button>
-                                {item.url ? (
-                                  <a
-                                    href={item.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                  >
-                                    下载
-                                  </a>
-                                ) : (
-                                  <span className="text-[#C9CDD4]">下载</span>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => deleteMaterial(item.id)}
-                                  className="text-[#F53F3F]"
-                                >
-                                  删除
-                                </button>
-                              </div>
-                            </StudioTableCell>
-                          </StudioTableRow>
-                        );
-                      })
-                    )}
-                  </StudioTableBody>
-                </StudioTable>
+                <div className="flex items-center justify-between border-b border-[#EEF0F5] px-5 py-2">
+                  <label className="flex items-center gap-2 text-xs text-[#4E5969]">
+                    <input
+                      type="checkbox"
+                      className="accent-[#1664FF]"
+                      checked={
+                        materials.length > 0 &&
+                        selectedIds.length === materials.length
+                      }
+                      onChange={toggleSelectAll}
+                    />
+                    全选本页
+                  </label>
+                  <span className="text-xs text-[#86909C]">
+                    {activeTab === '全部素材'
+                      ? '显示全部类型'
+                      : `仅显示：${activeTab}`}
+                  </span>
+                </div>
+
+                {loading ? (
+                  <div className="px-5 py-16 text-center text-sm text-[#86909C]">
+                    素材加载中…
+                  </div>
+                ) : loadError ? (
+                  <div className="px-5 py-16 text-center text-sm text-[#F53F3F]">
+                    {loadError}
+                  </div>
+                ) : materials.length === 0 ? (
+                  <div className="px-5 py-16 text-center text-sm text-[#86909C]">
+                    {activeTab === '全部素材'
+                      ? '暂无素材，可点击「上传素材」添加'
+                      : `暂无「${activeTab}」类素材`}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3 p-4 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+                    {materials.map((item) => (
+                      <MaterialGridCard
+                        key={item.id}
+                        item={item}
+                        selected={selectedIds.includes(item.id)}
+                        onSelect={toggleSelect}
+                        onPreview={setPreviewMaterial}
+                        onEdit={setEditMaterial}
+                        onDelete={deleteMaterial}
+                      />
+                    ))}
+                  </div>
+                )}
 
                 <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#EEF0F5] px-5 py-4 text-xs text-[#4E5969]">
                   <span>
@@ -1024,8 +863,8 @@ export default function MaterialsPage() {
             </div>
           </div>
 
-          <div className="space-y-4">
-            <StudioCard contentClassName="p-5">
+          <div className="space-y-2">
+            <StudioCard contentClassName="p-4">
               <SidebarTitle title="素材类型分布" />
               <UsageDonut stats={stats} />
             </StudioCard>
@@ -1050,16 +889,16 @@ export default function MaterialsPage() {
                 {!stats || stats.recentUploads.length === 0 ? (
                   <p className="text-xs text-[#86909C]">暂无上传记录</p>
                 ) : (
-                  stats.recentUploads.map((row, index) => (
+                  stats.recentUploads.map((row) => (
                     <button
                       key={row.id}
                       type="button"
                       className="flex w-full items-center gap-3 text-left"
                       onClick={() => openRecentUpload(row.id)}
                     >
-                      <MaterialThumbnail
+                      <RecentUploadThumb
                         type={apiTypeToMaterialType(row.type)}
-                        index={index}
+                        url={row.url}
                       />
                       <div>
                         <p className="text-sm font-semibold text-[#1D2129]">
@@ -1094,6 +933,32 @@ export default function MaterialsPage() {
         material={editMaterial}
         onSuccess={refreshAll}
       />
+      <AlertDialog
+        open={!!deleteDialog}
+        onOpenChange={(open) => {
+          if (!open) setDeleteDialog(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteDialog?.type === 'batch'
+                ? `确定删除选中的 ${selectedIds.length} 个素材吗？删除后不可恢复。`
+                : '确定删除该素材吗？删除后不可恢复。'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-[#F53F3F] hover:bg-[#D92E2E]"
+              onClick={confirmDelete}
+            >
+              确认删除
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </StudioLayout>
   );
 }

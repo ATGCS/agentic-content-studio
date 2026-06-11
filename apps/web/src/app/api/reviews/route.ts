@@ -50,3 +50,28 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export async function POST(req: NextRequest) {
+  try {
+    const user = await authenticate(req);
+    const body = await req.json();
+    const data = await reviewCenter.submitReview(user, body);
+    return successResponse(data, 'submitted');
+  } catch (err) {
+    if (err instanceof AppError) {
+      return NextResponse.json(
+        { code: err.code, message: err.message, data: null },
+        { status: err.httpStatus }
+      );
+    }
+    console.error('[reviews POST] unexpected error:', err);
+    return NextResponse.json(
+      {
+        code: 50000,
+        message: err instanceof Error ? err.message : 'internal error',
+        data: null,
+      },
+      { status: 500 }
+    );
+  }
+}

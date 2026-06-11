@@ -1,7 +1,9 @@
 export type PreviewMaterial = {
+  id?: string;
   role?: string;
   url?: string | null;
   name?: string | null;
+  type?: string;
   meta?: Record<string, unknown> | null;
 };
 

@@ -12,5 +12,7 @@ describe('getDashboardStats', () => {
     assert.ok(typeof stats.pendingPublish === 'number');
     assert.ok(typeof stats.publishedTotal === 'number');
     assert.ok(typeof stats.reviewed === 'number');
+    assert.ok(typeof stats.deltas.pendingGenerate === 'number');
+    assert.ok(typeof stats.deltas.publishedTotal === 'number');
   });
 });

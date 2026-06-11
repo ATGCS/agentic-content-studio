@@ -1,57 +1,65 @@
 'use client';
 
 import Link from 'next/link';
-import { Check, ChevronRight } from 'lucide-react';
+import { useState } from 'react';
+import { Check, ChevronDown, ChevronRight, ChevronUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export type WorkflowStepId = 'series' | 'content' | 'review' | 'publish';
+export type WorkflowStepId = 'content' | 'review' | 'publish' | 'analytics';
 
-export const CREATION_WORKFLOW_STEPS: Array<{
+/** 新手推荐：不依赖系列与前置配置 */
+export const QUICK_WORKFLOW_STEPS: Array<{
   id: WorkflowStepId;
   label: string;
   description: string;
   href: string;
 }> = [
   {
-    id: 'series',
-    label: '创建系列',
-    description: '同一主题的多篇文章归组，统一目标平台',
-    href: '/topics',
-  },
-  {
     id: 'content',
     label: '新建并生成',
-    description: '创建文章后在详情页一键生成，下方直接编辑',
+    description: '创建文章，在详情页一键 AI 生成平台版本',
     href: '/contents',
   },
   {
     id: 'review',
-    label: '审核发布',
-    description: '微调后提交审核，通过后进入发布管理',
+    label: '提交审核',
+    description: '微调后提交，审核员在审核中心处理',
     href: '/reviews',
   },
   {
     id: 'publish',
+    label: '发布内容',
+    description: '审核通过后在发布管理导出发布包，或绑定账号后一键发布',
+    href: '/publishing?packages=1',
+  },
+  {
+    id: 'analytics',
     label: '数据复盘',
-    description: '发布后查看各平台数据表现',
+    description: '发布后查看阅读与互动表现',
     href: '/analytics',
   },
 ];
 
+/** @deprecated 保留兼容，指向快速流程 */
+export const CREATION_WORKFLOW_STEPS = QUICK_WORKFLOW_STEPS;
+
 function stepIndex(id: WorkflowStepId) {
-  return CREATION_WORKFLOW_STEPS.findIndex((step) => step.id === id);
+  return QUICK_WORKFLOW_STEPS.findIndex((step) => step.id === id);
 }
 
 export function CreationWorkflowGuide({
   currentStep,
   compact = false,
+  dense = false,
   className,
 }: {
   currentStep?: WorkflowStepId;
   compact?: boolean;
+  dense?: boolean;
   className?: string;
 }) {
   const currentIndex = currentStep ? stepIndex(currentStep) : -1;
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   if (compact) {
     return (
@@ -62,7 +70,7 @@ export function CreationWorkflowGuide({
         )}
       >
         <span className="mr-1 font-medium text-[#4E5969]">创作流程</span>
-        {CREATION_WORKFLOW_STEPS.map((step, index) => {
+        {QUICK_WORKFLOW_STEPS.map((step, index) => {
           const done = currentIndex >= 0 && index < currentIndex;
           const active = step.id === currentStep;
           return (
@@ -90,37 +98,23 @@ export function CreationWorkflowGuide({
   return (
     <div
       className={cn(
-        'rounded-xl border border-[#E5E8EF] bg-white p-5',
+        'rounded-xl border border-[#E5E8EF] bg-white',
+        dense ? 'p-3' : 'p-5',
         className
       )}
     >
-      <div className="mb-4 flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-sm font-semibold text-[#1D2129]">
-            系列内容创作流程
-          </h3>
-          <p className="mt-1 text-xs text-[#86909C]">
-            做一系列内容时，按顺序完成以下步骤。首次使用请先配置
-            <Link
-              href="/settings/ima"
-              className="mx-1 text-[#1664FF] hover:underline"
-            >
-              知识库
-            </Link>
-            与
-            <Link
-              href="/accounts"
-              className="mx-1 text-[#1664FF] hover:underline"
-            >
-              平台账号
-            </Link>
-            。
-          </p>
-        </div>
+      <div className={dense ? 'mb-2' : 'mb-4'}>
+        <h3 className="text-sm font-semibold text-[#1D2129]">
+          快速上手（推荐）
+        </h3>
+        <p className="mt-0.5 text-xs text-[#86909C]">
+          无需提前配置，按下面 4 步即可完成「写文章 → 审核 →
+          发布」。系列归组、知识库与平台账号可在下方高级选项中按需配置。
+        </p>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-4">
-        {CREATION_WORKFLOW_STEPS.map((step, index) => {
+      <div className={cn('grid md:grid-cols-4', dense ? 'gap-2' : 'gap-3')}>
+        {QUICK_WORKFLOW_STEPS.map((step, index) => {
           const done = currentIndex >= 0 && index < currentIndex;
           const active = step.id === currentStep;
           const upcoming = currentIndex >= 0 && index > currentIndex;
@@ -168,6 +162,56 @@ export function CreationWorkflowGuide({
             </Link>
           );
         })}
+      </div>
+
+      <div
+        className={cn(
+          'rounded-lg border border-[#E5E8EF]',
+          dense ? 'mt-2' : 'mt-4'
+        )}
+      >
+        <button
+          type="button"
+          className="flex w-full items-center justify-between px-3 py-2.5 text-left text-xs font-medium text-[#4E5969] hover:text-[#1664FF]"
+          onClick={() => setAdvancedOpen((v) => !v)}
+        >
+          <span>高级选项（系列归组 / 知识库 / 平台账号）</span>
+          {advancedOpen ? (
+            <ChevronUp className="size-4" />
+          ) : (
+            <ChevronDown className="size-4" />
+          )}
+        </button>
+        {advancedOpen && (
+          <div className="border-t border-[#F2F3F5] px-3 py-3 text-xs leading-relaxed text-[#86909C]">
+            <ul className="space-y-2">
+              <li>
+                <Link href="/topics" className="text-[#1664FF] hover:underline">
+                  系列管理
+                </Link>
+                ：同一主题多篇内容归组，适合专栏或活动专题。
+              </li>
+              <li>
+                <Link
+                  href="/settings/ima"
+                  className="text-[#1664FF] hover:underline"
+                >
+                  知识库（IMA）
+                </Link>
+                ：接入后可提升生成质量；不配置也能体验基础生成。
+              </li>
+              <li>
+                <Link
+                  href="/accounts"
+                  className="text-[#1664FF] hover:underline"
+                >
+                  平台账号
+                </Link>
+                ：正式发布到各平台前需完成授权绑定。
+              </li>
+            </ul>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -57,10 +57,37 @@ function columnForStatus(status: string) {
   );
 }
 
+function formatKanbanTime(dateStr: string): string {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return '刚刚';
+  if (diffMin < 60) return `${diffMin}分钟前`;
+  const diffHour = Math.floor(diffMin / 60);
+  if (diffHour < 24) return `${diffHour}小时前`;
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${month}-${day} ${hours}:${minutes}`;
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  PENDING_REVIEW: '待审核',
+  PENDING_PUBLISH: '待发布',
+  PUBLISHED: '已发布',
+  REVIEWED: '复盘完成',
+  DRAFT: '草稿',
+  PENDING_GENERATE: '待生成',
+};
+
 function KanbanCard({ item }: { item: KanbanContent }) {
   const owner = item.creator?.name ?? item.creator?.email ?? '—';
   const progress =
     item.status === 'GENERATING' ? 35 + (item.id.charCodeAt(0) % 55) : null;
+  const timeLabel = formatKanbanTime(item.updatedAt);
+  const statusLabel = STATUS_LABEL[item.status] ?? item.status;
 
   return (
     <Link
@@ -90,22 +117,25 @@ function KanbanCard({ item }: { item: KanbanContent }) {
         {item.status === 'PENDING_PUBLISH' && (
           <>
             <Clock className="size-3 text-[#86909c]" />
-            <span className="text-[11px] text-[#86909c]">定时发布</span>
+            <span className="text-[11px] text-[#86909c]">待发布</span>
           </>
         )}
         {item.status === 'PUBLISHED' && (
           <span className="text-[11px] text-[#86909c]">已发布</span>
         )}
         {item.status === 'REVIEWED' && (
-          <span className="text-[11px] text-[#86909c]">05-20 复盘完成</span>
+          <span className="text-[11px] text-[#86909c]">复盘完成</span>
         )}
         {item.status === 'DRAFT' && (
-          <span className="text-[11px] text-[#86909c]">今天 18:00 截止</span>
+          <span className="text-[11px] text-[#86909c]">草稿</span>
         )}
       </div>
       <div className="mt-3 flex items-center justify-between">
         <span className="flex size-5 items-center justify-center rounded-full bg-[#f7d6c9] text-[10px] font-medium text-[#873e32]">
           {owner.slice(0, 1)}
+        </span>
+        <span className="text-[10px] text-[#a9aeb8]">
+          {statusLabel} · {timeLabel}
         </span>
       </div>
     </Link>
@@ -137,7 +167,7 @@ export function WorkflowKanban({
 
   return (
     <div className="studio-kanban-board">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-2 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-[#1D2129]">
           内容状态流程看板
         </h3>
@@ -154,7 +184,7 @@ export function WorkflowKanban({
             key={col.key}
             className="studio-kanban-column min-w-[190px] flex-1"
           >
-            <div className="mb-3 flex items-center gap-2">
+            <div className="mb-2 flex items-center gap-2">
               <span className={cn('text-xs font-bold', colorStyles[col.color])}>
                 {col.label}
               </span>

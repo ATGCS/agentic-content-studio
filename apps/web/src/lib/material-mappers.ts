@@ -13,7 +13,11 @@ export type ApiMaterial = {
   content?: {
     id?: string;
     title?: string | null;
-    creator?: { id?: string; name?: string | null; email?: string | null } | null;
+    creator?: {
+      id?: string;
+      name?: string | null;
+      email?: string | null;
+    } | null;
   } | null;
 };
 
@@ -49,11 +53,18 @@ export type MaterialStats = {
     id: string;
     name: string;
     type: ApiMaterial['type'];
+    url?: string | null;
     createdAt: string;
   }[];
 };
 
-export const MATERIAL_TABS = ['全部素材', '图片', '视频', '文档', '音频', '其他'] as const;
+export const MATERIAL_TABS = [
+  '全部素材',
+  '图片',
+  '视频',
+  '文档',
+  '音频',
+] as const;
 
 const materialTypeMap: Record<ApiMaterial['type'], MaterialType> = {
   IMAGE: 'image',
@@ -62,7 +73,9 @@ const materialTypeMap: Record<ApiMaterial['type'], MaterialType> = {
   FILE: 'document',
 };
 
-export function tabToMaterialType(tab: string): ApiMaterial['type'] | undefined {
+export function tabToMaterialType(
+  tab: string
+): ApiMaterial['type'] | undefined {
   switch (tab) {
     case '图片':
       return 'IMAGE';
@@ -86,7 +99,8 @@ export function formatBytes(bytes: number) {
   if (bytes <= 0) return '0 B';
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+  if (bytes < 1024 * 1024 * 1024)
+    return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
   return `${(bytes / 1024 / 1024 / 1024).toFixed(2)} GB`;
 }
 
@@ -119,7 +133,8 @@ export function mapApiMaterial(material: ApiMaterial): MaterialItem {
       ? [material.role]
       : [];
   const uploader = uploaderLabel(material);
-  const sizeBytes = typeof material.meta?.size === 'number' ? material.meta.size : 0;
+  const sizeBytes =
+    typeof material.meta?.size === 'number' ? material.meta.size : 0;
 
   return {
     id: material.id,

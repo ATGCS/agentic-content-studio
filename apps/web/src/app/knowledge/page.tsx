@@ -2,11 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { RefreshCw, Search } from 'lucide-react';
+import {
+  RefreshCw,
+  Search,
+  FolderOpen,
+  Users,
+  Power,
+  PowerOff,
+} from 'lucide-react';
 import { StudioLayout } from '@/components/StudioLayout';
 import { PageContainer } from '@/components/layout/page-container';
 import { EmptyState } from '@/components/studio/empty-state';
-import { PlatformBadge } from '@/components/studio/platform-badge';
 import { StudioCard } from '@/components/studio/studio-card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,17 +23,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-
-import {
-  StudioTable,
-  StudioTableBody,
-  StudioTableCell,
-  StudioTableEmpty,
-  StudioTableFrame,
-  StudioTableHead,
-  StudioTableHeader,
-  StudioTableRow,
-} from '@/components/studio/studio-table';
 import { api } from '@/lib/api';
 
 type KnowledgeItem = {
@@ -38,6 +33,7 @@ type KnowledgeItem = {
   enabled: boolean;
   updatedAt: string;
   description?: string | null;
+  _count?: { documents: number };
 };
 
 const categories = [
@@ -100,11 +96,15 @@ export default function KnowledgePage() {
   }
 
   async function toggleKnowledgeBase(item: KnowledgeItem) {
-    await api(`/api/ima/knowledge-bases/${item.id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ enabled: !item.enabled }),
-    });
-    await loadKnowledgeBases();
+    try {
+      await api(`/api/ima/knowledge-bases/${item.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ enabled: !item.enabled }),
+      });
+      await loadKnowledgeBases();
+    } catch (e) {
+      console.error('toggleKnowledgeBase error:', e);
+    }
   }
 
   const filtered = items.filter((item) => {
@@ -117,18 +117,19 @@ export default function KnowledgePage() {
   return (
     <StudioLayout>
       <PageContainer>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 max-w-md">
+        {/* 顶部操作栏 */}
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#86909c]" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="搜索知识条目…"
-              className="studio-input h-9 pl-9 text-sm"
+              placeholder="搜索知识库…"
+              className="h-9 w-64 pl-9 text-sm"
             />
           </div>
           <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger className="studio-input w-40">
+            <SelectTrigger className="h-9 w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -150,110 +151,82 @@ export default function KnowledgePage() {
           </Button>
         </div>
 
-        <div className="flex gap-4">
-          {/* 左侧分类树 */}
-          <aside className="hidden w-44 shrink-0 lg:block">
-            <StudioCard contentClassName="p-2">
-              <nav className="space-y-0.5">
-                {categories.map((c) => (
-                  <button
-                    key={c.value}
-                    type="button"
-                    onClick={() => setCategory(c.value)}
-                    className={`w-full rounded-md px-3 py-2 text-left text-xs font-medium transition-colors ${
-                      category === c.value
-                        ? 'bg-[#f0f5ff] text-[#1664ff]'
-                        : 'text-[#4e5969] hover:bg-[#f5f7fa]'
-                    }`}
-                  >
-                    {c.label}
-                  </button>
-                ))}
-              </nav>
-            </StudioCard>
-          </aside>
+        {/* 内容区域 */}
+        {loading ? (
+          <EmptyState
+            title="知识库加载中…"
+            description="正在从 IMA 配置读取知识库"
+          />
+        ) : loadError ? (
+          <EmptyState title="知识库加载失败" description={loadError} />
+        ) : filtered.length === 0 ? (
+          <EmptyState
+            title="暂无知识条目"
+            description="同步知识库后可供内容流程调用"
+          />
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filtered.map((item) => (
+              <Link
+                key={item.id}
+                href={`/knowledge/${item.id}`}
+                className="group"
+              >
+                <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition-all hover:shadow-md hover:border-gray-300">
+                  {/* 卡片头部 */}
+                  <div className="mb-3 flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <FolderOpen className="size-5 text-amber-500" />
+                      <h3 className="font-semibold text-gray-900 line-clamp-1 group-hover:text-[#1664ff]">
+                        {item.name}
+                      </h3>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        toggleKnowledgeBase(item);
+                      }}
+                      className={`rounded-full p-1.5 transition-colors ${
+                        item.enabled
+                          ? 'text-green-600 hover:bg-green-50'
+                          : 'text-gray-400 hover:bg-gray-100'
+                      }`}
+                      title={item.enabled ? '停用' : '启用'}
+                    >
+                      {item.enabled ? (
+                        <Power className="size-4" />
+                      ) : (
+                        <PowerOff className="size-4" />
+                      )}
+                    </button>
+                  </div>
 
-          {/* 主列表 */}
-          <div className="min-w-0 flex-1">
-            <StudioCard contentClassName="overflow-hidden">
-              {loading ? (
-                <EmptyState
-                  title="知识库加载中…"
-                  description="正在从 IMA 配置读取知识库"
-                />
-              ) : loadError ? (
-                <EmptyState title="知识库加载失败" description={loadError} />
-              ) : filtered.length === 0 ? (
-                <EmptyState
-                  title="暂无知识条目"
-                  description="同步知识库后可供内容流程调用"
-                />
-              ) : (
-                <StudioTable>
-                  <StudioTableHeader>
-                    <StudioTableRow>
-                      <StudioTableHead>名称</StudioTableHead>
-                      <StudioTableHead>类型</StudioTableHead>
-                      <StudioTableHead>适用平台</StudioTableHead>
-                      <StudioTableHead>启用</StudioTableHead>
-                      <StudioTableHead>最近更新</StudioTableHead>
-                      <StudioTableHead className="text-right">
-                        操作
-                      </StudioTableHead>
-                    </StudioTableRow>
-                  </StudioTableHeader>
-                  <StudioTableBody>
-                    {filtered.map((item) => (
-                      <StudioTableRow key={item.id}>
-                        <StudioTableCell className="font-medium">
-                          <Link
-                            href={`/knowledge/${item.id}`}
-                            className="text-[#1664ff] hover:underline"
-                          >
-                            {item.name}
-                          </Link>
-                        </StudioTableCell>
-                        <StudioTableCell>
-                          <span className="rounded-md bg-[#f0f5ff] px-2 py-0.5 text-xs text-[#1664ff]">
-                            {categoryLabels[item.agentType || ''] ?? '通用'}
-                          </span>
-                        </StudioTableCell>
-                        <StudioTableCell>
-                          {item.platform ? (
-                            <PlatformBadge platform={item.platform} />
-                          ) : (
-                            <span className="text-xs text-[#86909c]">通用</span>
-                          )}
-                        </StudioTableCell>
-                        <StudioTableCell>
-                          <span
-                            className={`text-xs font-medium ${
-                              item.enabled ? 'text-[#00b42a]' : 'text-[#86909c]'
-                            }`}
-                          >
-                            {item.enabled ? '已启用' : '未启用'}
-                          </span>
-                        </StudioTableCell>
-                        <StudioTableCell className="text-sm text-[#86909c]">
-                          {new Date(item.updatedAt).toLocaleDateString()}
-                        </StudioTableCell>
-                        <StudioTableCell className="text-right">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => toggleKnowledgeBase(item)}
-                          >
-                            {item.enabled ? '停用' : '启用'}
-                          </Button>
-                        </StudioTableCell>
-                      </StudioTableRow>
-                    ))}
-                  </StudioTableBody>
-                </StudioTable>
-              )}
-            </StudioCard>
+                  {/* 描述 */}
+                  <p className="mb-4 text-sm text-gray-500 line-clamp-2">
+                    {item.description || '这是一个知识库'}
+                  </p>
+
+                  {/* 卡片底部信息 */}
+                  <div className="flex items-center justify-between border-t border-gray-100 pt-3">
+                    <div className="flex items-center gap-3 text-xs text-gray-500">
+                      <span className="flex items-center gap-1">
+                        <span className="inline-block h-2 w-2 rounded-full bg-green-500"></span>
+                        {item._count?.documents ?? 0} 文档
+                      </span>
+                      <span>
+                        {categoryLabels[item.agentType || ''] ?? '通用'}
+                      </span>
+                    </div>
+                    <span className="text-xs text-gray-400">
+                      {new Date(item.updatedAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+              </Link>
+            ))}
           </div>
-        </div>
+        )}
       </PageContainer>
     </StudioLayout>
   );

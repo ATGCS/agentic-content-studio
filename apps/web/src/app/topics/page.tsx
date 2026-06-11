@@ -2,14 +2,20 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Edit, FileText, Plus, RefreshCw, Trash2, X } from 'lucide-react';
+import {
+  Edit,
+  FileText,
+  Layers,
+  Plus,
+  RefreshCw,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { StudioLayout } from '@/components/StudioLayout';
 import { PageContainer } from '@/components/layout/page-container';
 import { PlatformBadge } from '@/components/platform-icon';
-
-import { CreationWorkflowGuide } from '@/components/studio/creation-workflow-guide';
+import { EmptyState } from '@/components/studio/empty-state';
 import { StatusBadge } from '@/components/studio/status-badge';
-import { StudioCard } from '@/components/studio/studio-card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,16 +27,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  StudioTable,
-  StudioTableBody,
-  StudioTableCell,
-  StudioTableEmpty,
-  StudioTableFrame,
-  StudioTableHead,
-  StudioTableHeader,
-  StudioTableRow,
-} from '@/components/studio/studio-table';
 import { api } from '@/lib/api';
 
 type Topic = {
@@ -79,14 +75,12 @@ export default function TopicsPage() {
   const [form, setForm] = useState<TopicForm>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [total, setTotal] = useState(0);
 
   async function load() {
     setLoading(true);
     try {
       const res = await api<TopicListResponse>('/api/topics');
       setItems(res.data.items ?? []);
-      setTotal(res.data.total ?? res.data.items?.length ?? 0);
       setLoadError(null);
     } catch (error) {
       console.error(error);
@@ -155,158 +149,145 @@ export default function TopicsPage() {
     }
   }
 
-  const statusCounts = items.reduce<Record<string, number>>((acc, t) => {
-    acc[t.status] = (acc[t.status] || 0) + 1;
-    return acc;
-  }, {});
-
   return (
     <StudioLayout>
-      <PageContainer>
-        <CreationWorkflowGuide currentStep="series" compact className="mb-4" />
-
-        {loadError && (
-          <StudioCard contentClassName="p-4">
-            <p className="text-sm text-[#F53F3F]">{loadError}</p>
-          </StudioCard>
-        )}
-
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-3">
-            {items.length > 0 && (
-              <>
-                <div className="flex items-center gap-1.5 text-sm">
-                  <span className="text-[#86909c]">总计</span>
-                  <span className="font-semibold text-[#1D2129]">{total}</span>
-                </div>
-                {Object.entries(statusCounts).map(([status, count]) => (
-                  <div
-                    key={status}
-                    className="flex items-center gap-1.5 text-sm"
-                  >
-                    <StatusBadge status={status} />
-                    <span className="font-medium text-[#1D2129]">{count}</span>
-                  </div>
-                ))}
-              </>
-            )}
+      <PageContainer className="gap-2 !p-2 md:!p-3">
+        {/* 顶部栏 */}
+        <div className="flex w-full min-w-0 items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-4 py-2 shadow-sm">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-sm">
+              <Layers className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="truncate text-sm font-semibold text-gray-900">
+                系列管理
+              </h1>
+              <p className="text-xs text-gray-400">{items.length} 个系列</p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <Button
-              variant="outline"
               size="sm"
-              className="h-9 gap-1 text-xs"
+              variant="ghost"
+              className="h-8 w-8 p-0"
               onClick={load}
               disabled={loading}
             >
               <RefreshCw
-                className={`size-3.5 ${loading ? 'animate-spin' : ''}`}
+                className={`size-3.5 text-gray-500 ${loading ? 'animate-spin' : ''}`}
               />
-              刷新
             </Button>
             <Button
-              className="h-9 bg-[#1664FF] px-4 text-xs text-white hover:bg-[#0E52D9]"
+              size="sm"
+              className="h-8 bg-[#1664FF] text-xs text-white hover:bg-[#0E52D9]"
               onClick={openCreateForm}
             >
-              <Plus className="size-4" />
+              <Plus className="size-3.5" />
               新建系列
             </Button>
           </div>
         </div>
 
-        <StudioCard contentClassName="overflow-hidden p-0">
-          <StudioTableFrame
-            bare
-            loading={loading}
-            isEmpty={items.length === 0}
-            empty={{
-              title: '暂无系列',
-              description: '创建第一个系列，开始内容规划',
-              actionLabel: '新建系列',
-              onAction: openCreateForm,
-            }}
-            toolbar={<span>共 {items.length} 个系列</span>}
-          >
-            <StudioTable>
-              <StudioTableHeader>
-                <StudioTableRow>
-                  <StudioTableHead>系列标题</StudioTableHead>
-                  <StudioTableHead>描述</StudioTableHead>
-                  <StudioTableHead>文章数</StudioTableHead>
-                  <StudioTableHead>目标平台</StudioTableHead>
-                  <StudioTableHead>状态</StudioTableHead>
-                  <StudioTableHead>创建时间</StudioTableHead>
-                  <StudioTableHead align="right">操作</StudioTableHead>
-                </StudioTableRow>
-              </StudioTableHeader>
-              <StudioTableBody>
-                {items.map((t) => (
-                  <StudioTableRow key={t.id} className="group cursor-pointer">
-                    <StudioTableCell variant="primary">
-                      <Link
-                        href={`/topics/${t.id}`}
-                        className="flex items-center gap-2 hover:text-[#1664FF]"
-                      >
-                        <FileText className="size-4 text-[#C9CDD4] group-hover:text-[#1664FF]" />
-                        {t.title}
-                      </Link>
-                    </StudioTableCell>
-                    <StudioTableCell
-                      variant="muted"
-                      className="max-w-sm truncate"
-                    >
-                      {t.description || '—'}
-                    </StudioTableCell>
-                    <StudioTableCell>
-                      <span className="inline-flex items-center gap-1 rounded-full bg-[#F0F5FF] px-2.5 py-1 text-xs font-medium text-[#1664FF]">
-                        <FileText className="size-3" />
-                        {t.contentCount ?? 0}
-                      </span>
-                    </StudioTableCell>
-                    <StudioTableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {t.targetPlatforms && t.targetPlatforms.length > 0 ? (
-                          t.targetPlatforms.map((p) => (
-                            <PlatformBadge key={p} platform={p} size="sm" />
-                          ))
-                        ) : (
-                          <span className="text-xs text-[#C9CDD4]">未指定</span>
-                        )}
-                      </div>
-                    </StudioTableCell>
-                    <StudioTableCell>
+        {loadError && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+            <p className="text-sm text-[#F53F3F]">{loadError}</p>
+          </div>
+        )}
+
+        {/* 卡片列表 */}
+        {loading ? (
+          <div className="rounded-xl border border-gray-200 bg-white p-12 shadow-sm">
+            <p className="text-center text-sm text-gray-400">加载中…</p>
+          </div>
+        ) : items.length === 0 ? (
+          <div className="rounded-xl border border-gray-200 bg-white p-12 shadow-sm">
+            <EmptyState
+              title="暂无系列"
+              description="创建第一个系列，开始内容规划"
+              actionLabel="新建系列"
+              onAction={openCreateForm}
+            />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {items.map((t) => (
+              <Link
+                key={t.id}
+                href={`/topics/${t.id}`}
+                className="group relative flex flex-col rounded-lg border border-gray-200 bg-white p-4 transition-all hover:border-purple-300 hover:shadow-md"
+              >
+                {/* 卡片头部 */}
+                <div className="flex items-start gap-3">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-purple-50 text-purple-600">
+                    <Layers className="size-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="truncate text-sm font-semibold text-gray-900 group-hover:text-purple-600">
+                      {t.title}
+                    </h3>
+                    <div className="mt-1 flex items-center gap-2">
                       <StatusBadge status={t.status} />
-                    </StudioTableCell>
-                    <StudioTableCell variant="muted">
-                      {new Date(t.createdAt).toLocaleDateString()}
-                    </StudioTableCell>
-                    <StudioTableCell variant="actions">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openEditForm(t)}
-                        >
-                          <Edit className="size-3.5" />
-                          编辑
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          isLoading={deletingId === t.id}
-                          onClick={() => deleteTopic(t)}
-                        >
-                          <Trash2 className="size-3.5" />
-                          删除
-                        </Button>
-                      </div>
-                    </StudioTableCell>
-                  </StudioTableRow>
-                ))}
-              </StudioTableBody>
-            </StudioTable>
-          </StudioTableFrame>
-        </StudioCard>
+                      <span className="inline-flex items-center gap-1 text-xs text-gray-400">
+                        <FileText className="size-3" />
+                        {t.contentCount ?? 0} 篇
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 描述 */}
+                {t.description && (
+                  <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-gray-500">
+                    {t.description}
+                  </p>
+                )}
+
+                {/* 目标平台 */}
+                <div className="mt-3 flex flex-wrap gap-1">
+                  {t.targetPlatforms && t.targetPlatforms.length > 0 ? (
+                    t.targetPlatforms.map((p) => (
+                      <PlatformBadge key={p} platform={p} size="sm" />
+                    ))
+                  ) : (
+                    <span className="text-xs text-gray-300">未指定平台</span>
+                  )}
+                </div>
+
+                {/* 底部：时间 + 操作 */}
+                <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+                  <span className="text-xs text-gray-400">
+                    {new Date(t.createdAt).toLocaleDateString()}
+                  </span>
+                  <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        openEditForm(t);
+                      }}
+                      className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-purple-600"
+                    >
+                      <Edit className="size-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        deleteTopic(t);
+                      }}
+                      disabled={deletingId === t.id}
+                      className="rounded-md p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </PageContainer>
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>

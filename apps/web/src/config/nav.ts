@@ -10,7 +10,6 @@ import {
   Layers,
   MessageSquare,
   Settings,
-  Sparkles,
   Upload,
   Users,
 } from 'lucide-react';
@@ -19,6 +18,8 @@ export type NavItem = {
   href: string;
   label: string;
   icon: LucideIcon;
+  /** primary = 主流程；secondary = 更多工具 */
+  tier?: 'primary' | 'secondary';
   /** Header breadcrumb title */
   title?: string;
   /** Breadcrumb parent for header display */
@@ -29,20 +30,26 @@ export type NavItem = {
 
 /** Flat sidebar navigation — matches platform mockup */
 export const studioNavItems: NavItem[] = [
-  { href: '/dashboard', label: '工作台', icon: Home, title: '工作台' },
+  {
+    href: '/dashboard',
+    label: '工作台',
+    icon: Home,
+    title: '工作台',
+    tier: 'primary',
+  },
   {
     href: '/butler',
     label: 'AI 对话',
     icon: MessageSquare,
     title: 'AI 对话',
+    tier: 'primary',
   },
-  { href: '/contents', label: '内容管理', icon: FileText, title: '内容管理' },
   {
-    href: '/ai-generate',
-    label: 'AI 生成',
-    icon: Sparkles,
-    title: 'AI 生成',
-    parent: '/contents',
+    href: '/contents',
+    label: '内容管理',
+    icon: FileText,
+    title: '内容管理',
+    tier: 'primary',
   },
   {
     href: '/topics',
@@ -50,6 +57,7 @@ export const studioNavItems: NavItem[] = [
     icon: Layers,
     title: '系列管理',
     parent: '/contents',
+    tier: 'secondary',
   },
   {
     href: '/agent-tasks',
@@ -57,6 +65,7 @@ export const studioNavItems: NavItem[] = [
     icon: Bot,
     title: '任务记录',
     parent: '/contents',
+    tier: 'secondary',
   },
   {
     href: '/reviews',
@@ -64,14 +73,58 @@ export const studioNavItems: NavItem[] = [
     icon: CheckSquare,
     title: '审核中心',
     breadcrumb: '审核中心',
+    tier: 'primary',
   },
-  { href: '/accounts', label: '平台账号', icon: Users, title: '平台账号' },
-  { href: '/knowledge', label: '知识库', icon: Database, title: '知识库' },
-  { href: '/materials', label: '素材库', icon: FolderOpen, title: '素材库' },
-  { href: '/publishing', label: '发布管理', icon: Upload, title: '发布管理' },
-  { href: '/analytics', label: '数据复盘', icon: BarChart3, title: '数据复盘' },
-  { href: '/settings', label: '系统设置', icon: Settings, title: '系统设置' },
+  {
+    href: '/publishing',
+    label: '发布管理',
+    icon: Upload,
+    title: '发布管理',
+    tier: 'primary',
+  },
+  {
+    href: '/analytics',
+    label: '数据复盘',
+    icon: BarChart3,
+    title: '数据复盘',
+    tier: 'primary',
+  },
+  {
+    href: '/accounts',
+    label: '平台账号',
+    icon: Users,
+    title: '平台账号',
+    tier: 'secondary',
+  },
+  {
+    href: '/knowledge',
+    label: '知识库',
+    icon: Database,
+    title: '知识库',
+    tier: 'secondary',
+  },
+  {
+    href: '/materials',
+    label: '素材库',
+    icon: FolderOpen,
+    title: '素材库',
+    tier: 'secondary',
+  },
+  {
+    href: '/settings',
+    label: '系统设置',
+    icon: Settings,
+    title: '系统设置',
+    tier: 'secondary',
+  },
 ];
+
+export const primaryNavItems = studioNavItems.filter(
+  (item) => item.tier !== 'secondary'
+);
+export const secondaryNavItems = studioNavItems.filter(
+  (item) => item.tier === 'secondary'
+);
 
 type BreadcrumbConfig = { parent: string; child: string };
 
@@ -108,6 +161,7 @@ export function getNavTitle(pathname: string): string {
   if (pathname.startsWith('/topics')) return '系列管理';
   if (pathname.startsWith('/prompts')) return 'Prompt 管理';
   if (pathname.startsWith('/contents/')) return '内容详情';
+  if (pathname.startsWith('/knowledge/')) return '知识库详情';
 
   return '智能内容运营中台';
 }
@@ -141,6 +195,14 @@ export function getBreadcrumb(pathname: string): {
       parent: '内容管理',
       child: '内容详情',
       parentHref: '/contents',
+    };
+  }
+
+  if (/^\/knowledge\/[^/]+$/.test(pathname)) {
+    return {
+      parent: '知识库',
+      child: '知识库详情',
+      parentHref: '/knowledge',
     };
   }
 

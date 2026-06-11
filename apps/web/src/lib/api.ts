@@ -53,7 +53,20 @@ export async function api<T>(
     return pendingRedirect();
   }
 
-  const hasBody = !!options.body;
+  let body = options.body;
+  if (
+    body != null &&
+    typeof body === 'object' &&
+    !(body instanceof FormData) &&
+    !(body instanceof URLSearchParams) &&
+    !(body instanceof Blob) &&
+    !(body instanceof ArrayBuffer) &&
+    typeof (body as ReadableStream).getReader !== 'function'
+  ) {
+    body = JSON.stringify(body);
+  }
+
+  const hasBody = body != null && body !== '';
   const headers: Record<string, string> = {
     ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
     ...(options.headers as Record<string, string>),
@@ -61,12 +74,7 @@ export async function api<T>(
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(path, { ...options, headers });
-
-  if (res.status === 401) {
-    redirectToLogin();
-    return pendingRedirect();
-  }
+  const res = await fetch(path, { ...options, body, headers });
 
   const text = await res.text();
   let json: { code: number; message: string; data: T };
@@ -89,8 +97,8 @@ export async function api<T>(
   if (json.code !== 0) {
     const sessionRejected =
       !isLoginRequest &&
-      json.code === UNAUTHORIZED_CODE &&
-      json.message === 'unauthorized';
+      (json.code === UNAUTHORIZED_CODE ||
+        (res.status === 401 && json.message === 'unauthorized'));
 
     if (sessionRejected) {
       redirectToLogin();

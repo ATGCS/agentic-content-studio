@@ -412,75 +412,13 @@ export async function accountRoutes(app: FastifyInstance) {
   app.get(
     '/analytics/aggregate',
     { onRequest: [app.authenticate] },
-    async (_request, reply) => {
-      const [
-        viewsResult,
-        likesResult,
-        commentsResult,
-        sharesResult,
-        collectsResult,
-      ] = await Promise.all([
-        prisma.analyticsData.aggregate({ _sum: { views: true } }),
-        prisma.analyticsData.aggregate({ _sum: { likes: true } }),
-        prisma.analyticsData.aggregate({ _sum: { comments: true } }),
-        prisma.analyticsData.aggregate({ _sum: { shares: true } }),
-        prisma.analyticsData.aggregate({ _sum: { collects: true } }),
-      ]);
-      const totalViews = viewsResult._sum.views ?? 0;
-      const totalLikes = likesResult._sum.likes ?? 0;
-      const totalComments = commentsResult._sum.comments ?? 0;
-      const totalShares = sharesResult._sum.shares ?? 0;
-      const totalCollects = collectsResult._sum.collects ?? 0;
-
-      // Top 10 contents by views
-      const topContents = await prisma.analyticsData.groupBy({
-        by: ['contentId'],
-        _sum: { views: true, likes: true },
-        orderBy: { _sum: { views: 'desc' } },
-        take: 10,
-      });
-
-      const contentIds = topContents.map((t) => t.contentId);
-      const contentsMap = new Map(
-        (
-          await prisma.content.findMany({
-            where: { id: { in: contentIds } },
-            select: {
-              id: true,
-              title: true,
-              status: true,
-              versions: { select: { platform: true } },
-            },
-          })
-        ).map((c) => [c.id, c])
+    async (request, reply) => {
+      const { days } = request.query as { days?: string };
+      const period = Math.min(
+        90,
+        Math.max(1, Number.parseInt(days ?? '7', 10) || 7)
       );
-
-      const top10 = topContents.map((t) => {
-        const c = contentsMap.get(t.contentId);
-        const views = t._sum.views ?? 0;
-        const likes = t._sum.likes ?? 0;
-        const completion =
-          views > 0 ? ((likes / views) * 100).toFixed(1) + '%' : '0%';
-        return {
-          contentId: t.contentId,
-          title: c?.title ?? '未知内容',
-          platform: c?.versions?.[0]?.platform ?? 'WECHAT',
-          views: views.toLocaleString(),
-          interactions: likes.toLocaleString(),
-          completion,
-        };
-      });
-
-      return reply.success({
-        metrics: {
-          totalViews,
-          totalLikes,
-          totalComments,
-          totalShares,
-          totalCollects,
-        },
-        top10,
-      });
+      return reply.success(await analytics.getAnalyticsAggregate(period));
     }
   );
 
@@ -489,45 +427,7 @@ export async function accountRoutes(app: FastifyInstance) {
     '/reviews/stats',
     { onRequest: [app.authenticate] },
     async (_request, reply) => {
-      const [pending, approved, rejected, total] = await Promise.all([
-        prisma.reviewTask.count({ where: { status: 'PENDING' } }),
-        prisma.reviewTask.count({ where: { status: 'APPROVED' } }),
-        prisma.reviewTask.count({ where: { status: 'REJECTED' } }),
-        prisma.reviewTask.count(),
-      ]);
-
-      // Risk distribution (by content platform from version)
-      const reviewTasks = await prisma.reviewTask.findMany({
-        select: {
-          id: true,
-          version: {
-            select: { platform: true, id: true },
-          },
-        },
-        where: { versionId: { not: null } },
-        take: 500,
-      });
-
-      const platformCounts: Record<string, number> = {};
-      for (const task of reviewTasks) {
-        const platform = task.version?.platform ?? 'OTHER';
-        platformCounts[platform] = (platformCounts[platform] ?? 0) + 1;
-      }
-
-      return reply.success({
-        total,
-        pending,
-        approved,
-        rejected,
-        platformDistribution: Object.entries(platformCounts).map(
-          ([platform, count]) => ({
-            platform,
-            count,
-            percent:
-              total > 0 ? ((count / total) * 100).toFixed(1) + '%' : '0%',
-          })
-        ),
-      });
+      return reply.success(await analytics.getReviewStats());
     }
   );
 

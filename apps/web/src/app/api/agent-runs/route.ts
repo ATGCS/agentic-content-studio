@@ -1,12 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
+import jwt from 'jsonwebtoken';
 import { prisma, type AgentType, type RunStatus } from '@acs/db';
+import { AppError, ErrorCodes } from '@acs/core';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 
 function successResponse(data: unknown, message = 'success') {
   return NextResponse.json({ code: 0, message, data });
 }
 
+async function authenticate(req: NextRequest) {
+  const authHeader = req.headers.get('authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    throw new AppError(ErrorCodes.UNAUTHORIZED, 'unauthorized', 401);
+  }
+  const token = authHeader.slice(7);
+  try {
+    return jwt.verify(token, JWT_SECRET) as any;
+  } catch {
+    throw new AppError(ErrorCodes.UNAUTHORIZED, 'unauthorized', 401);
+  }
+}
+
 export async function GET(req: NextRequest) {
   try {
+    await authenticate(req);
     const params = new URL(req.url).searchParams;
     const contentId = params.get('contentId') ?? undefined;
     const status = params.get('status') as RunStatus | null;

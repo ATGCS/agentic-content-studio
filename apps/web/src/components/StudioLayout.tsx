@@ -2,6 +2,7 @@
 
 import { AppSidebar } from '@/components/layout/app-sidebar';
 import { StudioHeader } from '@/components/layout/studio-header';
+import { StudioOnboarding } from '@/components/studio/studio-onboarding';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { Loader2 } from 'lucide-react';
@@ -19,6 +20,7 @@ export function StudioLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider defaultOpen>
+      <StudioOnboarding />
       <AppSidebar />
       <SidebarInset className="studio-canvas">
         <StudioHeader />

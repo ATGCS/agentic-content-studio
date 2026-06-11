@@ -3,15 +3,14 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Bot, ExternalLink, Layers, Plus } from 'lucide-react';
+import { Bot, FileText, Layers, Plus, RefreshCw } from 'lucide-react';
 import {
   ContentEditDialog,
   type ContentEditForm,
 } from '@/components/dialogs/content-edit-dialog';
-import { CreationWorkflowGuide } from '@/components/studio/creation-workflow-guide';
+import { EmptyState } from '@/components/studio/empty-state';
 import { PlatformBadge } from '@/components/platform-icon';
 import { StatusBadge } from '@/components/studio/status-badge';
-import { StudioCard } from '@/components/studio/studio-card';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { StudioLayout } from '@/components/StudioLayout';
@@ -71,15 +70,21 @@ export default function TopicDetailPage() {
     setTopic(res.data);
   }
 
-  useEffect(() => {
+  async function load() {
     setLoading(true);
-    api<TopicDetail>(`/api/topics/${id}`)
-      .then((res) => {
-        setTopic(res.data);
-        setError(null);
-      })
-      .catch(() => setError('系列不存在或已被删除'))
-      .finally(() => setLoading(false));
+    try {
+      const res = await api<TopicDetail>(`/api/topics/${id}`);
+      setTopic(res.data);
+      setError(null);
+    } catch {
+      setError('系列不存在或已被删除');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    load().catch(() => setError('系列不存在或已被删除'));
   }, [id]);
 
   async function createArticle(form: ContentEditForm): Promise<string> {
@@ -119,17 +124,16 @@ export default function TopicDetailPage() {
     return (
       <StudioLayout>
         <PageContainer>
-          <StudioCard contentClassName="p-6 text-center">
-            <h2 className="text-base font-semibold text-[#1D2129]">
-              系列不可用
-            </h2>
-            <p className="mt-2 text-sm text-[#86909c]">
-              {error ?? '系列不存在或已被删除'}
-            </p>
-            <Button className="mt-4" onClick={() => router.push('/topics')}>
+          <div className="rounded-xl border border-gray-200 bg-white p-8 text-center shadow-sm">
+            <p className="text-sm text-red-500">{error ?? '系列不存在'}</p>
+            <Button
+              className="mt-4"
+              variant="outline"
+              onClick={() => router.push('/topics')}
+            >
               返回系列列表
             </Button>
-          </StudioCard>
+          </div>
         </PageContainer>
       </StudioLayout>
     );
@@ -137,173 +141,178 @@ export default function TopicDetailPage() {
 
   return (
     <StudioLayout>
-      <PageContainer>
-        <CreationWorkflowGuide currentStep="content" compact className="mb-4" />
-
-        <div className="mb-2">
-          <Link
-            href="/topics"
-            className="inline-flex items-center gap-1 text-sm text-[#86909c] hover:text-[#1664ff]"
-          >
-            <ArrowLeft className="size-4" />
-            返回系列列表
-          </Link>
+      <div data-page-title={topic.title} className="hidden" />
+      <PageContainer className="gap-2 !p-2 md:!p-3">
+        {/* 顶部栏：系列名称 + 操作 */}
+        <div className="flex w-full min-w-0 items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-4 py-2 shadow-sm">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-sm">
+              <Layers className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="truncate text-sm font-semibold text-gray-900">
+                {topic.title}
+              </h1>
+              <p className="text-xs text-gray-400">
+                {topic.contents.length} 篇文章
+              </p>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-8 w-8 p-0"
+              onClick={load}
+            >
+              <RefreshCw className="size-3.5 text-gray-500" />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 gap-1 text-xs"
+              asChild
+            >
+              <Link href={`/butler?topicId=${topic.id}`}>
+                <Bot className="size-3.5" />
+                AI 对话
+              </Link>
+            </Button>
+            <Button
+              size="sm"
+              className="h-8 bg-[#1664FF] text-xs text-white hover:bg-[#0E52D9]"
+              onClick={() => setCreateOpen(true)}
+            >
+              <Plus className="size-3.5" />
+              新建文章
+            </Button>
+          </div>
         </div>
 
-        {/* 系列信息头 */}
-        <StudioCard contentClassName="p-5">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-3">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-[#F0F5FF] text-[#1664FF]">
-                  <Layers className="size-5" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-[#1D2129]">
-                    {topic.title}
-                  </h1>
-                  {topic.description && (
-                    <p className="mt-1 text-sm text-[#4E5969]">
-                      {topic.description}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 gap-1.5 text-xs"
-                asChild
-              >
-                <Link href={`/butler?topicId=${topic.id}`}>
-                  <Bot className="size-3.5" />
-                  打开对话
-                </Link>
-              </Button>
-              <StatusBadge status={topic.status} />
-            </div>
-          </div>
-          <div className="mt-4 flex flex-wrap items-center gap-4 text-xs text-[#86909c]">
-            <span>来源：{topic.source === 'ai' ? 'AI 推荐' : '手动创建'}</span>
-            <span>
-              创建：{new Date(topic.createdAt).toLocaleDateString('zh-CN')}
-            </span>
-            <span>文章：{topic.contents.length} 篇</span>
-            {topic.targetPlatforms && topic.targetPlatforms.length > 0 && (
-              <span className="flex items-center gap-1">
-                目标平台：
-                {topic.targetPlatforms.map((p) => (
-                  <PlatformBadge key={p} platform={p} size="sm" />
-                ))}
+        {/* 系列描述 */}
+        {topic.description && (
+          <div className="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
+            <p className="text-sm text-gray-600">{topic.description}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-400">
+              <span>{topic.source === 'ai' ? 'AI 推荐' : '手动创建'}</span>
+              <span>
+                创建于 {new Date(topic.createdAt).toLocaleDateString('zh-CN')}
               </span>
-            )}
-          </div>
-        </StudioCard>
-
-        {topic.outline && topic.outline.articles.length > 0 && (
-          <StudioCard contentClassName="p-5">
-            <h2 className="text-sm font-bold text-[#1D2129]">系列大纲</h2>
-            <p className="mt-2 text-xs text-[#4E5969]">
-              {topic.outline.summary}
-            </p>
-            <div className="mt-3 space-y-2">
-              {[...topic.outline.articles]
-                .sort((a, b) => a.order - b.order)
-                .map((article) => (
-                  <div
-                    key={article.order}
-                    className="rounded-lg border border-[#E5E8EF] px-3 py-2"
-                  >
-                    <p className="text-sm font-medium text-[#1D2129]">
-                      {article.order}. {article.title}
-                    </p>
-                    <p className="mt-1 text-xs text-[#86909c]">
-                      {article.summary}
-                    </p>
-                  </div>
-                ))}
+              {topic.targetPlatforms && topic.targetPlatforms.length > 0 && (
+                <div className="flex items-center gap-1">
+                  {topic.targetPlatforms.map((p) => (
+                    <PlatformBadge key={p} platform={p} size="sm" />
+                  ))}
+                </div>
+              )}
             </div>
-          </StudioCard>
+          </div>
         )}
 
-        {/* 文章列表 */}
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold text-[#1D2129]">
-            系列文章（{topic.contents.length}）
-          </h2>
-          <Button
-            size="sm"
-            className="h-8 gap-1.5 bg-[#1664FF] text-xs text-white hover:bg-[#0E52D9]"
-            onClick={() => setCreateOpen(true)}
-          >
-            <Plus className="size-3.5" />
-            新建文章
-          </Button>
-        </div>
+        {/* 系列大纲 */}
+        {topic.outline && topic.outline.articles.length > 0 && (
+          <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+            <div className="border-b border-gray-100 px-4 py-3">
+              <h2 className="text-sm font-semibold text-gray-900">系列大纲</h2>
+              {topic.outline.summary && (
+                <p className="mt-1 line-clamp-2 text-xs text-gray-500">
+                  {topic.outline.summary}
+                </p>
+              )}
+            </div>
+            <div className="p-4">
+              <ol className="space-y-2">
+                {[...topic.outline.articles]
+                  .sort((a, b) => a.order - b.order)
+                  .map((article, index) => (
+                    <li
+                      key={article.order}
+                      className="flex items-start gap-3 rounded-lg bg-gray-50 px-4 py-3"
+                    >
+                      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-purple-100 text-xs font-semibold text-purple-600">
+                        {index + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-900">
+                          {article.title}
+                        </p>
+                        {article.summary && (
+                          <p className="mt-1 line-clamp-2 text-xs text-gray-500">
+                            {article.summary}
+                          </p>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+              </ol>
+            </div>
+          </div>
+        )}
 
-        <div className="space-y-3">
-          {topic.contents.length === 0 ? (
-            <StudioCard contentClassName="p-6 text-center">
-              <p className="text-sm text-[#86909c]">
-                暂无文章，点击「新建文章」为此系列创建第一篇内容
-              </p>
-            </StudioCard>
-          ) : (
-            topic.contents.map((content) => (
-              <StudioCard key={content.id} contentClassName="p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <Link
-                      href={`/contents/${content.id}`}
-                      className="text-sm font-semibold text-[#1D2129] hover:text-[#1664FF] hover:underline"
-                    >
-                      {content.title}
-                    </Link>
-                    {content.summary && (
-                      <p className="mt-1 text-xs text-[#86909C] line-clamp-2">
-                        {content.summary}
-                      </p>
-                    )}
+        {/* 文章卡片列表 */}
+        {topic.contents.length === 0 ? (
+          <div className="rounded-xl border border-gray-200 bg-white p-12 shadow-sm">
+            <EmptyState
+              title="暂无文章"
+              description="点击「新建文章」为此系列创建第一篇内容"
+              actionLabel="新建文章"
+              onAction={() => setCreateOpen(true)}
+            />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {topic.contents.map((content) => (
+              <Link
+                key={content.id}
+                href={`/contents/${content.id}`}
+                className="group flex flex-col rounded-lg border border-gray-200 bg-white p-4 transition-all hover:border-purple-300 hover:shadow-md"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-purple-50 text-purple-600">
+                    <FileText className="size-5" />
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <StatusBadge status={content.status} />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 gap-1 text-[10px]"
-                      asChild
-                    >
-                      <Link href={`/contents/${content.id}`}>编辑</Link>
-                    </Button>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="truncate text-sm font-semibold text-gray-900 group-hover:text-purple-600">
+                      {content.title}
+                    </h3>
+                    <div className="mt-1 flex items-center gap-2">
+                      <StatusBadge status={content.status} />
+                      <span className="text-xs text-gray-400">
+                        {new Date(content.createdAt).toLocaleDateString(
+                          'zh-CN'
+                        )}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
+                {content.summary && (
+                  <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-gray-500">
+                    {content.summary}
+                  </p>
+                )}
+
                 {content.versions && content.versions.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <div className="mt-3 flex flex-wrap gap-1">
                     {content.versions.map((v) => (
-                      <Link
+                      <PlatformBadge
                         key={v.id}
-                        href={`/contents/${content.id}`}
-                        className="inline-flex items-center gap-1 rounded-md border border-[#E5E8EF] px-2.5 py-1 text-[10px] text-[#4E5969] hover:border-[#1664FF] hover:text-[#1664FF]"
-                      >
-                        <PlatformBadge platform={v.platform} size="sm" />
-                        <StatusBadge status={v.status} />
-                        <ExternalLink className="size-3" />
-                      </Link>
+                        platform={v.platform}
+                        size="sm"
+                      />
                     ))}
                   </div>
                 )}
 
-                <div className="mt-2 text-[10px] text-[#A9AEB8]">
-                  创建于{' '}
-                  {new Date(content.createdAt).toLocaleDateString('zh-CN')}
+                <div className="mt-3 border-t border-gray-100 pt-3">
+                  <span className="text-xs text-gray-400">
+                    {content.versions?.length ?? 0} 个版本
+                  </span>
                 </div>
-              </StudioCard>
-            ))
-          )}
-        </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </PageContainer>
 
       <ContentEditDialog

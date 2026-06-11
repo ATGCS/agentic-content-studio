@@ -2,18 +2,21 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Lock, Mail, Sparkles } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { api, setToken } from '@/lib/api';
+import { LoginIllustration } from '@/components/login/login-illustration';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('admin@acs.local');
+  const [password, setPassword] = useState('admin123');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (loading) return;
     setError('');
     setLoading(true);
     try {
@@ -33,70 +36,95 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="login-scene grid place-items-center p-4">
+    <div className="login-scene">
+      <div className="login-orbit login-orbit--1" aria-hidden />
+      <div className="login-orbit login-orbit--2" aria-hidden />
+      <div className="login-orbit login-orbit--3" aria-hidden />
+      <div className="login-orbit login-orbit--4" aria-hidden />
+      <div className="login-star login-star--1" aria-hidden />
+      <div className="login-star login-star--2" aria-hidden />
+
       <div className="login-shell">
+        <div className="login-illustration-panel">
+          <LoginIllustration />
+          <p className="login-illustration-caption">
+            一站式 AI 内容生产、审核、发布与数据复盘
+          </p>
+        </div>
+
         <form className="login-form-panel" onSubmit={onSubmit}>
-          <div className="mb-8 flex items-center gap-3">
-            <div className="studio-brand-icon flex size-11 items-center justify-center rounded-xl">
-              <Sparkles className="size-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-[#1d2129]">
-                Agentic Content Studio
-              </h1>
-              <p className="text-sm text-[#86909c]">智能内容运营工作台</p>
-            </div>
+          <div className="login-form-header">
+            <h1 className="login-form-title">用户登录</h1>
+            <p className="login-form-subtitle">
+              欢迎登录 Agentic Content Studio
+            </p>
           </div>
 
-          <div className="space-y-4">
-            <div className="login-input-wrap">
-              <Mail />
-              <input
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@mail.com"
-                className="studio-input h-10 w-full px-3 text-sm outline-none"
-              />
+          <div className="login-field">
+            <label htmlFor="email" className="login-label">
+              用户名 / 邮箱
+            </label>
+            <input
+              id="email"
+              type="email"
+              autoComplete="username"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="admin@acs.local"
+              className="login-input"
+              required
+            />
+          </div>
+
+          <div className="login-field">
+            <div className="login-label-row">
+              <label htmlFor="password" className="login-label">
+                密码
+              </label>
             </div>
-            <div className="login-input-wrap">
-              <Lock />
+            <div className="login-password-wrap">
               <input
                 id="password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="密码"
-                className="studio-input h-10 w-full px-3 text-sm outline-none"
+                placeholder="请输入密码"
+                className="login-input"
+                required
               />
+              <button
+                type="button"
+                className="login-password-toggle"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? '隐藏密码' : '显示密码'}
+              >
+                {showPassword ? (
+                  <EyeOff className="size-4" />
+                ) : (
+                  <Eye className="size-4" />
+                )}
+              </button>
             </div>
           </div>
 
-          {error && <p className="mt-4 text-sm text-[#f53f3f]">{error}</p>}
+          {error && <p className="login-error">{error}</p>}
 
           <button
             type="submit"
             disabled={loading}
-            className="login-sign-in-btn mt-6"
+            className="login-sign-in-btn"
           >
-            {loading ? '登录中…' : '登录'}
+            {loading ? '登录中…' : '用户登录'}
           </button>
-        </form>
 
-        <div className="login-brand-panel">
-          <div className="studio-brand-icon flex size-16 items-center justify-center rounded-2xl">
-            <Sparkles className="size-8 text-white" />
-          </div>
-          <p className="max-w-[200px] text-center text-sm leading-relaxed font-medium text-[#4d4c6d]">
-            「一站式 AI 内容生产、审核、发布与数据复盘，让运营效率提升 10 倍。」
+          <p className="login-demo-hint">
+            演示账号：
+            <span className="login-demo-account">admin@acs.local</span>
+            {' / '}
+            <span className="login-demo-account">admin123</span>
           </p>
-          <div className="text-center">
-            <p className="text-sm font-semibold text-[#1d2129]">
-              Content Studio
-            </p>
-            <p className="text-xs text-[#86909c]">Powered by TurboPush</p>
-          </div>
-        </div>
+        </form>
       </div>
     </div>
   );

@@ -16,6 +16,8 @@
     "db:push": "pnpm --filter @acs/db db:push",
     "db:seed": "pnpm --filter @acs/db db:seed",
     "db:setup": "pnpm db:push && pnpm db:seed",
+    "kb:import": "pnpm exec tsx scripts/import-knowledge-docs.mjs",
+    "kb:import:dry": "pnpm exec tsx scripts/import-knowledge-docs.mjs --dry-run",
     "test": "pnpm db:test:setup && pnpm test:packages && pnpm --filter @acs/api test",
     "test:packages": "pnpm -r --filter \"./packages/**\" run test",
     "db:test:setup": "pnpm --filter @acs/db db:test:push && pnpm --filter @acs/db db:test:seed",

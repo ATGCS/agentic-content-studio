@@ -61,9 +61,6 @@ export const statLabels = {
 };
 
 export const copy = {
-  infoTitle: '任务记录 ≠ 生成历史',
-  infoBody:
-    '此处记录每次 Agent 调用的执行状态、模型与输入输出，数据来自数据库 AgentRun。内容的标题/正文快照与恢复，请打开对应内容详情页左侧的「生成历史」面板。',
   taskType: '任务类型',
   status: '状态',
   reset: '重置',

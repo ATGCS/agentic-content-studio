@@ -110,6 +110,7 @@ export async function getMaterialStats(user: AuthUser) {
       id: true,
       name: true,
       type: true,
+      url: true,
       source: true,
       meta: true,
       createdAt: true,
@@ -158,6 +159,7 @@ export async function getMaterialStats(user: AuthUser) {
     id: row.id,
     name: row.name ?? row.content?.title ?? '未命名素材',
     type: row.type,
+    url: row.url,
     createdAt: row.createdAt.toISOString(),
   }));
 
@@ -245,7 +247,8 @@ export async function updateMaterial(
   requireRoles(user, 'ADMIN', 'OPERATOR');
   const existing = await getMaterial(user, id);
   const nextUrl = data.url !== undefined ? data.url : existing.url;
-  const nextPath = data.localPath !== undefined ? data.localPath : existing.localPath;
+  const nextPath =
+    data.localPath !== undefined ? data.localPath : existing.localPath;
   if (!nextUrl?.trim() && !nextPath?.trim()) {
     throw new AppError(
       ErrorCodes.BAD_REQUEST,

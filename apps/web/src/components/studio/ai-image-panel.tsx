@@ -14,14 +14,21 @@ import {
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
+import type { PreviewMaterial } from '@/lib/preview-body';
+import {
+  getCompactCoverThumbWidth,
+  getPlatformCoverInfo,
+  pickCoverUrl,
+} from '@/lib/platform-cover';
+import { getPlatformLabel } from '@/lib/tokens';
 
-type Material = {
-  id: string;
-  role: string;
-  name?: string | null;
-  url?: string | null;
-  type: string;
-};
+type Material = PreviewMaterial & { id: string; type: string };
+
+function asImageMaterials(materials: PreviewMaterial[]): Material[] {
+  return materials.filter((m): m is Material =>
+    Boolean(m.id && m.type && m.url && m.type === 'IMAGE')
+  );
+}
 
 const PLATFORM_OPTIONS = [
   { value: 'XIAOHONGSHU', label: '小红书' },
@@ -42,7 +49,7 @@ function materialShortLabel(m: Material, index: number) {
 
 type AiImagePanelProps = {
   contentId: string;
-  materials?: Material[];
+  materials?: PreviewMaterial[];
   defaultPlatform?: string;
   versionId?: string;
   onUpdated?: () => void;
@@ -67,13 +74,18 @@ export function AiImagePanel({
   const [error, setError] = useState<string | null>(null);
   const [latestUrl, setLatestUrl] = useState<string | null>(null);
 
-  const imageMaterials = materials.filter((m) => m.type === 'IMAGE' && m.url);
+  const coverInfo = getPlatformCoverInfo(platform);
 
   useEffect(() => {
-    const imgs = materials.filter((m) => m.type === 'IMAGE' && m.url);
-    const cover = imgs.find((m) => m.role === 'COVER');
-    setLatestUrl(cover?.url ?? imgs[0]?.url ?? null);
-  }, [materials]);
+    setPlatform(defaultPlatform);
+  }, [defaultPlatform]);
+
+  const imageMaterials = asImageMaterials(materials);
+
+  useEffect(() => {
+    const url = pickCoverUrl(materials, { platform, versionId });
+    setLatestUrl(url);
+  }, [materials, platform, versionId]);
 
   const runGenerate = useCallback(async () => {
     setGenerating(true);
@@ -139,32 +151,63 @@ export function AiImagePanel({
         补充生成图片
       </h3>
 
-      {latestUrl && !compact && (
-        <div className="mb-3 overflow-hidden rounded-lg border border-[#E5E8EF] bg-[#FAFBFC]">
-          <img
-            src={latestUrl}
-            alt="预览"
-            className="mx-auto max-h-48 w-full object-contain"
-          />
+      {latestUrl && (
+        <div className="mb-3">
+          <p className="mb-1.5 text-xs text-[#86909C]">
+            {getPlatformLabel(platform)} · {coverInfo.aspectLabel}
+          </p>
+          <div
+            className={cn(
+              'mx-auto overflow-hidden rounded-lg border border-[#E5E8EF] bg-[#FAFBFC]',
+              coverInfo.aspect,
+              compact
+                ? getCompactCoverThumbWidth(coverInfo.aspect)
+                : 'max-w-sm w-full'
+            )}
+          >
+            <img
+              src={latestUrl}
+              alt="封面预览"
+              className="size-full object-cover"
+            />
+          </div>
         </div>
       )}
 
       <div className="mb-3 grid gap-2 sm:grid-cols-2">
-        <div>
-          <Label className="text-xs text-[#86909C]">平台</Label>
-          <Select value={platform} onValueChange={setPlatform}>
-            <SelectTrigger className="mt-1 h-9 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {PLATFORM_OPTIONS.map((p) => (
-                <SelectItem key={p.value} value={p.value}>
-                  {p.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {compact ? (
+          <div className="sm:col-span-2">
+            <Label className="text-xs text-[#86909C]">目标平台</Label>
+            <p className="mt-1 text-sm font-medium text-[#1D2129]">
+              {getPlatformLabel(platform)}
+              <span className="ml-1.5 font-normal text-[#86909C]">
+                · {coverInfo.aspectLabel}
+              </span>
+            </p>
+            <p className="mt-0.5 text-[11px] leading-relaxed text-[#86909C]">
+              {coverInfo.description}。切换右侧预览 Tab 可生成其他平台尺寸。
+            </p>
+          </div>
+        ) : (
+          <div>
+            <Label className="text-xs text-[#86909C]">平台</Label>
+            <Select value={platform} onValueChange={setPlatform}>
+              <SelectTrigger className="mt-1 h-9 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PLATFORM_OPTIONS.map((p) => (
+                  <SelectItem key={p.value} value={p.value}>
+                    {p.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="mt-1 text-[11px] text-[#86909C]">
+              {coverInfo.aspectLabel} · {coverInfo.description}
+            </p>
+          </div>
+        )}
         <div>
           <Label className="text-xs text-[#86909C]">类型</Label>
           <Select

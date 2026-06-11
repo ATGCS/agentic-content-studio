@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { ContentReviewDialog } from '@/components/dialogs/content-review-dialog';
 import { StudioLayout } from '@/components/StudioLayout';
 import { PageContainer } from '@/components/layout/page-container';
@@ -21,8 +22,6 @@ import {
   ChevronRight,
   ChevronLeft,
   Clock,
-  MoreHorizontal,
-  Calendar,
   RotateCcw,
   Search,
   ShieldAlert,
@@ -30,16 +29,6 @@ import {
   XOctagon,
   FileText,
 } from 'lucide-react';
-import {
-  StudioTable,
-  StudioTableBody,
-  StudioTableCell,
-  StudioTableEmpty,
-  StudioTableFrame,
-  StudioTableHead,
-  StudioTableHeader,
-  StudioTableRow,
-} from '@/components/studio/studio-table';
 import { api } from '@/lib/api';
 
 /* ---------- types ---------- */
@@ -80,12 +69,11 @@ type ReviewsStats = {
 
 /* ---------- tab config ---------- */
 
-type TabValue = 'all' | 'pending' | 'highRisk' | 'rejected' | 'approved';
+type TabValue = 'all' | 'pending' | 'rejected' | 'approved';
 
 const tabs: { value: TabValue; label: string }[] = [
   { value: 'all', label: '全部' },
   { value: 'pending', label: '待审核' },
-  { value: 'highRisk', label: '高风险' },
   { value: 'rejected', label: '已驳回' },
   { value: 'approved', label: '已通过' },
 ];
@@ -93,7 +81,14 @@ const tabs: { value: TabValue; label: string }[] = [
 /* ---------- page ---------- */
 
 export default function ReviewsPage() {
-  const [tab, setTab] = useState<TabValue>('all');
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get('status');
+  const [tab, setTab] = useState<TabValue>(() => {
+    if (initialTab === 'pending') return 'pending';
+    if (initialTab === 'approved') return 'approved';
+    if (initialTab === 'rejected') return 'rejected';
+    return 'all';
+  });
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [stats, setStats] = useState<ReviewsStats | null>(null);
   const [total, setTotal] = useState(0);
@@ -104,16 +99,11 @@ export default function ReviewsPage() {
   const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
 
-  /* filter state */
   const [platformFilter, setPlatformFilter] = useState('all');
-  const [accountFilter, setAccountFilter] = useState('all');
-  const [reviewTypeFilter, setReviewTypeFilter] = useState('all');
-  const [riskFilter, setRiskFilter] = useState('all');
 
   const tabStatusMap: Record<TabValue, string> = {
     all: '',
     pending: 'PENDING',
-    highRisk: '',
     rejected: 'REJECTED',
     approved: 'APPROVED',
   };
@@ -168,9 +158,6 @@ export default function ReviewsPage() {
 
   function resetFilters() {
     setPlatformFilter('all');
-    setAccountFilter('all');
-    setReviewTypeFilter('all');
-    setRiskFilter('all');
     setTab('all');
   }
 
@@ -202,23 +189,13 @@ export default function ReviewsPage() {
       {
         label: '待审核',
         value: stats.pending,
-        delta: '+0',
         icon: Clock,
         iconBg: '#FFF7E6',
         iconColor: '#FF7D00',
       },
       {
-        label: '高风险',
-        value: 0,
-        delta: '+0',
-        icon: ShieldAlert,
-        iconBg: '#FFF1F0',
-        iconColor: '#F53F3F',
-      },
-      {
         label: '已驳回',
         value: stats.rejected,
-        delta: '+0',
         icon: XOctagon,
         iconBg: '#F5F1FF',
         iconColor: '#7B61FF',
@@ -226,15 +203,13 @@ export default function ReviewsPage() {
       {
         label: '已通过',
         value: stats.approved,
-        delta: '+0',
         icon: ShieldCheck,
         iconBg: '#E8FFEA',
         iconColor: '#00B42A',
       },
       {
-        label: '今日审核量',
-        value: 0,
-        delta: '+0',
+        label: '全部',
+        value: stats.total,
         icon: FileText,
         iconBg: '#E8F3FF',
         iconColor: '#1664FF',
@@ -258,36 +233,6 @@ export default function ReviewsPage() {
                 : 0,
     }));
   }, [stats]);
-
-  /* ---- helpers ---- */
-  const getRiskBadge = (level: string) => {
-    if (level === 'high')
-      return (
-        <Badge
-          variant="secondary"
-          className="bg-[#FFF1F0] text-[#F53F3F] hover:bg-[#FFF1F0] border-0"
-        >
-          高风险
-        </Badge>
-      );
-    if (level === 'medium')
-      return (
-        <Badge
-          variant="secondary"
-          className="bg-[#FFF7E6] text-[#FF7D00] hover:bg-[#FFF7E6] border-0"
-        >
-          中风险
-        </Badge>
-      );
-    return (
-      <Badge
-        variant="secondary"
-        className="bg-[#E8FFEA] text-[#00B42A] hover:bg-[#E8FFEA] border-0"
-      >
-        低风险
-      </Badge>
-    );
-  };
 
   const getStatusBadge = (status: string) => {
     if (status === 'pending' || status === 'PENDING')
@@ -343,9 +288,9 @@ export default function ReviewsPage() {
           <div className="flex min-h-screen">
             <div className="flex-1 p-4 md:p-6">
               {/* 统计卡片 */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
                 {statsLoading
-                  ? Array.from({ length: 5 }).map((_, i) => (
+                  ? Array.from({ length: 4 }).map((_, i) => (
                       <div
                         key={i}
                         className="studio-stat-card flex items-start justify-between p-4 bg-white rounded-xl shadow-sm border border-[#EEF0F5]"
@@ -373,14 +318,6 @@ export default function ReviewsPage() {
                             </div>
                             <div className="studio-stat-value mt-2 text-2xl font-bold text-[#1D2129]">
                               {stat.value}
-                            </div>
-                            <div className="studio-stat-hint flex items-center gap-1 mt-1">
-                              <span className="text-xs text-[#86909C]">
-                                较昨日
-                              </span>
-                              <span className="text-[#F53F3F] font-medium text-xs">
-                                {stat.delta}
-                              </span>
                             </div>
                           </div>
                           <div
@@ -424,284 +361,162 @@ export default function ReviewsPage() {
                     ))}
                   </div>
 
-                  {/* 筛选行 */}
-                  <div className="flex flex-wrap items-center gap-3 pb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-[#86909C] min-w-[48px]">
-                        平台
-                      </span>
-                      <Select
-                        value={platformFilter}
-                        onValueChange={setPlatformFilter}
-                      >
-                        <SelectTrigger size="sm" className="w-28 h-8 text-xs">
-                          <SelectValue placeholder="全部平台" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">全部平台</SelectItem>
-                          <SelectItem value="WECHAT">微信公众号</SelectItem>
-                          <SelectItem value="XIAOHONGSHU">小红书</SelectItem>
-                          <SelectItem value="DOUYIN">抖音</SelectItem>
-                          <SelectItem value="ZHIHU">知乎</SelectItem>
-                          <SelectItem value="BILIBILI">B站</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  {showFilters && (
+                    <div className="flex flex-wrap items-center gap-3 pb-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-[#86909C] min-w-[48px]">
+                          平台
+                        </span>
+                        <Select
+                          value={platformFilter}
+                          onValueChange={setPlatformFilter}
+                        >
+                          <SelectTrigger size="sm" className="w-28 h-8 text-xs">
+                            <SelectValue placeholder="全部平台" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">全部平台</SelectItem>
+                            <SelectItem value="WECHAT">微信公众号</SelectItem>
+                            <SelectItem value="XIAOHONGSHU">小红书</SelectItem>
+                            <SelectItem value="DOUYIN">抖音</SelectItem>
+                            <SelectItem value="ZHIHU">知乎</SelectItem>
+                            <SelectItem value="BILIBILI">B站</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-[#86909C] min-w-[48px]">
-                        账号
-                      </span>
-                      <Select
-                        value={accountFilter}
-                        onValueChange={setAccountFilter}
-                      >
-                        <SelectTrigger size="sm" className="w-28 h-8 text-xs">
-                          <SelectValue placeholder="全部账号" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">全部账号</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <div className="flex items-center gap-2 ml-auto">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 text-xs bg-white border-[#E5E8EF] text-[#4E5969] hover:bg-[#F5F7FA]"
+                          onClick={resetFilters}
+                        >
+                          <RotateCcw className="size-3.5 mr-1" />
+                          重置
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 text-xs bg-white border-[#E5E8EF] text-[#4E5969] hover:bg-[#F5F7FA]"
+                          onClick={() => setShowFilters(false)}
+                        >
+                          收起筛选
+                        </Button>
+                      </div>
                     </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-[#86909C] min-w-[60px]">
-                        审核类型
-                      </span>
-                      <Select
-                        value={reviewTypeFilter}
-                        onValueChange={setReviewTypeFilter}
-                      >
-                        <SelectTrigger size="sm" className="w-28 h-8 text-xs">
-                          <SelectValue placeholder="全部类型" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">全部类型</SelectItem>
-                          <SelectItem value="content">内容合规</SelectItem>
-                          <SelectItem value="marketing">营销合规</SelectItem>
-                          <SelectItem value="image">图片审核</SelectItem>
-                          <SelectItem value="copyright">版权审核</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-[#86909C] min-w-[60px]">
-                        风险等级
-                      </span>
-                      <Select value={riskFilter} onValueChange={setRiskFilter}>
-                        <SelectTrigger size="sm" className="w-28 h-8 text-xs">
-                          <SelectValue placeholder="全部风险" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">全部风险</SelectItem>
-                          <SelectItem value="high">高风险</SelectItem>
-                          <SelectItem value="medium">中风险</SelectItem>
-                          <SelectItem value="low">低风险</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="flex items-center gap-2">
+                  )}
+                  {!showFilters && (
+                    <div className="flex justify-end pb-4">
                       <Button
                         size="sm"
                         variant="outline"
                         className="h-8 text-xs bg-white border-[#E5E8EF] text-[#4E5969] hover:bg-[#F5F7FA]"
-                      >
-                        <Calendar className="size-3.5 mr-1" />
-                        开始日期 - 结束日期
-                      </Button>
-                    </div>
-
-                    <div className="flex items-center gap-2 ml-auto">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 text-xs bg-white border-[#E5E8EF] text-[#4E5969] hover:bg-[#F5F7FA]"
-                        onClick={resetFilters}
-                      >
-                        <RotateCcw className="size-3.5 mr-1" />
-                        重置
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="h-8 text-xs bg-[#1664FF] hover:bg-[#1664FF]/90"
-                        onClick={() => load()}
+                        onClick={() => setShowFilters(true)}
                       >
                         <Search className="size-3.5 mr-1" />
-                        筛选
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-8 text-xs bg-white border-[#E5E8EF] text-[#4E5969] hover:bg-[#F5F7FA]"
-                        onClick={() => setShowFilters(!showFilters)}
-                      >
-                        {showFilters ? '收起' : '展开'}
+                        按平台筛选
                       </Button>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 <div className="p-5">
-                  <StudioTable>
-                    <StudioTableHeader>
-                      <StudioTableRow className="hover:bg-transparent border-[#E5E8EF]">
-                        <StudioTableHead className="w-10 py-3">
-                          <input
-                            type="checkbox"
-                            className="size-4 rounded border-[#C9CDD4] text-[#1664FF] focus:ring-[#1664FF]"
-                          />
-                        </StudioTableHead>
-                        <StudioTableHead className="text-xs text-[#86909C] font-normal py-3">
-                          内容标题
-                        </StudioTableHead>
-                        <StudioTableHead className="text-xs text-[#86909C] font-normal py-3">
-                          平台
-                        </StudioTableHead>
-                        <StudioTableHead className="text-xs text-[#86909C] font-normal py-3">
-                          目标账号
-                        </StudioTableHead>
-                        <StudioTableHead className="text-xs text-[#86909C] font-normal py-3">
-                          审核类型
-                        </StudioTableHead>
-                        <StudioTableHead className="text-xs text-[#86909C] font-normal py-3">
-                          风险等级
-                        </StudioTableHead>
-                        <StudioTableHead className="text-xs text-[#86909C] font-normal py-3">
-                          提交时间
-                        </StudioTableHead>
-                        <StudioTableHead className="text-xs text-[#86909C] font-normal py-3">
-                          提交人来源
-                        </StudioTableHead>
-                        <StudioTableHead className="text-xs text-[#86909C] font-normal py-3">
-                          状态
-                        </StudioTableHead>
-                        <StudioTableHead className="text-xs text-[#86909C] font-normal py-3 text-right">
-                          操作
-                        </StudioTableHead>
-                      </StudioTableRow>
-                    </StudioTableHeader>
-                    <StudioTableBody>
-                      {loading ? (
-                        <StudioTableRow>
-                          <StudioTableCell
-                            colSpan={10}
-                            className="py-8 text-center text-[#86909C]"
+                  {loading ? (
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                      {Array.from({ length: 8 }).map((_, i) => (
+                        <div
+                          key={i}
+                          className="border border-gray-200 rounded-xl p-4 space-y-3 animate-pulse"
+                        >
+                          <div className="h-4 bg-gray-200 rounded w-3/4" />
+                          <div className="h-3 bg-gray-100 rounded w-1/2" />
+                          <div className="h-3 bg-gray-100 rounded w-2/3" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : items.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-[#86909C]">
+                      <ShieldAlert className="size-12 mb-3 text-[#C9CDD4]" />
+                      <p className="text-sm">暂无审核内容</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                      {items.map((item) => {
+                        const isPending =
+                          item.status === 'pending' ||
+                          item.status === 'PENDING';
+                        return (
+                          <Link
+                            key={item.id}
+                            href={`/reviews/${item.id}`}
+                            className="group border border-gray-200 bg-white rounded-xl p-4 hover:shadow-md hover:border-[#7B61FF]/40 transition-all duration-200 cursor-pointer block"
                           >
-                            加载中…
-                          </StudioTableCell>
-                        </StudioTableRow>
-                      ) : items.length === 0 ? (
-                        <StudioTableRow>
-                          <StudioTableCell
-                            colSpan={10}
-                            className="py-8 text-center text-[#86909C]"
-                          >
-                            暂无待审核内容
-                          </StudioTableCell>
-                        </StudioTableRow>
-                      ) : (
-                        items.map((item) => {
-                          const isPending =
-                            item.status === 'pending' ||
-                            item.status === 'PENDING';
-                          return (
-                            <StudioTableRow
-                              key={item.id}
-                              className="hover:bg-[#F7F8FA] border-[#E5E8EF] group"
-                            >
-                              <StudioTableCell className="py-3">
-                                <input
-                                  type="checkbox"
-                                  className="size-4 rounded border-[#C9CDD4] text-[#1664FF] focus:ring-[#1664FF]"
-                                />
-                              </StudioTableCell>
-                              <StudioTableCell className="py-3">
-                                <Link
-                                  href={`/reviews/${item.id}`}
-                                  className="text-sm font-medium text-[#1D2129] hover:text-[#1664FF] hover:underline max-w-[260px] truncate block"
-                                >
-                                  {item.content?.title || item.title}
-                                </Link>
-                              </StudioTableCell>
-                              <StudioTableCell className="py-3">
+                            {/* 标题 + 状态 */}
+                            <div className="flex items-start justify-between gap-2 mb-3">
+                              <h3 className="text-sm font-semibold text-[#1D2129] line-clamp-2 flex-1 group-hover:text-[#7B61FF] transition-colors">
+                                {item.content?.title || item.title}
+                              </h3>
+                              {getStatusBadge(item.status)}
+                            </div>
+
+                            {/* 平台 + 账号 */}
+                            <div className="space-y-2 mb-3">
+                              <div className="flex items-center gap-2 text-xs text-[#4E5969]">
                                 <PlatformBadge platform={item.platform} />
-                              </StudioTableCell>
-                              <StudioTableCell className="py-3 text-sm text-[#4E5969]">
-                                {item.account || '-'}
-                              </StudioTableCell>
-                              <StudioTableCell className="py-3">
-                                <Badge
-                                  variant="secondary"
-                                  className="bg-[#F2F5FA] text-[#4E5969] hover:bg-[#F2F5FA] border-0"
+                                <span className="truncate">
+                                  {item.account || '未绑定账号'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1 text-xs text-[#86909C]">
+                                <Clock className="size-3" />
+                                <span>
+                                  {item.submittedAt
+                                    ? new Date(item.submittedAt).toLocaleString(
+                                        'zh-CN',
+                                        {
+                                          month: '2-digit',
+                                          day: '2-digit',
+                                          hour: '2-digit',
+                                          minute: '2-digit',
+                                        }
+                                      )
+                                    : '-'}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* 操作按钮 */}
+                            <div
+                              className="flex items-center justify-end gap-2 pt-2 border-t border-gray-100"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }}
+                            >
+                              {isPending ? (
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  className="h-7 text-xs bg-[#7B61FF] hover:bg-[#6A50E6] text-white"
+                                  onClick={() => handleReview(item)}
                                 >
-                                  {item.reviewType || '内容合规'}
-                                </Badge>
-                              </StudioTableCell>
-                              <StudioTableCell className="py-3">
-                                {getRiskBadge(item.riskLevel || 'low')}
-                              </StudioTableCell>
-                              <StudioTableCell className="py-3 text-sm text-[#86909C]">
-                                {item.submittedAt
-                                  ? new Date(item.submittedAt).toLocaleString(
-                                      'zh-CN',
-                                      {
-                                        month: '2-digit',
-                                        day: '2-digit',
-                                        hour: '2-digit',
-                                        minute: '2-digit',
-                                      }
-                                    )
-                                  : '-'}
-                              </StudioTableCell>
-                              <StudioTableCell className="py-3 text-sm text-[#86909C]">
-                                {item.source || 'Agent生成'}
-                              </StudioTableCell>
-                              <StudioTableCell className="py-3">
-                                {getStatusBadge(item.status)}
-                              </StudioTableCell>
-                              <StudioTableCell className="py-3 text-right">
-                                <div className="flex items-center justify-end gap-3">
-                                  {isPending ? (
-                                    <>
-                                      <button
-                                        type="button"
-                                        onClick={() => handleReview(item)}
-                                        className="text-sm text-[#1664FF] hover:underline font-medium"
-                                      >
-                                        审核
-                                      </button>
-                                      <Link
-                                        href={`/reviews/${item.id}`}
-                                        className="text-sm text-[#4E5969] hover:text-[#1664FF]"
-                                      >
-                                        详情
-                                      </Link>
-                                    </>
-                                  ) : (
-                                    <Link
-                                      href={`/reviews/${item.id}`}
-                                      className="text-sm text-[#4E5969] hover:text-[#1664FF]"
-                                    >
-                                      查看
-                                    </Link>
-                                  )}
-                                  <Link
-                                    href={`/reviews/${item.id}`}
-                                    className="text-[#86909C] hover:text-[#4E5969] opacity-0 group-hover:opacity-100 transition-opacity"
-                                  >
-                                    <MoreHorizontal className="size-4" />
-                                  </Link>
-                                </div>
-                              </StudioTableCell>
-                            </StudioTableRow>
-                          );
-                        })
-                      )}
-                    </StudioTableBody>
-                  </StudioTable>
+                                  审核
+                                </Button>
+                              ) : null}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs border-[#7B61FF] text-[#7B61FF] hover:bg-[#F5F3FF]"
+                              >
+                                详情
+                              </Button>
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
 
                   {/* 分页 */}
                   <div className="flex items-center justify-between mt-6">

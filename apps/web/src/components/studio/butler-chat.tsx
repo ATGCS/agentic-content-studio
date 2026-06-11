@@ -75,6 +75,24 @@ type TopicOption = {
 
 const QUICK_COMMANDS = [
   {
+    label: '写一篇文章',
+    text: '帮我写一篇小红书风格的文章，主题你帮我定',
+    icon: FileStack,
+    needsTopic: false,
+  },
+  {
+    label: '改写优化',
+    text: '帮我优化一段营销文案，让语气更自然',
+    icon: Zap,
+    needsTopic: false,
+  },
+  {
+    label: '同步知识库',
+    text: '同步知识库',
+    icon: RefreshCw,
+    needsTopic: false,
+  },
+  {
     label: '规划大纲',
     text: '规划 5 篇文章大纲',
     icon: ListTree,
@@ -97,12 +115,6 @@ const QUICK_COMMANDS = [
     text: '一键生成',
     icon: Zap,
     needsTopic: true,
-  },
-  {
-    label: '同步知识库',
-    text: '同步知识库',
-    icon: RefreshCw,
-    needsTopic: false,
   },
 ] as const;
 
@@ -765,20 +777,22 @@ export function ButlerChat({
                   <p className="mt-2 max-w-sm text-sm leading-relaxed text-[#86909c]">
                     {selectedTopic
                       ? '选择上方快捷指令，或直接输入你想做的事'
-                      : '先在顶部选择一个系列，即可开始规划大纲、批量建文和一键生成'}
+                      : '可直接输入需求开始对话；若要做系列批量创作，请在顶部选择系列'}
                   </p>
                   <div className="mt-6 flex flex-wrap justify-center gap-2">
-                    {QUICK_COMMANDS.slice(0, 3).map((cmd) => (
-                      <button
-                        key={cmd.label}
-                        type="button"
-                        disabled={cmd.needsTopic && !session?.topicId}
-                        onClick={() => sendMessage(cmd.text)}
-                        className="rounded-full border border-[#E5E8EF] bg-white px-4 py-2 text-xs text-[#4E5969] transition-colors hover:border-[#1664FF]/40 hover:text-[#1664FF] disabled:opacity-40"
-                      >
-                        {cmd.label}
-                      </button>
-                    ))}
+                    {QUICK_COMMANDS.filter((cmd) => !cmd.needsTopic)
+                      .slice(0, 3)
+                      .map((cmd) => (
+                        <button
+                          key={cmd.label}
+                          type="button"
+                          disabled={cmd.needsTopic && !session?.topicId}
+                          onClick={() => sendMessage(cmd.text)}
+                          className="rounded-full border border-[#E5E8EF] bg-white px-4 py-2 text-xs text-[#4E5969] transition-colors hover:border-[#1664FF]/40 hover:text-[#1664FF] disabled:opacity-40"
+                        >
+                          {cmd.label}
+                        </button>
+                      ))}
                   </div>
                 </div>
               )}

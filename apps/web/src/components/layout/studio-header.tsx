@@ -41,12 +41,35 @@ export function StudioHeader() {
   const pageTitle = getNavTitle(pathname);
   const breadcrumb = getBreadcrumb(pathname);
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [dynamicTitle, setDynamicTitle] = useState<string | null>(null);
 
   useEffect(() => {
     api<AuthUser>('/api/auth/me')
       .then((res) => setUser(res.data))
       .catch(() => setUser(null));
   }, []);
+
+  // 监听页面通过 data 属性传递的动态标题
+  useEffect(() => {
+    const el = document.querySelector('[data-page-title]');
+    if (el) {
+      setDynamicTitle(el.getAttribute('data-page-title'));
+    } else {
+      setDynamicTitle(null);
+    }
+    // 使用 MutationObserver 监听 DOM 变化，处理页面延迟渲染的情况
+    const observer = new MutationObserver(() => {
+      const target = document.querySelector('[data-page-title]');
+      setDynamicTitle(target?.getAttribute('data-page-title') ?? null);
+    });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['data-page-title'],
+    });
+    return () => observer.disconnect();
+  }, [pathname]);
 
   const displayName = user?.name ?? '—';
   const roleLabel = user ? (roleLabels[user.role] ?? user.role) : '—';
@@ -62,9 +85,11 @@ export function StudioHeader() {
         {breadcrumb ? (
           <>
             <p className="truncate text-[22px] font-bold tracking-[-0.01em] text-[#1D2129]">
-              {breadcrumb.parent === breadcrumb.child
-                ? breadcrumb.child
-                : `${breadcrumb.parent} - ${breadcrumb.child}`}
+              {dynamicTitle
+                ? `${breadcrumb.parent} - ${dynamicTitle}`
+                : breadcrumb.parent === breadcrumb.child
+                  ? breadcrumb.child
+                  : `${breadcrumb.parent} - ${breadcrumb.child}`}
             </p>
             <nav className="mt-2 flex items-center gap-1.5 text-xs text-[#86909c]">
               <Link href="/dashboard" className="hover:text-[#1664ff]">
@@ -86,7 +111,9 @@ export function StudioHeader() {
                 </>
               )}
               <ChevronRight className="size-3" />
-              <span className="text-[#4e5969]">{breadcrumb.child}</span>
+              <span className="text-[#4e5969]">
+                {dynamicTitle ?? breadcrumb.child}
+              </span>
             </nav>
           </>
         ) : (

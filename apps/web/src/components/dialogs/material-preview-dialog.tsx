@@ -12,7 +12,11 @@ interface MaterialPreviewDialogProps {
   material: MaterialItem | null;
 }
 
-export function MaterialPreviewDialog({ open, onOpenChange, material }: MaterialPreviewDialogProps) {
+export function MaterialPreviewDialog({
+  open,
+  onOpenChange,
+  material,
+}: MaterialPreviewDialogProps) {
   if (!material) return null;
 
   const previewUrl = material.url ?? undefined;
@@ -23,17 +27,25 @@ export function MaterialPreviewDialog({ open, onOpenChange, material }: Material
       onOpenChange={onOpenChange}
       title={material.name}
       description={`${material.format} · ${material.size}`}
-      className="sm:max-w-[640px]"
+      className="sm:max-w-[min(960px,92vw)]"
     >
       <div className="space-y-4">
-        <div className="flex min-h-[200px] items-center justify-center overflow-hidden rounded-lg border border-[#EEF0F5] bg-[#F7F8FA] p-4">
+        <div className="flex min-h-[280px] items-center justify-center overflow-hidden rounded-lg border border-[#EEF0F5] bg-[#0B0F19] p-2">
           {!previewUrl ? (
             <p className="text-sm text-[#86909C]">暂无预览地址</p>
           ) : material.type === 'image' ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={previewUrl} alt={material.name} className="max-h-[360px] max-w-full rounded-md object-contain" />
+            <img
+              src={previewUrl}
+              alt={material.name}
+              className="max-h-[min(70vh,640px)] max-w-full rounded-md object-contain"
+            />
           ) : material.type === 'video' ? (
-            <video src={previewUrl} controls className="max-h-[360px] max-w-full rounded-md" />
+            <video
+              src={previewUrl}
+              controls
+              className="max-h-[min(70vh,640px)] max-w-full rounded-md"
+            />
           ) : material.type === 'audio' ? (
             <audio src={previewUrl} controls className="w-full" />
           ) : (
@@ -52,9 +64,18 @@ export function MaterialPreviewDialog({ open, onOpenChange, material }: Material
         </div>
 
         <div className="grid grid-cols-2 gap-3 text-xs text-[#4E5969]">
-          <div><span className="text-[#86909C]">来源：</span>{material.source}</div>
-          <div><span className="text-[#86909C]">上传人：</span>{material.uploader}</div>
-          <div><span className="text-[#86909C]">上传时间：</span>{material.uploadedAt}</div>
+          <div>
+            <span className="text-[#86909C]">来源：</span>
+            {material.source}
+          </div>
+          <div>
+            <span className="text-[#86909C]">上传人：</span>
+            {material.uploader}
+          </div>
+          <div>
+            <span className="text-[#86909C]">上传时间：</span>
+            {material.uploadedAt}
+          </div>
           <div>
             <span className="text-[#86909C]">标签：</span>
             {material.tags.length > 0 ? material.tags.join('、') : '-'}
@@ -68,8 +89,14 @@ export function MaterialPreviewDialog({ open, onOpenChange, material }: Material
             </Button>
           )}
           {previewUrl && (
-            <Button asChild size="sm" className="h-9 bg-[#1664FF] text-xs text-white hover:bg-[#0E52D9]">
-              <a href={previewUrl} target="_blank" rel="noopener noreferrer">下载 / 打开</a>
+            <Button
+              asChild
+              size="sm"
+              className="h-9 bg-[#1664FF] text-xs text-white hover:bg-[#0E52D9]"
+            >
+              <a href={previewUrl} target="_blank" rel="noopener noreferrer">
+                下载 / 打开
+              </a>
             </Button>
           )}
         </div>

@@ -3,7 +3,7 @@ import { AppError, ErrorCodes } from '@acs/core';
 import { encryptToken, decryptToken } from './token-crypto.js';
 import { oauthPublicBase, platformToSlug } from './platform-slug.js';
 import { consumeOAuthState } from './oauth-state.js';
-import { getAdapter } from './adapters/index.js';
+import { getAdapter, isMockOAuthEnabled } from './adapters/index.js';
 import { getOAuthConfig } from './oauth-config.js';
 import { AccountAuthStatus, canTransition } from './status.js';
 
@@ -31,14 +31,16 @@ export async function startBind(input: {
   });
 
   const callbackBase = oauthPublicBase();
-  const redirectUri = `${callbackBase}/api/oauth/${platformToSlug(input.platform)}/callback`;
+  const slug = platformToSlug(input.platform);
+  const redirectUri = `${callbackBase}/api/oauth/${slug}/callback`;
 
-  const adapter = getAdapter(input.platform, oauthConfig);
-  const authorizationUrl = adapter.buildAuthorizeUrl({
-    state,
-    redirectUri,
-    scopes: input.scopes,
-  });
+  const authorizationUrl = isMockOAuthEnabled(input.platform, oauthConfig)
+    ? `${callbackBase}/api/oauth/${slug}/dev-authorize?state=${encodeURIComponent(state)}`
+    : getAdapter(input.platform, oauthConfig).buildAuthorizeUrl({
+        state,
+        redirectUri,
+        scopes: input.scopes,
+      });
 
   if (input.accountId) {
     const account = await prisma.platformAccount.findUnique({
@@ -79,8 +81,14 @@ export async function completeOAuthCallback(input: {
     redirectUri: input.redirectUri,
   });
 
+  const openId =
+    typeof tokenResult.rawData?.open_id === 'string'
+      ? tokenResult.rawData.open_id
+      : undefined;
+
   const profile = await adapter.getAccountProfile({
     accessToken: tokenResult.accessToken,
+    openId,
   });
 
   let account = await prisma.platformAccount.findFirst({
@@ -302,7 +310,7 @@ export async function syncWorks(accountId: string) {
   if (!account)
     throw new AppError(ErrorCodes.NOT_FOUND, 'account not found', 404);
   if (!account.token)
-    throw new AppError(ErrorCodes.UNAUTHORIZED, 'account not bound', 401);
+    throw new AppError(ErrorCodes.BAD_REQUEST, 'account not bound', 400);
 
   const oauthConfig = await getOAuthConfig();
   const adapter = getAdapter(account.platform, oauthConfig);
@@ -377,7 +385,7 @@ export async function syncMetricsForAccount(
   if (!account)
     throw new AppError(ErrorCodes.NOT_FOUND, 'account not found', 404);
   if (!account.token)
-    throw new AppError(ErrorCodes.UNAUTHORIZED, 'account not bound', 401);
+    throw new AppError(ErrorCodes.BAD_REQUEST, 'account not bound', 400);
 
   const adapter = getAdapter(account.platform);
   if (!adapter.syncMetrics)

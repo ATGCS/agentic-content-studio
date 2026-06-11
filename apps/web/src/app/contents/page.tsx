@@ -2,15 +2,27 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   Edit,
   Layers,
   Plus,
   RefreshCw,
   Search,
+  Trash2,
   WandSparkles,
 } from 'lucide-react';
 import { StudioLayout } from '@/components/StudioLayout';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   ContentEditDialog,
   type ContentEditForm,
@@ -34,8 +46,6 @@ import {
   StudioTable,
   StudioTableBody,
   StudioTableCell,
-  StudioTableEmpty,
-  StudioTableFrame,
   StudioTableHead,
   StudioTableHeader,
   StudioTableRow,
@@ -79,6 +89,7 @@ type ContentListResponse = {
 };
 
 const statusKeys: ContentStatus[] = [
+  'DRAFT',
   'PENDING_GENERATE',
   'GENERATING',
   'PENDING_REVIEW',
@@ -87,7 +98,11 @@ const statusKeys: ContentStatus[] = [
   'REVIEWED',
 ];
 
+const validStatusFilters = new Set<string>(['ALL', ...statusKeys]);
+
 export default function ContentsPage() {
+  const searchParams = useSearchParams();
+  const initialStatus = searchParams.get('status')?.toUpperCase() ?? 'ALL';
   const [items, setItems] = useState<ContentItem[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [keyword, setKeyword] = useState('');
@@ -101,7 +116,11 @@ export default function ContentsPage() {
   const [topicFilter, setTopicFilter] = useState('');
   const [topics, setTopics] = useState<{ id: string; title: string }[]>([]);
   const [aiContentId, setAiContentId] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteDialogId, setDeleteDialogId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState(
+    validStatusFilters.has(initialStatus) ? initialStatus : 'ALL'
+  );
 
   async function load() {
     setLoading(true);
@@ -178,6 +197,20 @@ export default function ContentsPage() {
     setDialogOpen(true);
   }
 
+  async function doDelete() {
+    if (!deleteDialogId) return;
+    setDeletingId(deleteDialogId);
+    setDeleteDialogId(null);
+    try {
+      await api(`/api/contents/${deleteDialogId}`, { method: 'DELETE' });
+      await load();
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
   async function saveContent(form: ContentEditForm): Promise<string | void> {
     const topicId =
       form.topicId && form.topicId.trim() ? form.topicId.trim() : undefined;
@@ -193,6 +226,7 @@ export default function ContentsPage() {
         body: JSON.stringify({
           title: form.title,
           summary: form.summary || undefined,
+          topicId,
         }),
       });
       return;
@@ -261,7 +295,6 @@ export default function ContentsPage() {
               value={statusFilter}
               onValueChange={(val) => {
                 setStatusFilter(val);
-                load();
               }}
             >
               <SelectTrigger className="h-9 w-36 bg-white text-xs">
@@ -286,7 +319,6 @@ export default function ContentsPage() {
             <button
               onClick={() => {
                 setTopicFilter('');
-                load();
               }}
               className={`rounded-lg border px-3 py-1 text-xs transition-all ${!topicFilter ? 'border-[#1664FF] bg-[#F0F5FF] text-[#1664FF]' : 'border-[#E5E8EF] text-[#4E5969] hover:border-[#C9D8FF]'}`}
             >
@@ -297,7 +329,6 @@ export default function ContentsPage() {
                 key={t.id}
                 onClick={() => {
                   setTopicFilter(t.id);
-                  load();
                 }}
                 className={`rounded-lg border px-3 py-1 text-xs transition-all ${topicFilter === t.id ? 'border-[#1664FF] bg-[#F0F5FF] text-[#1664FF]' : 'border-[#E5E8EF] text-[#4E5969] hover:border-[#C9D8FF]'}`}
               >
@@ -470,6 +501,15 @@ export default function ContentsPage() {
                             <Edit className="size-3.5" />
                             编辑
                           </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 text-[#F53F3F] hover:text-[#F53F3F] hover:bg-red-50"
+                            disabled={deletingId === c.id}
+                            onClick={() => setDeleteDialogId(c.id)}
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
                         </div>
                       </StudioTableCell>
                     </StudioTableRow>
@@ -508,6 +548,30 @@ export default function ContentsPage() {
         }
         onSubmit={saveContent}
       />
+      <AlertDialog
+        open={!!deleteDialogId}
+        onOpenChange={(open) => {
+          if (!open) setDeleteDialogId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除</AlertDialogTitle>
+            <AlertDialogDescription>
+              删除后数据不可恢复，确定要删除这条内容吗？
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-[#F53F3F] hover:bg-[#D92E2E]"
+              onClick={doDelete}
+            >
+              {deletingId ? '删除中…' : '确认删除'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </StudioLayout>
   );
 }

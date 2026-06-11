@@ -13,6 +13,7 @@ function BindResultContent() {
   const success = params.get('success') === 'true';
   const accountId = params.get('accountId') ?? '';
   const isDev = params.get('dev') === 'true';
+  const error = params.get('error');
 
   return (
     <StudioLayout>
@@ -43,8 +44,10 @@ function BindResultContent() {
               <h1 className="text-xl font-semibold text-[#1D2129]">
                 账号绑定失败
               </h1>
-              <p className="text-sm text-[#4E5969]">
-                授权流程未完成，请重试或联系管理员
+              <p className="max-w-md text-center text-sm text-[#4E5969]">
+                {error
+                  ? decodeURIComponent(error)
+                  : '授权流程未完成，请重试或联系管理员'}
               </p>
             </>
           )}

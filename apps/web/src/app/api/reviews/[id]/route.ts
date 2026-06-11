@@ -1,61 +1,73 @@
-import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
+import { NextRequest } from 'next/server';
 import { prisma } from '@acs/db';
 import { AppError, ErrorCodes } from '@acs/core';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
-
-function successResponse(data: any, message = 'success') {
-  return NextResponse.json({ code: 0, message, data });
-}
-
-async function authenticate(req: NextRequest) {
-  const authHeader = req.headers.get('authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    throw new AppError(ErrorCodes.UNAUTHORIZED, 'unauthorized', 401);
-  }
-  const token = authHeader.slice(7);
-  try {
-    return jwt.verify(token, JWT_SECRET) as any;
-  } catch {
-    throw new AppError(ErrorCodes.UNAUTHORIZED, 'unauthorized', 401);
-  }
-}
+import {
+  authenticateRequest,
+  errorResponse,
+  successResponse,
+} from '@/lib/api-auth';
 
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    await authenticate(req);
+    await authenticateRequest(req);
     const { id } = await params;
     const review = await prisma.reviewTask.findUnique({
       where: { id },
       include: {
-        content: true,
-        version: true,
-        reviewer: { select: { id: true, name: true } },
+        content: {
+          include: {
+            topic: { select: { title: true } },
+            materials: { orderBy: { createdAt: 'desc' } },
+          },
+        },
+        version: {
+          include: {
+            account: { select: { accountName: true, platform: true } },
+          },
+        },
+        reviewer: { select: { id: true, name: true, email: true } },
       },
     });
     if (!review) {
       throw new AppError(ErrorCodes.NOT_FOUND, 'review not found', 404);
     }
-    return successResponse(review);
-  } catch (err) {
-    if (err instanceof AppError) {
-      return NextResponse.json(
-        { code: err.code, message: err.message, data: null },
-        { status: err.httpStatus }
-      );
-    }
-    console.error('[reviews id GET] unexpected error:', err);
-    return NextResponse.json(
-      {
-        code: 50000,
-        message: err instanceof Error ? err.message : 'internal error',
-        data: null,
+
+    return successResponse({
+      id: review.id,
+      status: review.status,
+      comment: review.comment,
+      createdAt: review.createdAt,
+      reviewedAt: review.reviewedAt,
+      contentId: review.contentId,
+      reviewer: review.reviewer,
+      content: {
+        id: review.content.id,
+        title: review.content.title,
+        summary: review.content.summary,
+        body: review.content.body,
+        coverText: review.content.coverText,
+        topic: review.content.topic,
+        materials: review.content.materials,
       },
-      { status: 500 }
-    );
+      version: review.version
+        ? {
+            id: review.version.id,
+            platform: review.version.platform,
+            title: review.version.title,
+            body: review.version.body,
+            coverText: review.version.coverText,
+            tags: review.version.tags,
+            status: review.version.status,
+            formatConfig: review.version.formatConfig,
+            account: review.version.account,
+          }
+        : null,
+    });
+  } catch (err) {
+    console.error('[reviews id GET]', err);
+    return errorResponse(err);
   }
 }

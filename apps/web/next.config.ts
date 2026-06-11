@@ -13,6 +13,7 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname, '../..'),
   serverExternalPackages: ['@prisma/client', 'better-sqlite3'],
   transpilePackages: [
+    '@acs/analytics-center',
     '@acs/core',
     '@acs/db',
     '@acs/content-center',
@@ -26,6 +27,7 @@ const nextConfig: NextConfig = {
     '@acs/studio-agents',
     '@acs/studio-workflows',
     '@acs/studio-butler',
+    '@acs/turbopush-adapter',
   ],
   // Force rebuild to detect new API routes
   webpack: (config) => {

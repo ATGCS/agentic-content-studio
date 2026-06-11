@@ -14,7 +14,11 @@ import {
   SidebarRail,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { studioNavItems } from '@/config/nav';
+import {
+  primaryNavItems,
+  secondaryNavItems,
+  studioNavItems,
+} from '@/config/nav';
 import { clearToken } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -99,10 +103,20 @@ export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { toggleSidebar, state } = useSidebar();
+  const [moreOpen, setMoreOpen] = useState(() =>
+    secondaryNavItems
+      .filter((item) => !item.parent)
+      .some(
+        (item) => pathname === item.href || pathname.startsWith(`${item.href}/`)
+      )
+  );
 
-  // Group nav items by parent
-  const topLevelItems = studioNavItems.filter((item) => !item.parent);
+  const topLevelItems = primaryNavItems.filter((item) => !item.parent);
   const subItems = studioNavItems.filter((item) => item.parent);
+  const secondaryTop = secondaryNavItems.filter((item) => !item.parent);
+  const secondaryActive = secondaryTop.some(
+    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`)
+  );
 
   return (
     <Sidebar collapsible="icon" className="studio-sidebar">
@@ -130,6 +144,54 @@ export function AppSidebar() {
             />
           ))}
         </SidebarMenu>
+
+        {secondaryTop.length > 0 && (
+          <SidebarMenu className="mt-2 border-t border-[#E5E8EF] pt-2">
+            <SidebarMenuItem>
+              <button
+                type="button"
+                className={cn(
+                  'studio-nav-link w-full text-left',
+                  secondaryActive && 'studio-nav-link--active'
+                )}
+                onClick={() => setMoreOpen((v) => !v)}
+              >
+                <ChevronRight
+                  className={cn(
+                    'size-4 shrink-0 transition-transform',
+                    moreOpen && 'rotate-90'
+                  )}
+                />
+                <span className="group-data-[collapsible=icon]:hidden">
+                  更多工具
+                </span>
+              </button>
+            </SidebarMenuItem>
+            {moreOpen &&
+              secondaryTop.map((item) => {
+                const Icon = item.icon;
+                const active =
+                  pathname === item.href ||
+                  pathname.startsWith(`${item.href}/`);
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <Link
+                      href={item.href}
+                      className={cn(
+                        'studio-nav-link ml-2',
+                        active && 'studio-nav-link--active'
+                      )}
+                    >
+                      <Icon className="size-4 shrink-0" />
+                      <span className="group-data-[collapsible=icon]:hidden">
+                        {item.label}
+                      </span>
+                    </Link>
+                  </SidebarMenuItem>
+                );
+              })}
+          </SidebarMenu>
+        )}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-[#e5e8ef] p-2">

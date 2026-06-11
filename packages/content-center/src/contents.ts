@@ -45,7 +45,6 @@ export async function listContents(
             },
           },
           take: 3,
-          where: { accountId: { not: null } },
         },
       },
     }),
@@ -99,6 +98,7 @@ export async function updateContent(
     body: string;
     coverText: string;
     status: ContentStatus;
+    topicId: string | null;
   }>,
   options?: { createdBy?: string }
 ) {
@@ -214,4 +214,13 @@ export async function listVersions(contentId: string) {
     where: { contentId },
     orderBy: { createdAt: 'desc' },
   });
+}
+
+export async function deleteContent(user: AuthUser, id: string) {
+  requireRoles(user, 'ADMIN', 'OPERATOR');
+  const content = await getContent(id);
+  if (user.role === 'OPERATOR' && content.createdBy !== user.id) {
+    throw new AppError(ErrorCodes.FORBIDDEN, 'forbidden', 403);
+  }
+  return prisma.content.delete({ where: { id } });
 }

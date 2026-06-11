@@ -14,13 +14,10 @@ import {
 } from 'lucide-react';
 import { StudioLayout } from '@/components/StudioLayout';
 import { PageContainer } from '@/components/layout/page-container';
-import { DashboardAlertRail } from '@/components/studio/dashboard-alert-rail';
+import { DashboardTodoRail } from '@/components/studio/dashboard-todo-rail';
 import { CreationWorkflowGuide } from '@/components/studio/creation-workflow-guide';
 import { QuickAction } from '@/components/studio/quick-action';
-import {
-  DashboardMetricCard,
-  pseudoDelta,
-} from '@/components/studio/dashboard-metric-card';
+import { DashboardMetricCard } from '@/components/studio/dashboard-metric-card';
 import { EmptyState } from '@/components/studio/empty-state';
 import { PlatformBadge } from '@/components/studio/platform-badge';
 import { StudioCard } from '@/components/studio/studio-card';
@@ -52,41 +49,44 @@ type DashboardStats = {
   reviewed: number;
 };
 
+const metricLinks: Record<string, string> = {
+  pendingGenerate: '/contents?status=DRAFT',
+  generating: '/contents?status=GENERATING',
+  pendingReview: '/reviews?status=pending',
+  pendingPublish: '/publishing',
+  publishedTotal: '/contents?status=PUBLISHED',
+};
+
 const metricConfig = [
   {
     key: 'pendingGenerate' as const,
     label: '待生成',
     icon: FileText,
     tone: 'blue' as const,
-    salt: 1,
   },
   {
     key: 'generating' as const,
     label: '生成中',
     icon: Loader2,
     tone: 'cyan' as const,
-    salt: 2,
   },
   {
     key: 'pendingReview' as const,
     label: '待审核',
     icon: Shield,
     tone: 'orange' as const,
-    salt: 3,
   },
   {
     key: 'pendingPublish' as const,
     label: '待发布',
     icon: Send,
     tone: 'purple' as const,
-    salt: 4,
   },
   {
     key: 'publishedTotal' as const,
     label: '已发布',
     icon: CheckCircle,
     tone: 'green' as const,
-    salt: 5,
   },
 ];
 
@@ -121,54 +121,47 @@ export default function DashboardPage() {
 
   return (
     <StudioLayout>
-      <PageContainer className="max-w-none gap-4 p-6">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-start">
-          <div className="min-w-0 flex-1 space-y-4">
-            <CreationWorkflowGuide />
+      <PageContainer className="max-w-none -mt-2 gap-2 p-3 md:p-4">
+        <div className="flex flex-col gap-2 xl:flex-row xl:items-start">
+          <div className="min-w-0 flex-1 space-y-2">
+            <CreationWorkflowGuide dense />
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <QuickAction
-                href="/topics"
-                label="新建系列"
-                description="同一主题的多篇文章归组"
-                icon={Layers}
-                tone="purple"
-              />
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <QuickAction
                 href="/contents"
                 label="新建文章"
-                description="创建内容并选择发布平台"
-                icon={FileText}
+                description="填写标题即可开始，创建后一键 AI 生成"
+                icon={Sparkles}
                 tone="blue"
               />
               <QuickAction
-                href="/ai-generate"
-                label="AI 生成"
-                description="一键生成标题、正文与分平台版本"
-                icon={Sparkles}
-                tone="cyan"
+                href="/topics"
+                label="创建系列（可选）"
+                description="多篇同主题文章需要归组时再使用"
+                icon={Layers}
+                tone="purple"
               />
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
-              {metricConfig.map(({ key, label, icon, tone, salt }) => (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+              {metricConfig.map(({ key, label, icon, tone }) => (
                 <DashboardMetricCard
                   key={key}
                   label={label}
                   value={loading ? '—' : (stats?.[key] ?? 0)}
-                  delta={stats ? pseudoDelta(stats[key], salt) : undefined}
                   icon={icon}
                   tone={tone}
+                  href={metricLinks[key]}
                 />
               ))}
             </div>
 
-            <StudioCard contentClassName="p-5">
+            <StudioCard contentClassName="p-3">
               <WorkflowKanban items={items} counts={kanbanCounts} />
             </StudioCard>
 
             <StudioCard contentClassName="overflow-hidden p-0">
-              <div className="flex items-center justify-between px-5 py-4">
+              <div className="flex items-center justify-between px-4 py-3">
                 <h3 className="text-sm font-semibold text-[#1D2129]">
                   最近内容管理列表
                 </h3>
@@ -252,7 +245,15 @@ export default function DashboardPage() {
             </StudioCard>
           </div>
 
-          <DashboardAlertRail />
+          <DashboardTodoRail
+            stats={stats}
+            items={items.map((item) => ({
+              id: item.id,
+              title: item.title,
+              status: item.status,
+              versions: item.versions ?? [],
+            }))}
+          />
         </div>
       </PageContainer>
     </StudioLayout>

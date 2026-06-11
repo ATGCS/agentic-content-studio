@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 
@@ -13,24 +14,28 @@ export function DashboardMetricCard({
   label,
   value,
   delta,
+  deltaHint = '较昨日活跃',
   icon: Icon,
   tone = 'blue',
+  href,
 }: {
   label: string;
   value: string | number;
   delta?: number;
+  deltaHint?: string;
   icon: LucideIcon;
   tone?: 'blue' | 'purple' | 'cyan' | 'orange' | 'green';
+  href?: string;
 }) {
   const up = delta !== undefined && delta >= 0;
   const deltaText = delta !== undefined ? `${up ? '+' : ''}${delta} 个` : null;
 
-  return (
-    <div className="studio-stat-card">
+  const inner = (
+    <>
       <div className="flex items-start justify-between">
         <div className="min-w-0">
           <p className="studio-stat-label">{label}</p>
-          <p className="studio-stat-value mt-3 text-[#1D2129]">{value}</p>
+          <p className="studio-stat-value mt-1.5 text-[#1D2129]">{value}</p>
         </div>
         <div className={`studio-stat-icon rounded-full ${iconBg[tone]}`}>
           <Icon className="size-5" />
@@ -38,11 +43,11 @@ export function DashboardMetricCard({
       </div>
       {deltaText && (
         <p
-          className={`studio-stat-delta mt-3 flex items-center gap-0.5 ${
+          className={`studio-stat-delta mt-1.5 flex items-center gap-0.5 ${
             up ? 'text-[#f53f3f]' : 'text-[#00b42a]'
           }`}
         >
-          较昨日{' '}
+          {deltaHint}{' '}
           {up ? (
             <ArrowUp className="size-3" />
           ) : (
@@ -51,13 +56,19 @@ export function DashboardMetricCard({
           {deltaText}
         </p>
       )}
-    </div>
+    </>
   );
-}
 
-/** Deterministic pseudo-delta from count for demo display */
-export function pseudoDelta(count: number, salt = 0): number {
-  if (count === 0) return 0;
-  const raw = ((count * 7 + salt * 13) % 31) - 8;
-  return raw;
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="studio-stat-card block transition-shadow hover:shadow-md"
+      >
+        {inner}
+      </Link>
+    );
+  }
+
+  return <div className="studio-stat-card">{inner}</div>;
 }

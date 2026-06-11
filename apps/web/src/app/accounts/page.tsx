@@ -1,9 +1,9 @@
-﻿'use client';
+'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  PlatformIcon,
+  PlatformLogoMark,
   platformIconMeta,
   type PlatformIconKey,
 } from '@/components/platform-icon';
@@ -146,10 +146,10 @@ function PlatformLogo({ platform }: { platform: PlatformIconKey }) {
 
   return (
     <div
-      className="flex h-11 w-11 items-center justify-center rounded-xl text-sm font-semibold shadow-sm"
+      className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-xl text-sm font-semibold shadow-sm"
       style={{ backgroundColor: meta.bg, color: meta.color }}
     >
-      {meta.icon ? <PlatformIcon icon={meta.icon} size={24} /> : meta.short}
+      <PlatformLogoMark platform={platform} size={meta.image ? 44 : 24} />
     </div>
   );
 }
@@ -282,10 +282,10 @@ export default function AccountsPage() {
   const [notifications, setNotifications] = useState<
     { id: number; type: 'success' | 'error'; message: string }[]
   >([]);
-  let notifId = 0;
+  const notifIdRef = useRef(0);
 
   function notify(type: 'success' | 'error', message: string) {
-    const id = ++notifId;
+    const id = ++notifIdRef.current;
     setNotifications((prev) => [...prev, { type, message, id }]);
     setTimeout(
       () => setNotifications((prev) => prev.filter((n) => n.id !== id)),

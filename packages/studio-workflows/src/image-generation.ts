@@ -85,6 +85,8 @@ export async function orchestrateImageGeneration(
       prompt: options.editInstruction,
       model: result.model,
       sourceMaterialId: source.id,
+      versionId: options.versionId,
+      platform,
     });
 
     return { material, image: result, mode: 'edit' as const };

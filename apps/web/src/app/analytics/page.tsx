@@ -48,10 +48,15 @@ type TopContentItem = {
   views: string;
   interactions: string;
   completion: string;
+  updatedAt?: string;
 };
 
 type AggregateResponse = {
+  periodDays: number;
   metrics: AggregateMetrics;
+  previousMetrics?: AggregateMetrics;
+  deltas?: AggregateMetrics & { engagementRate?: number };
+  engagementRate?: number;
   top10: TopContentItem[];
 };
 
@@ -66,8 +71,6 @@ type AnalyticsReport = {
 };
 
 /* ---------- constants ---------- */
-
-const tabs = ['内容表现', '平台表现', '账号表现', 'Agent 表现', '知识库效果'];
 
 const metricConfig = [
   {
@@ -118,6 +121,11 @@ function formatViews(value: number): string {
   if (value >= 10000) return (value / 10000).toFixed(2) + 'w';
   if (value >= 1000) return (value / 1000).toFixed(1) + 'k';
   return String(value);
+}
+
+function parseTimeRangeDays(range: string): number {
+  const match = range.match(/^(\d+)d$/);
+  return match ? Number.parseInt(match[1], 10) : 7;
 }
 
 function FilterSelect({
@@ -176,26 +184,36 @@ export default function AnalyticsPage() {
   const [aggregateLoading, setAggregateLoading] = useState(true);
   const [reportsLoading, setReportsLoading] = useState(true);
   const [reportsError, setReportsError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState(0);
-
-  /* filters (UI state only for now) */
+  /* filters */
   const [timeRange, setTimeRange] = useState('7d');
   const [contentType, setContentType] = useState('all');
   const [platformFilter, setPlatformFilter] = useState('all');
   const [accountFilter, setAccountFilter] = useState('all');
   const [tagFilter, setTagFilter] = useState('all');
+  const periodDays = parseTimeRangeDays(timeRange);
 
   const loadAggregate = useCallback(async () => {
     setAggregateLoading(true);
     try {
-      const res = await api<AggregateResponse>('/api/analytics/aggregate');
+      const days = parseTimeRangeDays(timeRange);
+      const filterParams = new URLSearchParams();
+      filterParams.set('days', String(days));
+      if (platformFilter && platformFilter !== 'all')
+        filterParams.set('platform', platformFilter);
+      if (contentType && contentType !== 'all')
+        filterParams.set('contentType', contentType);
+      if (accountFilter && accountFilter !== 'all')
+        filterParams.set('accountId', accountFilter);
+      const res = await api<AggregateResponse>(
+        `/api/analytics/aggregate?${filterParams.toString()}`
+      );
       setAggregate(res.data);
     } catch {
       // 静默失败，页面仍可展示空状态
     } finally {
       setAggregateLoading(false);
     }
-  }, []);
+  }, [timeRange, platformFilter, contentType, accountFilter]);
 
   const loadReports = useCallback(async () => {
     setReportsLoading(true);
@@ -214,14 +232,29 @@ export default function AnalyticsPage() {
     Promise.all([loadAggregate(), loadReports()]).catch(console.error);
   }, [loadAggregate, loadReports]);
 
+  const formatMetricDelta = (n?: number, asPercent = false) => {
+    if (n === undefined) return null;
+    if (n === 0) return '较上周期 持平';
+    const sign = n > 0 ? '+' : '';
+    if (asPercent) return `较上周期 ${sign}${n.toFixed(1)}%`;
+    return `较上周期 ${sign}${formatViews(Math.abs(n))}`;
+  };
+
   const metrics = useMemo(() => {
     const m = aggregate?.metrics;
+    const d = aggregate?.deltas;
     if (!m) return null;
+    const engagement =
+      aggregate.engagementRate ??
+      (m.totalViews > 0
+        ? ((m.totalLikes + m.totalComments + m.totalShares) / m.totalViews) *
+          100
+        : 0);
     return [
       {
         label: '阅读量',
         value: formatViews(m.totalViews),
-        delta: '—',
+        delta: formatMetricDelta(d?.totalViews),
         icon: Eye,
         bg: '#E8F3FF',
         color: '#1664FF',
@@ -229,7 +262,7 @@ export default function AnalyticsPage() {
       {
         label: '点赞数',
         value: formatViews(m.totalLikes),
-        delta: '—',
+        delta: formatMetricDelta(d?.totalLikes),
         icon: ThumbsUp,
         bg: '#E8FFFB',
         color: '#14C9C9',
@@ -237,7 +270,7 @@ export default function AnalyticsPage() {
       {
         label: '收藏数',
         value: formatViews(m.totalCollects),
-        delta: '—',
+        delta: formatMetricDelta(d?.totalCollects),
         icon: Star,
         bg: '#FFF7E8',
         color: '#FFB400',
@@ -245,7 +278,7 @@ export default function AnalyticsPage() {
       {
         label: '评论数',
         value: formatViews(m.totalComments),
-        delta: '—',
+        delta: formatMetricDelta(d?.totalComments),
         icon: MessageSquare,
         bg: '#F0F3FF',
         color: '#4E6EF2',
@@ -253,18 +286,15 @@ export default function AnalyticsPage() {
       {
         label: '转发数',
         value: formatViews(m.totalShares),
-        delta: '—',
+        delta: formatMetricDelta(d?.totalShares),
         icon: Share2,
         bg: '#E8FFEA',
         color: '#00B42A',
       },
       {
-        label: '完读率',
-        value:
-          m.totalViews > 0
-            ? ((m.totalLikes / m.totalViews) * 100).toFixed(1) + '%'
-            : '0%',
-        delta: '—',
+        label: '互动率',
+        value: `${engagement.toFixed(1)}%`,
+        delta: formatMetricDelta(d?.engagementRate, true),
         icon: Gauge,
         bg: '#E8F7FF',
         color: '#00A3FF',
@@ -275,7 +305,9 @@ export default function AnalyticsPage() {
   const top10 = aggregate?.top10 ?? [];
 
   function handleExport() {
-    const rows = [['排名', '内容标题', '平台', '阅读量', '互动量', '完读率']];
+    const rows = [
+      ['排名', '内容标题', '平台', '阅读量', '互动量', '互动率', '更新时间'],
+    ];
     top10.forEach((item, i) => {
       rows.push([
         String(i + 1),
@@ -284,6 +316,7 @@ export default function AnalyticsPage() {
         item.views,
         item.interactions,
         item.completion,
+        item.updatedAt ?? '',
       ]);
     });
     const csv = rows.map((r) => r.map((c) => `"${c}"`).join(',')).join('\n');
@@ -374,7 +407,7 @@ export default function AnalyticsPage() {
         <StudioCard contentClassName="p-4">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-sm font-bold text-[#1D2129]">
-              核心指标（所选时间范围内）
+              核心指标（最近 {aggregate?.periodDays ?? periodDays} 天）
             </h2>
             <Button
               variant="outline"
@@ -414,38 +447,17 @@ export default function AnalyticsPage() {
                       <p className="mt-1 text-2xl font-bold leading-none text-[#1D2129]">
                         {metric.value}
                       </p>
-                      <p className="mt-2 text-[11px] text-[#86909C]">
-                        较上周期{' '}
-                        <span className="font-semibold text-[#00B42A]">
+                      {metric.delta && (
+                        <p className="mt-2 text-[11px] text-[#86909C]">
                           {metric.delta}
-                        </span>
-                      </p>
+                        </p>
+                      )}
                     </div>
                   </div>
                 );
               })}
             </div>
           )}
-        </StudioCard>
-
-        <StudioCard contentClassName="p-0">
-          <div className="flex border-b border-[#EEF0F5] px-5">
-            {tabs.map((tab, index) => (
-              <button
-                key={tab}
-                className={cn(
-                  'relative px-5 py-4 text-sm font-semibold text-[#4E5969] transition-colors hover:text-[#1D2129]',
-                  index === activeTab && 'text-[#1664FF]'
-                )}
-                onClick={() => setActiveTab(index)}
-              >
-                {tab}
-                {index === activeTab && (
-                  <span className="absolute inset-x-5 bottom-0 h-0.5 rounded-full bg-[#1664FF]" />
-                )}
-              </button>
-            ))}
-          </div>
         </StudioCard>
 
         <div className="grid grid-cols-[1.1fr_0.9fr] gap-4">
@@ -465,7 +477,8 @@ export default function AnalyticsPage() {
                       '平台',
                       '阅读量',
                       '互动量',
-                      '完读率',
+                      '互动率',
+                      '更新时间',
                     ].map((header) => (
                       <StudioTableHead
                         key={header}
@@ -499,6 +512,16 @@ export default function AnalyticsPage() {
                       </StudioTableCell>
                       <StudioTableCell className="px-2 py-1 font-medium text-[#1D2129]">
                         {item.completion}
+                      </StudioTableCell>
+                      <StudioTableCell className="px-2 py-1 text-[11px] text-[#86909C]">
+                        {item.updatedAt
+                          ? new Date(item.updatedAt).toLocaleString('zh-CN', {
+                              month: '2-digit',
+                              day: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })
+                          : '—'}
                       </StudioTableCell>
                     </StudioTableRow>
                   ))}

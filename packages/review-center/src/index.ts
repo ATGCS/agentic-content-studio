@@ -7,16 +7,24 @@ import {
   canReview,
   requireRoles,
 } from '@acs/core';
-import { getContent } from '@acs/content-center';
+import { getContent, computeContentStatus } from '@acs/content-center';
 
 export async function listReviews(
   user: AuthUser,
-  query: { status?: string; page?: string; pageSize?: string }
+  query: {
+    status?: string;
+    page?: string;
+    pageSize?: string;
+    platform?: string;
+  }
 ) {
   const { page, pageSize, skip } = parsePagination(query);
-  const where: { status?: 'PENDING' | 'APPROVED' | 'REJECTED' } = {};
+  const where: Record<string, unknown> = {};
   if (query.status) {
-    where.status = query.status as 'PENDING' | 'APPROVED' | 'REJECTED';
+    where.status = query.status;
+  }
+  if (query.platform && query.platform !== 'all') {
+    where.version = { platform: query.platform };
   }
 
   const [items, total] = await Promise.all([
@@ -38,6 +46,20 @@ export async function submitReview(
 ) {
   requireRoles(user, 'ADMIN', 'OPERATOR');
   await getContent(data.contentId);
+
+  if (data.versionId) {
+    const existing = await prisma.reviewTask.findFirst({
+      where: {
+        contentId: data.contentId,
+        versionId: data.versionId,
+        status: 'PENDING',
+      },
+    });
+    if (existing) {
+      throw new AppError(ErrorCodes.REVIEW_INVALID, '该版本已在审核中', 409);
+    }
+  }
+
   const task = await prisma.reviewTask.create({
     data: {
       contentId: data.contentId,
@@ -51,9 +73,15 @@ export async function submitReview(
       data: { status: 'PENDING_REVIEW' },
     });
   }
+  // 基于所有版本状态计算内容级状态（支持多版本独立审核）
+  const allVersions = await prisma.contentVersion.findMany({
+    where: { contentId: data.contentId },
+    select: { status: true },
+  });
+  const computedStatus = computeContentStatus(allVersions.map((v) => v.status));
   await prisma.content.update({
     where: { id: data.contentId },
-    data: { status: 'PENDING_REVIEW' },
+    data: { status: computedStatus },
   });
   return task;
 }
@@ -83,10 +111,35 @@ export async function approveReview(user: AuthUser, reviewId: string) {
       where: { id: task.versionId },
       data: { status: 'APPROVED' },
     });
+    // 审核通过后自动创建发布任务
+    const version = await prisma.contentVersion.findUnique({
+      where: { id: task.versionId },
+    });
+    if (version && version.accountId) {
+      await prisma.publishingTask
+        .create({
+          data: {
+            contentId: task.contentId,
+            versionId: task.versionId,
+            accountId: version.accountId,
+            platform: version.platform,
+            status: 'PENDING',
+          },
+        })
+        .catch(() => {
+          // 如果发布任务已存在则忽略
+        });
+    }
   }
+  // 基于所有版本状态计算内容级状态
+  const allVersions = await prisma.contentVersion.findMany({
+    where: { contentId: task.contentId },
+    select: { status: true },
+  });
+  const computedStatus = computeContentStatus(allVersions.map((v) => v.status));
   await prisma.content.update({
     where: { id: task.contentId },
-    data: { status: 'APPROVED' },
+    data: { status: computedStatus },
   });
   return updated;
 }
@@ -122,9 +175,15 @@ export async function rejectReview(
       data: { status: 'REJECTED' },
     });
   }
+  // 基于所有版本状态计算内容级状态
+  const allVersions = await prisma.contentVersion.findMany({
+    where: { contentId: task.contentId },
+    select: { status: true },
+  });
+  const computedStatus = computeContentStatus(allVersions.map((v) => v.status));
   await prisma.content.update({
     where: { id: task.contentId },
-    data: { status: 'REJECTED' },
+    data: { status: computedStatus },
   });
   return updated;
 }
@@ -185,6 +244,20 @@ export async function getPublishingTask(id: string) {
 }
 
 export async function cancelPublishingTask(id: string) {
+  const task = await prisma.publishingTask.findUnique({ where: { id } });
+  if (!task) {
+    throw new AppError(ErrorCodes.NOT_FOUND, 'publishing task not found', 404);
+  }
+  if (task.status === 'SUCCESS') {
+    throw new AppError(
+      ErrorCodes.BAD_REQUEST,
+      'cannot cancel a successfully published task',
+      400
+    );
+  }
+  if (task.status === 'CANCELLED') {
+    throw new AppError(ErrorCodes.BAD_REQUEST, 'task already cancelled', 400);
+  }
   return prisma.publishingTask.update({
     where: { id },
     data: { status: 'CANCELLED' },

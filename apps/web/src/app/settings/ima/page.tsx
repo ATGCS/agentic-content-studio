@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Database, RefreshCw, Save, Trash2 } from 'lucide-react';
+import { Database, RefreshCw, Save, Trash2, Wand2 } from 'lucide-react';
 import { StudioLayout } from '@/components/StudioLayout';
 import { PageContainer } from '@/components/layout/page-container';
 import { StudioCard } from '@/components/studio/studio-card';
@@ -60,28 +60,40 @@ type KnowledgeBase = {
 };
 
 const agentTypeOptions = [
-  { value: 'UNBOUND', label: '未绑定' },
-  { value: 'TOPIC', label: '选题生成 Agent' },
-  { value: 'TITLE', label: '标题生成 Agent' },
-  { value: 'COVER', label: '封面文案 Agent' },
-  { value: 'BODY', label: '正文生成 Agent' },
-  { value: 'TAG', label: '标签生成 Agent' },
-  { value: 'PLATFORM_RULE', label: '平台规则库' },
-  { value: 'ACCOUNT_STYLE', label: '账号风格库' },
-  { value: 'MATERIAL', label: '素材知识库' },
+  { value: 'UNBOUND', label: '未绑定', hint: '不参与生成' },
+  { value: 'TOPIC', label: '选题参考库', hint: '写选题时参考' },
+  { value: 'TITLE', label: '标题参考库', hint: '生成标题时参考' },
+  { value: 'COVER', label: '封面文案库', hint: '写封面文案时参考' },
+  { value: 'BODY', label: '正文写作库', hint: '生成正文时参考' },
+  { value: 'TAG', label: '标签参考库', hint: '生成标签时参考' },
+  { value: 'PLATFORM_RULE', label: '平台规则库', hint: '适配平台规范' },
+  { value: 'ACCOUNT_STYLE', label: '账号风格库', hint: '统一账号语气' },
+  { value: 'MATERIAL', label: '素材知识库', hint: '配图与素材检索' },
 ];
 
-const agentTypeLabels: Record<string, string> = {
-  UNBOUND: '未绑定',
-  TOPIC: '选题生成 Agent',
-  TITLE: '标题生成 Agent',
-  COVER: '封面文案 Agent',
-  BODY: '正文生成 Agent',
-  TAG: '标签生成 Agent',
-  PLATFORM_RULE: '平台规则库',
-  ACCOUNT_STYLE: '账号风格库',
-  MATERIAL: '素材知识库',
-};
+const defaultBindingRules: { keywords: string[]; agentType: string }[] = [
+  { keywords: ['选题', 'topic'], agentType: 'TOPIC' },
+  { keywords: ['标题', 'title'], agentType: 'TITLE' },
+  { keywords: ['封面', 'cover'], agentType: 'COVER' },
+  { keywords: ['正文', '写作', 'body', '文章'], agentType: 'BODY' },
+  { keywords: ['标签', 'tag'], agentType: 'TAG' },
+  { keywords: ['平台', '规则', 'rule'], agentType: 'PLATFORM_RULE' },
+  { keywords: ['账号', '风格', 'style'], agentType: 'ACCOUNT_STYLE' },
+  { keywords: ['素材', 'material', '图片', '图库'], agentType: 'MATERIAL' },
+];
+
+function guessAgentType(
+  name: string,
+  description?: string | null
+): string | null {
+  const text = `${name} ${description ?? ''}`.toLowerCase();
+  for (const rule of defaultBindingRules) {
+    if (rule.keywords.some((kw) => text.includes(kw.toLowerCase()))) {
+      return rule.agentType;
+    }
+  }
+  return null;
+}
 
 export default function ImaSettingsPage() {
   const [config, setConfig] = useState<ImaConfig | null>(null);
@@ -95,6 +107,16 @@ export default function ImaSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [bindingDefaults, setBindingDefaults] = useState(false);
+  const [toast, setToast] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
+
+  function showToast(type: 'success' | 'error', message: string) {
+    setToast({ type, message });
+    setTimeout(() => setToast(null), 3000);
+  }
 
   async function load() {
     const [cfgRes, kbRes] = await Promise.all([
@@ -125,7 +147,7 @@ export default function ImaSettingsPage() {
         body: JSON.stringify(body),
       });
       await load();
-      alert('IMA 配置已保存');
+      showToast('success', 'IMA 配置已保存');
     } finally {
       setSaving(false);
     }
@@ -136,9 +158,9 @@ export default function ImaSettingsPage() {
     try {
       await api('/api/ima/knowledge-bases/sync', { method: 'POST' });
       await load();
-      alert('知识库列表已同步');
+      showToast('success', '知识库列表已同步');
     } catch (e) {
-      alert(e instanceof Error ? e.message : '同步失败');
+      showToast('error', e instanceof Error ? e.message : '同步失败');
     } finally {
       setSyncing(false);
     }
@@ -166,6 +188,34 @@ export default function ImaSettingsPage() {
       body: JSON.stringify({ agentType }),
     });
     await load();
+  }
+
+  async function applyDefaultBindings() {
+    setBindingDefaults(true);
+    try {
+      let bound = 0;
+      for (const kb of kbs) {
+        if (kb.agentType) continue;
+        const guessed = guessAgentType(kb.name, kb.description);
+        if (!guessed) continue;
+        await api(`/api/ima/knowledge-bases/${kb.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ agentType: guessed }),
+        });
+        bound += 1;
+      }
+      await load();
+      showToast(
+        bound > 0 ? 'success' : 'error',
+        bound > 0
+          ? `已根据名称自动绑定 ${bound} 个知识库`
+          : '没有可识别的未绑定知识库，请检查名称是否含「正文」「标题」等关键词'
+      );
+    } catch (e) {
+      showToast('error', e instanceof Error ? e.message : '自动绑定失败');
+    } finally {
+      setBindingDefaults(false);
+    }
   }
 
   function toggleSelect(id: string) {
@@ -202,9 +252,9 @@ export default function ImaSettingsPage() {
       });
       await load();
       setSelectedIds(new Set());
-      alert(`成功删除 ${selectedIds.size} 个知识库`);
+      showToast('success', `成功删除 ${selectedIds.size} 个知识库`);
     } catch (e) {
-      alert(e instanceof Error ? e.message : '删除失败');
+      showToast('error', e instanceof Error ? e.message : '删除失败');
     } finally {
       setDeleting(false);
       setDeleteDialogOpen(false);
@@ -287,22 +337,40 @@ export default function ImaSettingsPage() {
         </StudioCard>
 
         <StudioCard className="p-5">
-          <div className="mb-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Database className="size-4 text-[#1664ff]" />
-              <h3 className="text-sm font-semibold">知识库列表</h3>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <Database className="size-4 text-[#1664ff]" />
+                <h3 className="text-sm font-semibold">知识库列表</h3>
+              </div>
+              <p className="mt-1 text-xs text-[#86909C]">
+                「用途」决定生成时哪类内容会参考该库。不确定时点「一键默认绑定」即可。
+              </p>
             </div>
-            {selectedIds.size > 0 && (
+            <div className="flex items-center gap-2">
               <Button
                 size="sm"
-                variant="destructive"
-                onClick={openDeleteDialog}
-                disabled={deleting}
+                variant="outline"
+                onClick={applyDefaultBindings}
+                disabled={bindingDefaults || kbs.length === 0}
               >
-                <Trash2 className="size-4" />
-                批量删除 ({selectedIds.size})
+                <Wand2
+                  className={`size-4 ${bindingDefaults ? 'animate-spin' : ''}`}
+                />
+                一键默认绑定
               </Button>
-            )}
+              {selectedIds.size > 0 && (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={openDeleteDialog}
+                  disabled={deleting}
+                >
+                  <Trash2 className="size-4" />
+                  批量删除 ({selectedIds.size})
+                </Button>
+              )}
+            </div>
           </div>
           <StudioTable>
             <StudioTableHeader>
@@ -319,7 +387,7 @@ export default function ImaSettingsPage() {
                 </StudioTableHead>
                 <StudioTableHead>名称</StudioTableHead>
                 <StudioTableHead>外部 ID</StudioTableHead>
-                <StudioTableHead>绑定 Agent</StudioTableHead>
+                <StudioTableHead>用途</StudioTableHead>
                 <StudioTableHead>默认</StudioTableHead>
                 <StudioTableHead>启用</StudioTableHead>
                 <StudioTableHead className="text-right">操作</StudioTableHead>
@@ -354,7 +422,10 @@ export default function ImaSettingsPage() {
                       <SelectContent>
                         {agentTypeOptions.map((option) => (
                           <SelectItem key={option.value} value={option.value}>
-                            {option.label}
+                            <span>{option.label}</span>
+                            <span className="ml-1 text-[10px] text-[#86909C]">
+                              · {option.hint}
+                            </span>
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -412,6 +483,13 @@ export default function ImaSettingsPage() {
           </AlertDialogContent>
         </AlertDialog>
       </PageContainer>
+      {toast && (
+        <div
+          className={`fixed bottom-6 right-6 z-50 rounded-lg px-4 py-3 text-sm shadow-lg transition-all ${toast.type === 'success' ? 'bg-[#00B42A] text-white' : 'bg-[#F53F3F] text-white'}`}
+        >
+          {toast.message}
+        </div>
+      )}
     </StudioLayout>
   );
 }
