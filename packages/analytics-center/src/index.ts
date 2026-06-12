@@ -104,6 +104,7 @@ export async function getDashboardStats() {
     pendingPublish,
     publishedTotal,
     reviewed,
+    topicCount,
     ...deltas
   ] = await Promise.all([
     prisma.content.count({
@@ -118,6 +119,7 @@ export async function getDashboardStats() {
       where: { status: { in: [...DASHBOARD_STATUS_BUCKETS.publishedTotal] } },
     }),
     prisma.content.count({ where: { status: 'REVIEWED' } }),
+    prisma.topic.count(),
     countContentDeltaVsYesterday([...DASHBOARD_STATUS_BUCKETS.pendingGenerate]),
     countContentDeltaVsYesterday([...DASHBOARD_STATUS_BUCKETS.generating]),
     countContentDeltaVsYesterday([...DASHBOARD_STATUS_BUCKETS.pendingReview]),
@@ -133,6 +135,7 @@ export async function getDashboardStats() {
     pendingPublish,
     publishedTotal,
     reviewed,
+    topicCount,
     deltas: {
       pendingGenerate: deltas[0],
       generating: deltas[1],

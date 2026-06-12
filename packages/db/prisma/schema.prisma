@@ -259,6 +259,7 @@ model Topic {
   title           String
   description     String?
   outline         Json?
+  strategy        Json?
   source          String        @default("manual")
   targetPlatforms Json?
   status          ContentStatus @default(DRAFT)
@@ -266,12 +267,26 @@ model Topic {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
-  owner          User            @relation(fields: [ownerId], references: [id])
-  contents       Content[]
-  butlerSessions ButlerSession[]
+  owner            User                 @relation(fields: [ownerId], references: [id])
+  contents         Content[]
+  butlerSessions   ButlerSession[]
+  knowledgeBases   TopicKnowledgeBase[]
 
   @@index([ownerId, status, createdAt])
   @@map("topics")
+}
+
+model TopicKnowledgeBase {
+  topicId         String
+  knowledgeBaseId String
+  createdAt       DateTime @default(now())
+
+  topic         Topic            @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  knowledgeBase ImaKnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+
+  @@id([topicId, knowledgeBaseId])
+  @@index([knowledgeBaseId])
+  @@map("topic_knowledge_bases")
 }
 
 model ButlerSession {
@@ -481,8 +496,9 @@ model ImaKnowledgeBase {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  documents  ImaKnowledgeDocument[]
-  searchLogs ImaSearchLog[]
+  documents      ImaKnowledgeDocument[]
+  searchLogs     ImaSearchLog[]
+  topicBindings  TopicKnowledgeBase[]
 
   @@index([source, enabled])
   @@map("ima_knowledge_bases")

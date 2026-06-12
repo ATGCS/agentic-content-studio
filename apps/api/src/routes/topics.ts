@@ -63,4 +63,35 @@ export async function topicRoutes(app: FastifyInstance) {
       return reply.success(null);
     }
   );
+
+  // 获取系列绑定的知识库
+  app.get(
+    '/topics/:id/knowledge-bases',
+    { onRequest: [app.authenticate] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      return reply.success(await topics.getTopicKnowledgeBases(id));
+    }
+  );
+
+  // 绑定知识库到系列（全量替换）
+  app.put(
+    '/topics/:id/knowledge-bases',
+    { onRequest: [app.authenticate] },
+    async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const body = z
+        .object({
+          knowledgeBaseIds: z.array(z.string()),
+        })
+        .parse(request.body);
+      return reply.success(
+        await topics.bindTopicKnowledgeBases(
+          getUser(request),
+          id,
+          body.knowledgeBaseIds
+        )
+      );
+    }
+  );
 }

@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Loader2, Plus } from 'lucide-react';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -209,19 +209,52 @@ export function ContentEditDialog({
                     加载系列列表…
                   </div>
                 ) : (
-                  <Select value={topicId || ' '} onValueChange={setTopicId}>
-                    <SelectTrigger className="h-9 text-sm">
-                      <SelectValue placeholder="独立文章（不归属系列）" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value=" ">独立文章（不归属系列）</SelectItem>
-                      {topics.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>
-                          {t.title}
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={topicId || ' '}
+                      onValueChange={setTopicId}
+                      className="flex-1"
+                    >
+                      <SelectTrigger className="h-9 text-sm flex-1">
+                        <SelectValue placeholder="独立文章（不归属系列）" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value=" ">
+                          独立文章（不归属系列）
                         </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                        {topics.map((t) => (
+                          <SelectItem key={t.id} value={t.id}>
+                            {t.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const name = prompt('请输入新系列名称：');
+                        if (name?.trim()) {
+                          api<{ id: string }>('/api/topics', {
+                            method: 'POST',
+                            body: JSON.stringify({ title: name.trim() }),
+                          })
+                            .then((res) => {
+                              setTopics((prev) => [
+                                ...prev,
+                                { id: res.data.id, title: name.trim() },
+                              ]);
+                              setTopicId(res.data.id);
+                            })
+                            .catch(() => {});
+                        }
+                      }}
+                      className="flex shrink-0 items-center gap-1 rounded-lg border border-dashed border-[#C9CDD4] px-2.5 py-1.5 text-xs text-[#86909C] hover:border-[#1664FF] hover:text-[#1664FF] transition-all"
+                      title="创建新系列"
+                    >
+                      <Plus className="size-3" />
+                      新建
+                    </button>
+                  </div>
                 )}
               </div>
             )}

@@ -8,11 +8,8 @@ import {
   Layers,
   Plus,
   RefreshCw,
-  Search,
   Trash2,
   X,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react';
 import { StudioLayout } from '@/components/StudioLayout';
 import { PageContainer } from '@/components/layout/page-container';
@@ -46,8 +43,6 @@ type Topic = {
 type TopicListResponse = {
   items: Topic[];
   total: number;
-  page: number;
-  pageSize: number;
 };
 
 const platformOptions = [
@@ -71,8 +66,6 @@ const emptyForm: TopicForm = {
   targetPlatforms: [],
 };
 
-const PAGE_SIZE = 20;
-
 export default function TopicsPage() {
   const [items, setItems] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,22 +75,12 @@ export default function TopicsPage() {
   const [form, setForm] = useState<TopicForm>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
 
   async function load() {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      params.set('page', String(page));
-      params.set('pageSize', String(PAGE_SIZE));
-      if (search.trim()) params.set('search', search.trim());
-      const res = await api<TopicListResponse>(
-        `/api/topics?${params.toString()}`
-      );
+      const res = await api<TopicListResponse>('/api/topics');
       setItems(res.data.items ?? []);
-      setTotal(res.data.total ?? 0);
       setLoadError(null);
     } catch (error) {
       console.error(error);
@@ -109,12 +92,7 @@ export default function TopicsPage() {
 
   useEffect(() => {
     load().catch(console.error);
-  }, [page]);
-
-  function handleSearch() {
-    setPage(1);
-    load();
-  }
+  }, []);
 
   function openCreateForm() {
     setEditingTopic(null);
@@ -171,8 +149,6 @@ export default function TopicsPage() {
     }
   }
 
-  const totalPages = Math.ceil(total / PAGE_SIZE);
-
   return (
     <StudioLayout>
       <PageContainer className="gap-2 !p-2 md:!p-3">
@@ -186,7 +162,7 @@ export default function TopicsPage() {
               <h1 className="truncate text-sm font-semibold text-gray-900">
                 系列管理
               </h1>
-              <p className="text-xs text-gray-400">{total} 个系列</p>
+              <p className="text-xs text-gray-400">{items.length} 个系列</p>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -212,44 +188,6 @@ export default function TopicsPage() {
           </div>
         </div>
 
-        {/* 搜索栏 */}
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1 max-w-xs">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-[#C9CDD4]" />
-            <Input
-              className="h-8 pl-8 text-xs"
-              placeholder="搜索系列名称…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSearch();
-              }}
-            />
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 text-xs"
-            onClick={handleSearch}
-          >
-            搜索
-          </Button>
-          {search && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-8 text-xs text-gray-400"
-              onClick={() => {
-                setSearch('');
-                setPage(1);
-              }}
-            >
-              <X className="size-3 mr-1" />
-              清除
-            </Button>
-          )}
-        </div>
-
         {loadError && (
           <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
             <p className="text-sm text-[#F53F3F]">{loadError}</p>
@@ -264,141 +202,91 @@ export default function TopicsPage() {
         ) : items.length === 0 ? (
           <div className="rounded-xl border border-gray-200 bg-white p-12 shadow-sm">
             <EmptyState
-              title={search ? '未找到匹配的系列' : '暂无系列'}
-              description={
-                search ? '尝试其他关键词' : '创建第一个系列，开始内容规划'
-              }
-              actionLabel={search ? undefined : '新建系列'}
-              onAction={search ? undefined : openCreateForm}
+              title="暂无系列"
+              description="创建第一个系列，开始内容规划"
+              actionLabel="新建系列"
+              onAction={openCreateForm}
             />
           </div>
         ) : (
-          <>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {items.map((t) => (
-                <Link
-                  key={t.id}
-                  href={`/topics/${t.id}`}
-                  className="group relative flex flex-col rounded-lg border border-gray-200 bg-white p-4 transition-all hover:border-purple-300 hover:shadow-md"
-                >
-                  {/* 卡片头部 */}
-                  <div className="flex items-start gap-3">
-                    <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-purple-50 text-purple-600">
-                      <Layers className="size-5" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="truncate text-sm font-semibold text-gray-900 group-hover:text-purple-600">
-                        {t.title}
-                      </h3>
-                      <div className="mt-1 flex items-center gap-2">
-                        <StatusBadge status={t.status} />
-                        <span className="inline-flex items-center gap-1 text-xs text-gray-400">
-                          <FileText className="size-3" />
-                          {t.contentCount ?? 0} 篇
-                        </span>
-                      </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {items.map((t) => (
+              <Link
+                key={t.id}
+                href={`/topics/${t.id}`}
+                className="group relative flex flex-col rounded-lg border border-gray-200 bg-white p-4 transition-all hover:border-purple-300 hover:shadow-md"
+              >
+                {/* 卡片头部 */}
+                <div className="flex items-start gap-3">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-purple-50 text-purple-600">
+                    <Layers className="size-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="truncate text-sm font-semibold text-gray-900 group-hover:text-purple-600">
+                      {t.title}
+                    </h3>
+                    <div className="mt-1 flex items-center gap-2">
+                      <StatusBadge status={t.status} />
+                      <span className="inline-flex items-center gap-1 text-xs text-gray-400">
+                        <FileText className="size-3" />
+                        {t.contentCount ?? 0} 篇
+                      </span>
                     </div>
                   </div>
+                </div>
 
-                  {/* 描述 */}
-                  {t.description && (
-                    <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-gray-500">
-                      {t.description}
-                    </p>
+                {/* 描述 */}
+                {t.description && (
+                  <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-gray-500">
+                    {t.description}
+                  </p>
+                )}
+
+                {/* 目标平台 */}
+                <div className="mt-3 flex flex-wrap gap-1">
+                  {t.targetPlatforms && t.targetPlatforms.length > 0 ? (
+                    t.targetPlatforms.map((p) => (
+                      <PlatformBadge key={p} platform={p} size="sm" />
+                    ))
+                  ) : (
+                    <span className="text-xs text-gray-300">未指定平台</span>
                   )}
+                </div>
 
-                  {/* 目标平台 */}
-                  <div className="mt-3 flex flex-wrap gap-1">
-                    {t.targetPlatforms && t.targetPlatforms.length > 0 ? (
-                      t.targetPlatforms.map((p) => (
-                        <PlatformBadge key={p} platform={p} size="sm" />
-                      ))
-                    ) : (
-                      <span className="text-xs text-gray-300">未指定平台</span>
-                    )}
+                {/* 底部：时间 + 操作 */}
+                <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+                  <span className="text-xs text-gray-400">
+                    {new Date(t.createdAt).toLocaleDateString()}
+                  </span>
+                  <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        openEditForm(t);
+                      }}
+                      className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-purple-600"
+                    >
+                      <Edit className="size-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        deleteTopic(t);
+                      }}
+                      disabled={deletingId === t.id}
+                      className="rounded-md p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
                   </div>
-
-                  {/* 底部：时间 + 操作 */}
-                  <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
-                    <span className="text-xs text-gray-400">
-                      {new Date(t.createdAt).toLocaleDateString()}
-                    </span>
-                    <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          openEditForm(t);
-                        }}
-                        className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-purple-600"
-                      >
-                        <Edit className="size-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          deleteTopic(t);
-                        }}
-                        disabled={deletingId === t.id}
-                        className="rounded-md p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-
-            {/* 分页 */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 py-4">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 w-8 p-0"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  <ChevronLeft className="size-3.5" />
-                </Button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter(
-                    (p) =>
-                      p === 1 || p === totalPages || Math.abs(p - page) <= 2
-                  )
-                  .map((p, idx, arr) => (
-                    <span key={p} className="flex items-center">
-                      {idx > 0 && arr[idx - 1] !== p - 1 && (
-                        <span className="px-1 text-xs text-gray-300">…</span>
-                      )}
-                      <button
-                        onClick={() => setPage(p)}
-                        className={`h-8 min-w-[32px] rounded-md text-xs font-medium transition-all ${
-                          p === page
-                            ? 'bg-[#1664FF] text-white'
-                            : 'text-gray-500 hover:bg-gray-100'
-                        }`}
-                      >
-                        {p}
-                      </button>
-                    </span>
-                  ))}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-8 w-8 p-0"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                >
-                  <ChevronRight className="size-3.5" />
-                </Button>
-              </div>
-            )}
-          </>
+                </div>
+              </Link>
+            ))}
+          </div>
         )}
       </PageContainer>
 

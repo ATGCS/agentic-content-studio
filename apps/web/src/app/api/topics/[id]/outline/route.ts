@@ -30,7 +30,7 @@ function handleError(err: unknown) {
       { status: err.httpStatus }
     );
   }
-  console.error('[topics id] unexpected error:', err);
+  console.error('[topics outline] unexpected error:', err);
   return NextResponse.json(
     {
       code: 50000,
@@ -41,50 +41,18 @@ function handleError(err: unknown) {
   );
 }
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    await authenticate(req);
-    const { id } = await params;
-    const raw = await topics.getTopic(id);
-    const data = {
-      ...raw,
-      knowledgeBases: raw.knowledgeBases?.map(
-        (kb: { knowledgeBase: { id: string; name: string } }) => ({
-          id: kb.knowledgeBase.id,
-          name: kb.knowledgeBase.name,
-        })
-      ),
-    };
-    return successResponse(data);
-  } catch (err) {
-    return handleError(err);
-  }
-}
-
-const topicOutlineArticleSchema = z.object({
+const outlineArticleSchema = z.object({
   order: z.number(),
   title: z.string(),
   summary: z.string(),
   keyPoints: z.array(z.string()).optional(),
 });
 
-const topicOutlineSchema = z.object({
+const updateOutlineBody = z.object({
   summary: z.string(),
-  articles: z.array(topicOutlineArticleSchema),
+  articles: z.array(outlineArticleSchema),
   targetPlatforms: z.array(z.string()).optional(),
   plannedAt: z.string().optional(),
-});
-
-const patchTopicBody = z.object({
-  title: z.string().optional(),
-  description: z.string().optional(),
-  status: z.string().optional(),
-  targetPlatforms: z.array(z.string()).optional(),
-  outline: topicOutlineSchema.optional(),
-  strategy: z.record(z.unknown()).optional(),
 });
 
 export async function PATCH(
@@ -94,23 +62,9 @@ export async function PATCH(
   try {
     const user = await authenticate(req);
     const { id } = await params;
-    const body = patchTopicBody.parse(await req.json());
-    const data = await topics.updateTopic(user, id, body);
+    const body = updateOutlineBody.parse(await req.json());
+    const data = await topics.updateTopicOutline(user, id, body);
     return successResponse(data);
-  } catch (err) {
-    return handleError(err);
-  }
-}
-
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const user = await authenticate(req);
-    const { id } = await params;
-    await topics.deleteTopic(user, id);
-    return successResponse(null);
   } catch (err) {
     return handleError(err);
   }

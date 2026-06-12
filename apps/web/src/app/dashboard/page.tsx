@@ -45,6 +45,7 @@ type DashboardStats = {
   pendingPublish: number;
   publishedTotal: number;
   reviewed: number;
+  topicCount: number;
 };
 
 const metricLinks: Record<string, string> = {
@@ -132,7 +133,7 @@ export default function DashboardPage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
               {metricConfig.map(({ key, label, icon, tone }) => (
                 <DashboardMetricCard
                   key={key}
@@ -143,6 +144,13 @@ export default function DashboardPage() {
                   href={metricLinks[key]}
                 />
               ))}
+              <DashboardMetricCard
+                label="系列总数"
+                value={loading ? '—' : (stats?.topicCount ?? 0)}
+                icon={Layers}
+                tone="purple"
+                href="/topics"
+              />
             </div>
 
             <StudioCard contentClassName="p-3">

@@ -34,19 +34,37 @@ export async function createSession(
   user: AuthUser,
   data?: { topicId?: string; title?: string }
 ) {
+  // 确保用户存在于数据库（处理数据库重置后旧 JWT 仍有效的情况）
+  await prisma.user.upsert({
+    where: { id: user.id },
+    update: { email: user.email, name: user.name },
+    create: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      passwordHash: '',
+    },
+  });
+
   let title = data?.title?.trim();
-  if (data?.topicId && !title) {
+  let resolvedTopicId: string | undefined;
+
+  if (data?.topicId) {
     const topic = await prisma.topic.findUnique({
       where: { id: data.topicId },
       select: { title: true },
     });
-    title = topic ? `大管家 · ${topic.title}` : '大管家会话';
+    if (topic) {
+      resolvedTopicId = data.topicId;
+      if (!title) title = `大管家 · ${topic.title}`;
+    }
   }
 
   return prisma.butlerSession.create({
     data: {
       userId: user.id,
-      topicId: data?.topicId,
+      topicId: resolvedTopicId,
       title: title ?? '大管家会话',
     },
     include: { topic: { select: { id: true, title: true } } },
@@ -77,7 +95,6 @@ export async function updateSession(
   await assertSessionOwner(user, sessionId);
 
   const updateData: { topicId?: string | null; title?: string } = {};
-  if (data.topicId !== undefined) updateData.topicId = data.topicId;
   if (data.title !== undefined) updateData.title = data.title;
 
   if (data.topicId) {
@@ -85,8 +102,12 @@ export async function updateSession(
       where: { id: data.topicId },
       select: { title: true },
     });
-    if (topic) updateData.title = `大管家 · ${topic.title}`;
+    if (topic) {
+      updateData.topicId = data.topicId;
+      updateData.title = `大管家 · ${topic.title}`;
+    }
   } else if (data.topicId === null) {
+    updateData.topicId = null;
     updateData.title = '大管家会话';
   }
 
