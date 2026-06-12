@@ -25,9 +25,7 @@ export function DashboardTodoRail({
 }) {
   // 生成完成待确认的内容（GENERATING 状态已完成，等待用户确认）
   const readyToConfirm = items.filter(
-    (item) =>
-      item.versions.length > 0 &&
-      item.status === 'APPROVED'
+    (item) => item.versions.length > 0 && item.status === 'APPROVED'
   );
 
   const todos = [

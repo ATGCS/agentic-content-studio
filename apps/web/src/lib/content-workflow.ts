@@ -11,7 +11,11 @@ export function getActiveWorkflowStep(
   input: ContentWorkflowInput
 ): WorkflowStepId {
   // 简化流程：生成完成 → 编辑确认 → 发布
-  if (input.contentStatus === 'APPROVED' || input.contentStatus === 'PENDING_PUBLISH') return 'publish';
+  if (
+    input.contentStatus === 'APPROVED' ||
+    input.contentStatus === 'PENDING_PUBLISH'
+  )
+    return 'publish';
   if (!input.versions.length) return 'generate';
   return 'edit';
 }

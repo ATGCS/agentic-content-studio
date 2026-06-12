@@ -62,7 +62,8 @@ export async function listContents(
 
   const statusCounts: Record<string, number> = {};
   for (const row of statusCountsRaw) {
-    const count = Object.values(row._count).find(v => typeof v === 'number') || 0;
+    const count =
+      Object.values(row._count).find((v) => typeof v === 'number') || 0;
     statusCounts[row.status] = count;
   }
 

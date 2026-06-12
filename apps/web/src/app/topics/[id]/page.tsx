@@ -3,7 +3,15 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Bot, FileText, Layers, Plus, RefreshCw, ListOrdered, X } from 'lucide-react';
+import {
+  Bot,
+  FileText,
+  Layers,
+  Plus,
+  RefreshCw,
+  ListOrdered,
+  X,
+} from 'lucide-react';
 import {
   ContentEditDialog,
   type ContentEditForm,
@@ -276,23 +284,26 @@ export default function TopicDetailPage() {
                                 <p className="mt-1 text-[11px] leading-relaxed text-[#86909C] line-clamp-3">
                                   {article.summary}
                                 </p>
-                                {article.keyPoints && article.keyPoints.length > 0 && (
-                                  <div className="mt-1.5 flex flex-wrap gap-1">
-                                    {article.keyPoints.slice(0, 3).map((point, i) => (
-                                      <span
-                                        key={i}
-                                        className="rounded bg-[#F7F8FA] px-1.5 py-0.5 text-[10px] text-[#4E5969]"
-                                      >
-                                        {point}
-                                      </span>
-                                    ))}
-                                    {article.keyPoints.length > 3 && (
-                                      <span className="text-[10px] text-[#C9CDD4]">
-                                        +{article.keyPoints.length - 3}
-                                      </span>
-                                    )}
-                                  </div>
-                                )}
+                                {article.keyPoints &&
+                                  article.keyPoints.length > 0 && (
+                                    <div className="mt-1.5 flex flex-wrap gap-1">
+                                      {article.keyPoints
+                                        .slice(0, 3)
+                                        .map((point, i) => (
+                                          <span
+                                            key={i}
+                                            className="rounded bg-[#F7F8FA] px-1.5 py-0.5 text-[10px] text-[#4E5969]"
+                                          >
+                                            {point}
+                                          </span>
+                                        ))}
+                                      {article.keyPoints.length > 3 && (
+                                        <span className="text-[10px] text-[#C9CDD4]">
+                                          +{article.keyPoints.length - 3}
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
                               </div>
                             </div>
                           </div>

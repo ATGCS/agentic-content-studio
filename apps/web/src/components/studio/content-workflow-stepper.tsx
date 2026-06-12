@@ -63,7 +63,11 @@ export function ContentWorkflowStepper({
           </>
         );
 
-        if (step.id === 'publish' && (input.contentStatus === 'APPROVED' || input.contentStatus === 'PENDING_PUBLISH')) {
+        if (
+          step.id === 'publish' &&
+          (input.contentStatus === 'APPROVED' ||
+            input.contentStatus === 'PENDING_PUBLISH')
+        ) {
           return (
             <span key={step.id} className="inline-flex items-center">
               {index > 0 && (

@@ -224,7 +224,10 @@ export default function ReviewsPage() {
           reviewingItem
             ? {
                 id: reviewingItem.id,
-                title: reviewingItem.content?.title || reviewingItem.version?.title || '',
+                title:
+                  reviewingItem.content?.title ||
+                  reviewingItem.version?.title ||
+                  '',
                 platform: reviewingItem.version?.platform || '',
                 submitTime: reviewingItem.createdAt,
               }
@@ -238,7 +241,8 @@ export default function ReviewsPage() {
             <div className="flex flex-wrap items-center gap-1">
               {tabCounts.map((t) => {
                 const active = tab === t.value;
-                const count = 'count' in t && typeof t.count === 'number' ? t.count : 0;
+                const count =
+                  'count' in t && typeof t.count === 'number' ? t.count : 0;
                 return (
                   <button
                     key={t.value}
@@ -246,7 +250,9 @@ export default function ReviewsPage() {
                     className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all ${active ? 'bg-[#7B61FF] text-white ring-1 ring-current/20' : 'bg-[#F2F3F5] text-[#4E5969] hover:bg-[#E5E8EF]'}`}
                   >
                     {t.label}{' '}
-                    <span className="ml-0.5 text-[10px] opacity-70">{count}</span>
+                    <span className="ml-0.5 text-[10px] opacity-70">
+                      {count}
+                    </span>
                   </button>
                 );
               })}
@@ -280,153 +286,164 @@ export default function ReviewsPage() {
           </div>
 
           <div>
-          {loading ? (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="border border-[#E5E8EF] rounded-xl p-3 space-y-2 animate-pulse"
-                >
-                  <div className="h-4 bg-[#F2F3F5] rounded w-3/4" />
-                  <div className="h-3 bg-[#F7F8FA] rounded w-1/2" />
-                  <div className="h-3 bg-[#F7F8FA] rounded w-2/3" />
-                </div>
-              ))}
-            </div>
-          ) : items.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-[#86909C]">
-              <ShieldAlert className="size-10 mb-2 text-[#C9CDD4]" />
-              <p className="text-sm">暂无审核内容</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {items.map((item) => {
-                const isPending =
-                  item.status === 'pending' || item.status === 'PENDING';
-                return (
-                  <Link
-                    key={item.id}
-                    href={`/reviews/${item.id}`}
-                    className="group flex flex-col rounded-xl border border-[#E5E8EF] bg-white p-3 hover:shadow-md hover:border-[#7B61FF]/40 transition-all cursor-pointer"
+            {loading ? (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="border border-[#E5E8EF] rounded-xl p-3 space-y-2 animate-pulse"
                   >
-                    {/* 标题 + 状态 */}
-                    <div className="flex items-start justify-between gap-1.5">
-                      <h3 className="line-clamp-2 text-sm font-semibold text-[#1D2129] flex-1 group-hover:text-[#7B61FF] transition-colors">
-                        {item.content?.title || item.version?.title || '未命名内容'}
-                      </h3>
-                      {getStatusBadge(item.status)}
-                    </div>
-
-                    {/* 平台 + 时间 */}
-                    <div className="mt-2 flex items-center gap-2 text-[11px] text-[#86909C]">
-                      <PlatformBadge platform={item.version?.platform} size="sm" />
-                      <span className="ml-auto whitespace-nowrap">
-                        {item.createdAt
-                          ? new Date(item.createdAt).toLocaleString('zh-CN', {
-                              month: '2-digit',
-                              day: '2-digit',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })
-                          : '-'}
-                      </span>
-                    </div>
-
-                    {/* 操作 */}
-                    <div
-                      className="mt-2 flex items-center gap-1.5 border-t border-[#F2F3F5] pt-2"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }}
+                    <div className="h-4 bg-[#F2F3F5] rounded w-3/4" />
+                    <div className="h-3 bg-[#F7F8FA] rounded w-1/2" />
+                    <div className="h-3 bg-[#F7F8FA] rounded w-2/3" />
+                  </div>
+                ))}
+              </div>
+            ) : items.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-[#86909C]">
+                <ShieldAlert className="size-10 mb-2 text-[#C9CDD4]" />
+                <p className="text-sm">暂无审核内容</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {items.map((item) => {
+                  const isPending =
+                    item.status === 'pending' || item.status === 'PENDING';
+                  return (
+                    <Link
+                      key={item.id}
+                      href={`/reviews/${item.id}`}
+                      className="group flex flex-col rounded-xl border border-[#E5E8EF] bg-white p-3 hover:shadow-md hover:border-[#7B61FF]/40 transition-all cursor-pointer"
                     >
-                      {isPending && (
+                      {/* 标题 + 状态 */}
+                      <div className="flex items-start justify-between gap-1.5">
+                        <h3 className="line-clamp-2 text-sm font-semibold text-[#1D2129] flex-1 group-hover:text-[#7B61FF] transition-colors">
+                          {item.content?.title ||
+                            item.version?.title ||
+                            '未命名内容'}
+                        </h3>
+                        {getStatusBadge(item.status)}
+                      </div>
+
+                      {/* 平台 + 时间 */}
+                      <div className="mt-2 flex items-center gap-2 text-[11px] text-[#86909C]">
+                        <PlatformBadge
+                          platform={item.version?.platform}
+                          size="sm"
+                        />
+                        <span className="ml-auto whitespace-nowrap">
+                          {item.createdAt
+                            ? new Date(item.createdAt).toLocaleString('zh-CN', {
+                                month: '2-digit',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })
+                            : '-'}
+                        </span>
+                      </div>
+
+                      {/* 操作 */}
+                      <div
+                        className="mt-2 flex items-center gap-1.5 border-t border-[#F2F3F5] pt-2"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                        }}
+                      >
+                        {isPending && (
+                          <Button
+                            size="sm"
+                            className="h-7 flex-1 text-[11px] bg-[#7B61FF] hover:bg-[#6A50E6] text-white"
+                            onClick={() => handleReview(item)}
+                          >
+                            审核
+                          </Button>
+                        )}
                         <Button
                           size="sm"
-                          className="h-7 flex-1 text-[11px] bg-[#7B61FF] hover:bg-[#6A50E6] text-white"
-                          onClick={() => handleReview(item)}
+                          variant="outline"
+                          className="h-7 flex-1 text-[11px] border-[#E5E8EF]"
                         >
-                          审核
+                          详情
                         </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 flex-1 text-[11px] border-[#E5E8EF]"
-                      >
-                        详情
-                      </Button>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
 
-          {/* 分页 */}
-          <div className="flex items-center justify-between text-xs text-[#86909c]">
-            <span>共 {total} 条 · 第 {page}/{totalPages} 页</span>
-            <div className="flex items-center gap-1">
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 w-7 p-0 bg-white border-[#E5E8EF]"
-                disabled={page <= 1}
-                onClick={() => setPage(page - 1)}
-              >
-                <ChevronLeft className="size-3.5" />
-              </Button>
-              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                const pageNum = Math.max(1, Math.min(page - 2, totalPages - 4 + i));
-                if (pageNum + i > totalPages) return null;
-                const p = i === 0 ? Math.max(1, page - 2) : Math.max(1, page - 2) + i;
-                if (p > totalPages) return null;
-                return (
-                  <Button
-                    key={p}
-                    size="sm"
-                    variant="outline"
-                    className={cn(
-                      'h-7 w-7 p-0 text-xs',
-                      p === page
-                        ? 'bg-[#7B61FF] border-[#7B61FF] text-white hover:bg-[#7B61FF]'
-                        : 'bg-white border-[#E5E8EF] text-[#4E5969] hover:bg-[#F5F7FA]'
-                    )}
-                    onClick={() => setPage(p)}
-                  >
-                    {p}
-                  </Button>
-                );
-              }).filter(Boolean)}
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-7 w-7 p-0 bg-white border-[#E5E8EF]"
-                disabled={page >= totalPages}
-                onClick={() => setPage(page + 1)}
-              >
-                <ChevronRight className="size-3.5" />
-              </Button>
-              <Select
-                value={pageSize}
-                onValueChange={(v) => {
-                  setPageSize(v);
-                  setPage(1);
-                }}
-              >
-                <SelectTrigger size="sm" className="w-20 h-7 text-xs ml-2">
-                  <SelectValue placeholder="10条/页" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="10">10条/页</SelectItem>
-                  <SelectItem value="20">20条/页</SelectItem>
-                  <SelectItem value="50">50条/页</SelectItem>
-                </SelectContent>
-              </Select>
+            {/* 分页 */}
+            <div className="flex items-center justify-between text-xs text-[#86909c]">
+              <span>
+                共 {total} 条 · 第 {page}/{totalPages} 页
+              </span>
+              <div className="flex items-center gap-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 w-7 p-0 bg-white border-[#E5E8EF]"
+                  disabled={page <= 1}
+                  onClick={() => setPage(page - 1)}
+                >
+                  <ChevronLeft className="size-3.5" />
+                </Button>
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                  const pageNum = Math.max(
+                    1,
+                    Math.min(page - 2, totalPages - 4 + i)
+                  );
+                  if (pageNum + i > totalPages) return null;
+                  const p =
+                    i === 0 ? Math.max(1, page - 2) : Math.max(1, page - 2) + i;
+                  if (p > totalPages) return null;
+                  return (
+                    <Button
+                      key={p}
+                      size="sm"
+                      variant="outline"
+                      className={cn(
+                        'h-7 w-7 p-0 text-xs',
+                        p === page
+                          ? 'bg-[#7B61FF] border-[#7B61FF] text-white hover:bg-[#7B61FF]'
+                          : 'bg-white border-[#E5E8EF] text-[#4E5969] hover:bg-[#F5F7FA]'
+                      )}
+                      onClick={() => setPage(p)}
+                    >
+                      {p}
+                    </Button>
+                  );
+                }).filter(Boolean)}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 w-7 p-0 bg-white border-[#E5E8EF]"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage(page + 1)}
+                >
+                  <ChevronRight className="size-3.5" />
+                </Button>
+                <Select
+                  value={pageSize}
+                  onValueChange={(v) => {
+                    setPageSize(v);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger size="sm" className="w-20 h-7 text-xs ml-2">
+                    <SelectValue placeholder="10条/页" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10条/页</SelectItem>
+                    <SelectItem value="20">20条/页</SelectItem>
+                    <SelectItem value="50">50条/页</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
-        </div>
-      </PageContainer>
+        </PageContainer>
       </StudioLayout>
     </>
   );

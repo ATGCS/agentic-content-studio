@@ -3,13 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import {
-  Clipboard,
-  Download,
-  Send,
-  X,
-  RefreshCw,
-} from 'lucide-react';
+import { Clipboard, Download, Send, X, RefreshCw } from 'lucide-react';
 import { StudioLayout } from '@/components/StudioLayout';
 import { PageContainer } from '@/components/layout/page-container';
 import { PlatformBadge } from '@/components/platform-icon';
@@ -192,7 +186,13 @@ type CopyPreview = {
   versionId: string;
 } | null;
 
-type TabValue = 'all' | 'pending' | 'published' | 'packages' | 'records' | 'drafts';
+type TabValue =
+  | 'all'
+  | 'pending'
+  | 'published'
+  | 'packages'
+  | 'records'
+  | 'drafts';
 
 const tabs: { value: TabValue; label: string }[] = [
   { value: 'all', label: '全部' },
@@ -232,13 +232,12 @@ export default function PublishingPage() {
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [tasksRes, draftsRes, redPkgRes, douyinPkgRes] =
-        await Promise.all([
-          api<ApiPublishingTask[]>('/api/publishing/tasks'),
-          api<DraftItem[]>('/api/publishing/drafts'),
-          api<PackageItem[]>('/api/publishing/packages?platform=XIAOHONGSHU'),
-          api<PackageItem[]>('/api/publishing/packages?platform=DOUYIN'),
-        ]);
+      const [tasksRes, draftsRes, redPkgRes, douyinPkgRes] = await Promise.all([
+        api<ApiPublishingTask[]>('/api/publishing/tasks'),
+        api<DraftItem[]>('/api/publishing/drafts'),
+        api<PackageItem[]>('/api/publishing/packages?platform=XIAOHONGSHU'),
+        api<PackageItem[]>('/api/publishing/packages?platform=DOUYIN'),
+      ]);
       setTasks(tasksRes.data);
       setDrafts(draftsRes.data);
       setRedPackages(redPkgRes.data);
@@ -278,9 +277,7 @@ export default function PublishingPage() {
     (item) => item.status === 'SUCCESS'
   );
   const recordItems = taskItems.filter(
-    (item) =>
-      item.status === 'FAILED' ||
-      item.status === 'CANCELLED'
+    (item) => item.status === 'FAILED' || item.status === 'CANCELLED'
   );
 
   const publishedTodayCount = recordItems.filter(
@@ -353,7 +350,7 @@ export default function PublishingPage() {
         const tags: string[] = Array.isArray(v.tags)
           ? v.tags.filter((t): t is string => typeof t === 'string')
           : [];
-        
+
         // 构建纯文本内容（适合直接粘贴到平台）
         const lines: string[] = [];
         lines.push(v.title ?? item.title);
@@ -363,12 +360,12 @@ export default function PublishingPage() {
           lines.push('');
         }
         if (tags.length > 0) {
-          lines.push(tags.map(t => `#${t}`).join(' '));
+          lines.push(tags.map((t) => `#${t}`).join(' '));
           lines.push('');
         }
         lines.push(v.body ?? '');
         const plainText = lines.join('\n').trim();
-        
+
         // 显示预览弹窗
         setCopyPreview({
           title: item.title,
@@ -422,7 +419,12 @@ export default function PublishingPage() {
   }
 
   const tabCounts = useMemo(() => {
-    const totalCount = pendingTaskItems.length + publishedTaskItems.length + packageCount + recordItems.length + drafts.length;
+    const totalCount =
+      pendingTaskItems.length +
+      publishedTaskItems.length +
+      packageCount +
+      recordItems.length +
+      drafts.length;
     return tabs.map((t) => {
       let count = 0;
       if (t.value === 'all') count = totalCount;
@@ -475,7 +477,9 @@ export default function PublishingPage() {
                   className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all ${active ? 'bg-[#1664FF] text-white ring-1 ring-current/20' : 'bg-[#F2F3F5] text-[#4E5969] hover:bg-[#E5E8EF]'}`}
                 >
                   {t.label}{' '}
-                  <span className="ml-0.5 text-[10px] opacity-70">{t.count}</span>
+                  <span className="ml-0.5 text-[10px] opacity-70">
+                    {t.count}
+                  </span>
                 </button>
               );
             })}
@@ -490,7 +494,9 @@ export default function PublishingPage() {
             onClick={loadAll}
             disabled={loading}
           >
-            <RefreshCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw
+              className={`size-3.5 ${loading ? 'animate-spin' : ''}`}
+            />
             刷新
           </Button>
         </div>
@@ -519,7 +525,10 @@ export default function PublishingPage() {
                 {pendingTaskItems.length > 0 && (
                   <div>
                     <h3 className="mb-3 text-sm font-semibold text-[#1D2129]">
-                      待发布 <span className="ml-1 text-xs font-normal text-[#86909C]">({pendingTaskItems.length})</span>
+                      待发布{' '}
+                      <span className="ml-1 text-xs font-normal text-[#86909C]">
+                        ({pendingTaskItems.length})
+                      </span>
                     </h3>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                       {pendingTaskItems.map((item) => (
@@ -534,16 +543,22 @@ export default function PublishingPage() {
                             <StatusPill value={item.status} />
                           </div>
                           <div className="mt-2 flex items-center gap-2 text-[11px] text-[#86909C]">
-                            <PlatformBadge platform={item.platforms[0]} size="sm" />
+                            <PlatformBadge
+                              platform={item.platforms[0]}
+                              size="sm"
+                            />
                             <span className="truncate">{item.account}</span>
                             <span className="ml-auto whitespace-nowrap">
                               {item.schedule !== '—'
-                                ? new Date(item.schedule).toLocaleString('zh-CN', {
-                                    month: '2-digit',
-                                    day: '2-digit',
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                  })
+                                ? new Date(item.schedule).toLocaleString(
+                                    'zh-CN',
+                                    {
+                                      month: '2-digit',
+                                      day: '2-digit',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                    }
+                                  )
                                 : '—'}
                             </span>
                           </div>
@@ -577,7 +592,10 @@ export default function PublishingPage() {
                 {publishedTaskItems.length > 0 && (
                   <div>
                     <h3 className="mb-3 text-sm font-semibold text-[#1D2129]">
-                      已发布 <span className="ml-1 text-xs font-normal text-[#86909C]">({publishedTaskItems.length})</span>
+                      已发布{' '}
+                      <span className="ml-1 text-xs font-normal text-[#86909C]">
+                        ({publishedTaskItems.length})
+                      </span>
                     </h3>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                       {publishedTaskItems.map((item) => (
@@ -592,16 +610,22 @@ export default function PublishingPage() {
                             <StatusPill value={item.status} />
                           </div>
                           <div className="mt-2 flex items-center gap-2 text-[11px] text-[#86909C]">
-                            <PlatformBadge platform={item.platforms[0]} size="sm" />
+                            <PlatformBadge
+                              platform={item.platforms[0]}
+                              size="sm"
+                            />
                             <span className="truncate">{item.account}</span>
                             <span className="ml-auto whitespace-nowrap">
                               {item.schedule !== '—'
-                                ? new Date(item.schedule).toLocaleString('zh-CN', {
-                                    month: '2-digit',
-                                    day: '2-digit',
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                  })
+                                ? new Date(item.schedule).toLocaleString(
+                                    'zh-CN',
+                                    {
+                                      month: '2-digit',
+                                      day: '2-digit',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                    }
+                                  )
                                 : '—'}
                             </span>
                           </div>
@@ -623,7 +647,10 @@ export default function PublishingPage() {
                 {packageCount > 0 && (
                   <div>
                     <h3 className="mb-3 text-sm font-semibold text-[#1D2129]">
-                      发布包 <span className="ml-1 text-xs font-normal text-[#86909C]">({packageCount})</span>
+                      发布包{' '}
+                      <span className="ml-1 text-xs font-normal text-[#86909C]">
+                        ({packageCount})
+                      </span>
                     </h3>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                       {activePackages.map((item) => (
@@ -671,7 +698,10 @@ export default function PublishingPage() {
                 {recordItems.length > 0 && (
                   <div>
                     <h3 className="mb-3 text-sm font-semibold text-[#1D2129]">
-                      发布记录 <span className="ml-1 text-xs font-normal text-[#86909C]">({recordItems.length})</span>
+                      发布记录{' '}
+                      <span className="ml-1 text-xs font-normal text-[#86909C]">
+                        ({recordItems.length})
+                      </span>
                     </h3>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                       {recordItems.map((item) => (
@@ -686,16 +716,22 @@ export default function PublishingPage() {
                             <StatusPill value={item.status} />
                           </div>
                           <div className="mt-2 flex items-center gap-2 text-[11px] text-[#86909C]">
-                            <PlatformBadge platform={item.platforms[0]} size="sm" />
+                            <PlatformBadge
+                              platform={item.platforms[0]}
+                              size="sm"
+                            />
                             <span className="truncate">{item.account}</span>
                             <span className="ml-auto whitespace-nowrap">
                               {item.schedule !== '—'
-                                ? new Date(item.schedule).toLocaleString('zh-CN', {
-                                    month: '2-digit',
-                                    day: '2-digit',
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                  })
+                                ? new Date(item.schedule).toLocaleString(
+                                    'zh-CN',
+                                    {
+                                      month: '2-digit',
+                                      day: '2-digit',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                    }
+                                  )
                                 : '—'}
                             </span>
                           </div>
@@ -717,7 +753,10 @@ export default function PublishingPage() {
                 {drafts.length > 0 && (
                   <div>
                     <h3 className="mb-3 text-sm font-semibold text-[#1D2129]">
-                      草稿同步 <span className="ml-1 text-xs font-normal text-[#86909C]">({drafts.length})</span>
+                      草稿同步{' '}
+                      <span className="ml-1 text-xs font-normal text-[#86909C]">
+                        ({drafts.length})
+                      </span>
                     </h3>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                       {drafts.map((item) => (
@@ -749,12 +788,16 @@ export default function PublishingPage() {
                 )}
 
                 {/* 全部为空 */}
-                {pendingTaskItems.length === 0 && publishedTaskItems.length === 0 && packageCount === 0 && recordItems.length === 0 && drafts.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-16 text-[#86909C]">
-                    <Send className="size-10 mb-2 text-[#C9CDD4]" />
-                    <p className="text-sm">暂无内容</p>
-                  </div>
-                )}
+                {pendingTaskItems.length === 0 &&
+                  publishedTaskItems.length === 0 &&
+                  packageCount === 0 &&
+                  recordItems.length === 0 &&
+                  drafts.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-16 text-[#86909C]">
+                      <Send className="size-10 mb-2 text-[#C9CDD4]" />
+                      <p className="text-sm">暂无内容</p>
+                    </div>
+                  )}
               </div>
             )}
 
@@ -781,16 +824,22 @@ export default function PublishingPage() {
                         </div>
 
                         <div className="mt-2 flex items-center gap-2 text-[11px] text-[#86909C]">
-                          <PlatformBadge platform={item.platforms[0]} size="sm" />
+                          <PlatformBadge
+                            platform={item.platforms[0]}
+                            size="sm"
+                          />
                           <span className="truncate">{item.account}</span>
                           <span className="ml-auto whitespace-nowrap">
                             {item.schedule !== '—'
-                              ? new Date(item.schedule).toLocaleString('zh-CN', {
-                                  month: '2-digit',
-                                  day: '2-digit',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })
+                              ? new Date(item.schedule).toLocaleString(
+                                  'zh-CN',
+                                  {
+                                    month: '2-digit',
+                                    day: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  }
+                                )
                               : '—'}
                           </span>
                         </div>
@@ -844,16 +893,22 @@ export default function PublishingPage() {
                           <StatusPill value={item.status} />
                         </div>
                         <div className="mt-2 flex items-center gap-2 text-[11px] text-[#86909C]">
-                          <PlatformBadge platform={item.platforms[0]} size="sm" />
+                          <PlatformBadge
+                            platform={item.platforms[0]}
+                            size="sm"
+                          />
                           <span className="truncate">{item.account}</span>
                           <span className="ml-auto whitespace-nowrap">
                             {item.schedule !== '—'
-                              ? new Date(item.schedule).toLocaleString('zh-CN', {
-                                  month: '2-digit',
-                                  day: '2-digit',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })
+                              ? new Date(item.schedule).toLocaleString(
+                                  'zh-CN',
+                                  {
+                                    month: '2-digit',
+                                    day: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  }
+                                )
                               : '—'}
                           </span>
                         </div>
@@ -992,16 +1047,22 @@ export default function PublishingPage() {
                         </div>
 
                         <div className="mt-2 flex items-center gap-2 text-[11px] text-[#86909C]">
-                          <PlatformBadge platform={item.platforms[0]} size="sm" />
+                          <PlatformBadge
+                            platform={item.platforms[0]}
+                            size="sm"
+                          />
                           <span className="truncate">{item.account}</span>
                           <span className="ml-auto whitespace-nowrap">
                             {item.schedule !== '—'
-                              ? new Date(item.schedule).toLocaleString('zh-CN', {
-                                  month: '2-digit',
-                                  day: '2-digit',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })
+                              ? new Date(item.schedule).toLocaleString(
+                                  'zh-CN',
+                                  {
+                                    month: '2-digit',
+                                    day: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  }
+                                )
                               : '—'}
                           </span>
                         </div>

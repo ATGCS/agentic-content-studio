@@ -367,9 +367,7 @@ export default function ContentsPage() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredItems.map((c) => {
-              const platforms = [
-                ...new Set(c.versions.map((v) => v.platform)),
-              ];
+              const platforms = [...new Set(c.versions.map((v) => v.platform))];
               const accounts = c.versions
                 .map((v) => v.account?.accountName)
                 .filter(Boolean);
@@ -390,10 +388,7 @@ export default function ContentsPage() {
                   </label>
 
                   {/* 标题 + 摘要 */}
-                  <Link
-                    href={`/contents/${c.id}`}
-                    className="block pr-6"
-                  >
+                  <Link href={`/contents/${c.id}`} className="block pr-6">
                     <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-[#1D2129] group-hover:text-[#1664FF]">
                       {c.title}
                     </h3>
