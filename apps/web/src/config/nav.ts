@@ -67,14 +67,15 @@ export const studioNavItems: NavItem[] = [
     parent: '/contents',
     tier: 'secondary',
   },
-  {
-    href: '/reviews',
-    label: '审核中心',
-    icon: CheckSquare,
-    title: '审核中心',
-    breadcrumb: '审核中心',
-    tier: 'primary',
-  },
+  // 审核中心暂时隐藏 - 流程简化后生成完成即发布状态
+  // {
+  //   href: '/reviews',
+  //   label: '审核中心',
+  //   icon: CheckSquare,
+  //   title: '审核中心',
+  //   breadcrumb: '审核中心',
+  //   tier: 'primary',
+  // },
   {
     href: '/publishing',
     label: '发布管理',

@@ -26,7 +26,11 @@ export async function listContents(
   if (query.topicId) where.topicId = query.topicId;
   if (user.role === 'OPERATOR') where.createdBy = user.id;
 
-  const [items, total] = await Promise.all([
+  // where without status filter, for computing per-status counts
+  const whereWithoutStatus = { ...where };
+  delete whereWithoutStatus.status;
+
+  const [items, total, statusCountsRaw] = await Promise.all([
     prisma.content.findMany({
       where,
       skip,
@@ -49,8 +53,20 @@ export async function listContents(
       },
     }),
     prisma.content.count({ where }),
+    prisma.content.groupBy({
+      by: ['status'],
+      where: whereWithoutStatus,
+      _count: true,
+    }),
   ]);
-  return { items, total, page, pageSize };
+
+  const statusCounts: Record<string, number> = {};
+  for (const row of statusCountsRaw) {
+    const count = Object.values(row._count).find(v => typeof v === 'number') || 0;
+    statusCounts[row.status] = count;
+  }
+
+  return { items, total, page, pageSize, statusCounts };
 }
 
 export async function createContent(

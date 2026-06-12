@@ -34,22 +34,6 @@ import { PlatformBadge } from '@/components/studio/platform-badge';
 import { StatusBadge } from '@/components/studio/status-badge';
 import { StudioCard } from '@/components/studio/studio-card';
 import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-
-import {
-  StudioTable,
-  StudioTableBody,
-  StudioTableCell,
-  StudioTableHead,
-  StudioTableHeader,
-  StudioTableRow,
-} from '@/components/studio/studio-table';
 import { api } from '@/lib/api';
 import { getStatusLabel, getStatusStyle } from '@/lib/tokens';
 
@@ -86,6 +70,7 @@ type ContentItem = {
 type ContentListResponse = {
   items: ContentItem[];
   total: number;
+  statusCounts?: Record<string, number>;
 };
 
 const statusKeys: ContentStatus[] = [
@@ -121,6 +106,7 @@ export default function ContentsPage() {
   const [statusFilter, setStatusFilter] = useState(
     validStatusFilters.has(initialStatus) ? initialStatus : 'ALL'
   );
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({});
 
   async function load() {
     setLoading(true);
@@ -135,6 +121,7 @@ export default function ContentsPage() {
       );
       setItems(res.data.items || []);
       setTotal(res.data.total ?? res.data.items?.length ?? 0);
+      setStatusCounts(res.data.statusCounts ?? {});
       setSelected([]);
       setLoadError(null);
     } catch (error) {
@@ -162,11 +149,6 @@ export default function ContentsPage() {
       .filter(Boolean)
       .some((value) => value?.toLowerCase().includes(normalizedKeyword));
   });
-
-  const statusCounts = items.reduce<Record<string, number>>((acc, c) => {
-    acc[c.status] = (acc[c.status] || 0) + 1;
-    return acc;
-  }, {});
 
   const toggleSelect = (id: string) => {
     setSelected((prev) =>
@@ -204,8 +186,14 @@ export default function ContentsPage() {
     try {
       await api(`/api/contents/${deleteDialogId}`, { method: 'DELETE' });
       await load();
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
+      if (error?.message?.includes('not found')) {
+        // 内容已被删除，刷新列表即可
+        await load();
+      } else {
+        setLoadError('删除失败，请重试');
+      }
     } finally {
       setDeletingId(null);
     }
@@ -248,122 +236,97 @@ export default function ContentsPage() {
 
   return (
     <StudioLayout>
+      <CreationWorkflowGuide currentStep="content" />
       <PageContainer className="max-w-none gap-4 p-6">
-        <CreationWorkflowGuide currentStep="content" />
-
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center justify-end gap-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#86909c]" />
-              <input
-                value={keyword}
-                onChange={(e) => setKeyword(e.target.value)}
-                placeholder="搜索内容"
-                className="studio-input h-10 w-60 pl-10 pr-4 text-sm"
-              />
-            </div>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="size-10"
-              onClick={load}
-              disabled={loading}
-            >
-              <RefreshCw
-                className={`size-4 text-[#86909c] ${loading ? 'animate-spin' : ''}`}
-              />
-            </Button>
-            <Button
-              size="sm"
-              className="h-10 bg-[#1664FF] text-white hover:bg-[#0E52D9]"
-              onClick={openCreateDialog}
-            >
-              <Plus className="size-4" />
-              新建内容
-            </Button>
-            <Link href="/topics">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-10 gap-1.5 border-[#E5E8EF] text-xs"
-              >
-                <Layers className="size-4" />
-                系列管理
-              </Button>
-            </Link>
-            <Select
-              value={statusFilter}
-              onValueChange={(val) => {
-                setStatusFilter(val);
-              }}
-            >
-              <SelectTrigger className="h-9 w-36 bg-white text-xs">
-                <SelectValue placeholder="全部状态" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ALL">全部状态</SelectItem>
-                {statusKeys.map((key) => (
-                  <SelectItem key={key} value={key}>
-                    {getStatusLabel(key)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {/* 工具栏：搜索 + 操作 */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-[#86909c]" />
+            <input
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              placeholder="搜索内容"
+              className="studio-input h-8 w-48 rounded-lg pl-8 pr-3 text-xs"
+            />
           </div>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="size-8"
+            onClick={load}
+            disabled={loading}
+          >
+            <RefreshCw
+              className={`size-3.5 text-[#86909c] ${loading ? 'animate-spin' : ''}`}
+            />
+          </Button>
+          <div className="mx-1 h-5 w-px bg-[#E5E8EF]" />
+          <Button
+            size="sm"
+            className="h-8 bg-[#1664FF] px-3 text-xs text-white hover:bg-[#0E52D9]"
+            onClick={openCreateDialog}
+          >
+            <Plus className="size-3.5" />
+            新建内容
+          </Button>
+          <Link href="/topics">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1 border-[#E5E8EF] px-2.5 text-xs"
+            >
+              <Layers className="size-3.5" />
+              系列管理
+            </Button>
+          </Link>
+
+          {/* 系列筛选 pills */}
+          {topics.length > 0 && (
+            <>
+              <div className="mx-1 h-5 w-px bg-[#E5E8EF]" />
+              <button
+                onClick={() => setTopicFilter('')}
+                className={`rounded-md border px-2 py-0.5 text-[11px] transition-all ${!topicFilter ? 'border-[#1664FF] bg-[#F0F5FF] text-[#1664FF]' : 'border-[#E5E8EF] text-[#86909C] hover:border-[#C9D8FF]'}`}
+              >
+                全部
+              </button>
+              {topics.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => setTopicFilter(t.id)}
+                  className={`rounded-md border px-2 py-0.5 text-[11px] transition-all ${topicFilter === t.id ? 'border-[#1664FF] bg-[#F0F5FF] text-[#1664FF]' : 'border-[#E5E8EF] text-[#86909C] hover:border-[#C9D8FF]'}`}
+                >
+                  {t.title}
+                </button>
+              ))}
+            </>
+          )}
         </div>
 
-        {/* 系列筛选 */}
-        {topics.length > 0 && (
-          <div className="mb-4 flex flex-wrap items-center gap-2">
-            <span className="text-xs text-[#86909C]">按系列筛选：</span>
-            <button
-              onClick={() => {
-                setTopicFilter('');
-              }}
-              className={`rounded-lg border px-3 py-1 text-xs transition-all ${!topicFilter ? 'border-[#1664FF] bg-[#F0F5FF] text-[#1664FF]' : 'border-[#E5E8EF] text-[#4E5969] hover:border-[#C9D8FF]'}`}
-            >
-              全部
-            </button>
-            {topics.map((t) => (
+        {/* 状态筛选 tabs（替代大卡片 + 下拉） */}
+        <div className="flex flex-wrap items-center gap-1">
+          <button
+            onClick={() => setStatusFilter('ALL')}
+            className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all ${statusFilter === 'ALL' ? 'bg-[#1664FF] text-white' : 'bg-[#F2F3F5] text-[#4E5969] hover:bg-[#E5E8EF]'}`}
+          >
+            全部 <span className="ml-0.5 text-[10px] opacity-70">{total}</span>
+          </button>
+          {statusKeys.map((key) => {
+            const count = statusCounts[key] || 0;
+            const style = getStatusStyle(key);
+            const active = statusFilter === key;
+            return (
               <button
-                key={t.id}
-                onClick={() => {
-                  setTopicFilter(t.id);
-                }}
-                className={`rounded-lg border px-3 py-1 text-xs transition-all ${topicFilter === t.id ? 'border-[#1664FF] bg-[#F0F5FF] text-[#1664FF]' : 'border-[#E5E8EF] text-[#4E5969] hover:border-[#C9D8FF]'}`}
+                key={key}
+                onClick={() => setStatusFilter(key)}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-all ${active ? `${style.bg} ${style.text} ring-1 ring-current/20` : 'bg-[#F2F3F5] text-[#4E5969] hover:bg-[#E5E8EF]'}`}
               >
-                {t.title}
+                {getStatusLabel(key)}{' '}
+                <span className="ml-0.5 text-[10px] opacity-70">{count}</span>
               </button>
-            ))}
-          </div>
-        )}
-
-        <StudioCard
-          className="overflow-hidden px-6 py-5"
-          contentClassName="p-0"
-        >
-          <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-6">
-            {statusKeys.map((key) => {
-              const style = getStatusStyle(key);
-              const count = statusCounts[key] || 0;
-              return (
-                <div key={key} className="flex items-center gap-3">
-                  <div
-                    className={`flex size-8 shrink-0 items-center justify-center rounded-md text-sm font-bold ${style.bg} ${style.text}`}
-                  >
-                    {count}
-                  </div>
-                  <div>
-                    <p className="text-[15px] font-semibold text-[#1D2129]">
-                      {getStatusLabel(key)}
-                    </p>
-                    <p className="text-[11px] text-[#86909c]">共 {count} 条</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </StudioCard>
+            );
+          })}
+        </div>
 
         {loadError && (
           <StudioCard contentClassName="p-4">
@@ -371,164 +334,165 @@ export default function ContentsPage() {
           </StudioCard>
         )}
 
-        <StudioCard contentClassName="overflow-hidden px-5 pt-4">
-          <div className="mb-3 flex items-center justify-between px-1 text-xs text-[#86909c]">
-            <span>共 {filteredItems.length} 条内容</span>
-            <span>已选 {selected.length} 条</span>
-          </div>
+        <div className="mb-2 flex items-center justify-between text-xs text-[#86909c]">
+          <span>共 {filteredItems.length} 条内容</span>
+          <label className="flex items-center gap-1.5">
+            <input
+              type="checkbox"
+              className="accent-[#1664ff]"
+              checked={
+                selected.length === filteredItems.length &&
+                filteredItems.length > 0
+              }
+              onChange={toggleAll}
+            />
+            全选
+          </label>
+        </div>
 
-          {loading ? (
+        {loading ? (
+          <StudioCard contentClassName="p-8">
             <EmptyState
               title="内容加载中…"
               description="正在读取内容管理列表"
             />
-          ) : filteredItems.length === 0 ? (
+          </StudioCard>
+        ) : filteredItems.length === 0 ? (
+          <StudioCard contentClassName="p-8">
             <EmptyState
               title="暂无内容"
               description="新建内容后可在这里管理内容"
             />
-          ) : (
-            <StudioTable>
-              <StudioTableHeader>
-                <StudioTableRow>
-                  <StudioTableHead className="w-12">
+          </StudioCard>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filteredItems.map((c) => {
+              const platforms = [
+                ...new Set(c.versions.map((v) => v.platform)),
+              ];
+              const accounts = c.versions
+                .map((v) => v.account?.accountName)
+                .filter(Boolean);
+              const isSelected = selected.includes(c.id);
+              return (
+                <div
+                  key={c.id}
+                  className={`group relative flex flex-col rounded-xl border bg-white p-4 transition-all hover:shadow-md ${isSelected ? 'border-[#1664FF] ring-1 ring-[#1664FF]/20' : 'border-[#E5E8EF] hover:border-[#C9D8FF]'}`}
+                >
+                  {/* 选中标记 */}
+                  <label className="absolute right-3 top-3 flex items-center">
                     <input
                       type="checkbox"
                       className="accent-[#1664ff]"
-                      checked={
-                        selected.length === filteredItems.length &&
-                        filteredItems.length > 0
-                      }
-                      onChange={toggleAll}
+                      checked={isSelected}
+                      onChange={() => toggleSelect(c.id)}
                     />
-                  </StudioTableHead>
-                  <StudioTableHead>标题</StudioTableHead>
-                  <StudioTableHead>系列</StudioTableHead>
-                  <StudioTableHead>目标平台</StudioTableHead>
-                  <StudioTableHead>目标账号</StudioTableHead>
-                  <StudioTableHead>当前状态</StudioTableHead>
-                  <StudioTableHead>负责人</StudioTableHead>
-                  <StudioTableHead>最近更新时间</StudioTableHead>
-                  <StudioTableHead className="text-right">操作</StudioTableHead>
-                </StudioTableRow>
-              </StudioTableHeader>
-              <StudioTableBody>
-                {filteredItems.map((c) => {
-                  const firstPlatform = c.versions?.[0]?.platform || '';
-                  const firstAccount =
-                    c.versions?.[0]?.account?.accountName || '';
-                  return (
-                    <StudioTableRow key={c.id} className="h-14">
-                      <StudioTableCell>
-                        <input
-                          type="checkbox"
-                          className="accent-[#1664ff]"
-                          checked={selected.includes(c.id)}
-                          onChange={() => toggleSelect(c.id)}
-                        />
-                      </StudioTableCell>
-                      <StudioTableCell className="max-w-xs">
-                        <Link
-                          href={`/contents/${c.id}`}
-                          className="font-medium text-[#1D2129] hover:text-[#1664ff] hover:underline"
-                        >
-                          {c.title}
-                        </Link>
-                        {c.summary && (
-                          <p className="mt-1 truncate text-xs text-[#86909C]">
-                            {c.summary}
-                          </p>
-                        )}
-                      </StudioTableCell>
-                      <StudioTableCell>
-                        {c.topic ? (
-                          <Link
-                            href={`/topics/${c.topic.id}`}
-                            className="text-xs text-[#1664FF] hover:underline"
-                          >
-                            {c.topic.title}
-                          </Link>
-                        ) : (
-                          <span className="text-xs text-[#C9CDD4]">—</span>
-                        )}
-                      </StudioTableCell>
-                      <StudioTableCell>
-                        {firstPlatform ? (
-                          <PlatformBadge platform={firstPlatform} size="sm" />
-                        ) : (
-                          <span className="text-xs text-[#86909c]">未指定</span>
-                        )}
-                      </StudioTableCell>
-                      <StudioTableCell className="text-sm text-[#4e5969]">
-                        {firstAccount || '未指定'}
-                      </StudioTableCell>
-                      <StudioTableCell>
-                        <StatusBadge status={c.status} />
-                      </StudioTableCell>
-                      <StudioTableCell>
-                        <span className="inline-flex items-center gap-2 text-sm text-[#4e5969]">
-                          <span className="flex size-6 items-center justify-center rounded-full bg-[#f5f7fa] text-[11px] font-medium text-[#86909c]">
-                            {(c.creator?.name || 'U').slice(0, 1)}
-                          </span>
-                          {c.creator?.name || '未分配'}
-                        </span>
-                      </StudioTableCell>
-                      <StudioTableCell className="text-xs text-[#86909c]">
-                        {new Date(c.updatedAt).toLocaleString('zh-CN', {
-                          year: 'numeric',
-                          month: '2-digit',
-                          day: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </StudioTableCell>
-                      <StudioTableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-8 text-xs text-[#1664FF] border-[#1664FF]"
-                            onClick={() => openAiGenerate(c.id)}
-                          >
-                            <WandSparkles className="size-3.5" />
-                            AI 生成
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openEditDialog(c)}
-                          >
-                            <Edit className="size-3.5" />
-                            编辑
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 text-[#F53F3F] hover:text-[#F53F3F] hover:bg-red-50"
-                            disabled={deletingId === c.id}
-                            onClick={() => setDeleteDialogId(c.id)}
-                          >
-                            <Trash2 className="size-3.5" />
-                          </Button>
-                        </div>
-                      </StudioTableCell>
-                    </StudioTableRow>
-                  );
-                })}
-              </StudioTableBody>
-            </StudioTable>
-          )}
+                  </label>
 
-          <div className="flex items-center justify-between border-t border-[#f5f7fa] px-2 py-3 text-xs text-[#86909c]">
-            <span>共 {total} 条记录</span>
-            <Button variant="ghost" size="sm" className="h-7 px-2" disabled>
-              当前第 1 页
-            </Button>
-            <Button variant="ghost" size="sm" className="h-7 gap-1" disabled>
-              10 条/页
-            </Button>
+                  {/* 标题 + 摘要 */}
+                  <Link
+                    href={`/contents/${c.id}`}
+                    className="block pr-6"
+                  >
+                    <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-[#1D2129] group-hover:text-[#1664FF]">
+                      {c.title}
+                    </h3>
+                    {c.summary && (
+                      <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-[#86909C]">
+                        {c.summary}
+                      </p>
+                    )}
+                  </Link>
+
+                  {/* 系列 + 状态 */}
+                  <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                    <StatusBadge status={c.status} />
+                    {c.topic && (
+                      <Link
+                        href={`/topics/${c.topic.id}`}
+                        className="rounded-full bg-[#F0F5FF] px-2 py-0.5 text-[11px] font-medium text-[#1664FF] hover:underline"
+                      >
+                        {c.topic.title}
+                      </Link>
+                    )}
+                  </div>
+
+                  {/* 平台 + 账号 */}
+                  <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                    {platforms.length > 0 ? (
+                      platforms.map((p) => (
+                        <PlatformBadge key={p} platform={p} size="sm" />
+                      ))
+                    ) : (
+                      <span className="text-[11px] text-[#C9CDD4]">
+                        未指定平台
+                      </span>
+                    )}
+                    {accounts.length > 0 && (
+                      <span className="text-[11px] text-[#86909C]">
+                        · {accounts.join(', ')}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* 底部：负责人 + 时间 */}
+                  <div className="mt-auto flex items-center justify-between border-t border-[#F2F3F5] pt-3">
+                    <span className="flex items-center gap-1.5 text-[11px] text-[#86909C]">
+                      <span className="flex size-5 items-center justify-center rounded-full bg-[#F2F3F5] text-[10px] font-medium text-[#4E5969]">
+                        {(c.creator?.name || 'U').slice(0, 1)}
+                      </span>
+                      {c.creator?.name || '未分配'}
+                    </span>
+                    <span className="text-[11px] text-[#C9CDD4]">
+                      {new Date(c.updatedAt).toLocaleString('zh-CN', {
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </span>
+                  </div>
+
+                  {/* 操作按钮 */}
+                  <div className="mt-2 flex items-center gap-1.5">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 flex-1 text-[11px] text-[#1664FF] border-[#E5E8EF]"
+                      onClick={() => openAiGenerate(c.id)}
+                    >
+                      <WandSparkles className="size-3 mr-1" />
+                      AI 生成
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 flex-1 text-[11px] border-[#E5E8EF]"
+                      onClick={() => openEditDialog(c)}
+                    >
+                      <Edit className="size-3 mr-1" />
+                      编辑
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 w-7 p-0 text-[#C9CDD4] hover:text-[#F53F3F] hover:bg-red-50"
+                      disabled={deletingId === c.id}
+                      onClick={() => setDeleteDialogId(c.id)}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </StudioCard>
+        )}
+
+        <div className="flex items-center justify-between text-xs text-[#86909c]">
+          <span>共 {total} 条记录</span>
+          <span>当前第 1 页 · 10 条/页</span>
+        </div>
       </PageContainer>
       <ContentEditDialog
         open={dialogOpen}

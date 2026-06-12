@@ -31,12 +31,6 @@ export const KANBAN_COLUMNS = [
     color: 'cyan',
   },
   {
-    key: 'pendingReview',
-    label: '待审核',
-    statuses: ['PENDING_REVIEW'],
-    color: 'orange',
-  },
-  {
     key: 'pendingPublish',
     label: '待发布',
     statuses: ['APPROVED', 'PENDING_PUBLISH'],

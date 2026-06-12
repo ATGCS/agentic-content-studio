@@ -307,6 +307,36 @@ function CoverArea({
   );
 }
 
+/** 手机 Feed 外壳：限制最大宽度 375px，居中显示，带圆角边框模拟手机屏幕 */
+function PhoneFrame({
+  children,
+  fill,
+  className,
+}: {
+  children: React.ReactNode;
+  fill?: boolean;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        'flex items-start justify-center',
+        fill ? 'min-h-0 flex-1 overflow-y-auto py-2' : 'py-2'
+      )}
+    >
+      <div
+        className={cn(
+          'w-full max-w-[375px] overflow-hidden rounded-2xl border border-[#E5E8EF] bg-white shadow-sm',
+          fill && 'flex min-h-0 flex-1 flex-col',
+          className
+        )}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 function XiaohongshuPreview({
   title,
   body,
@@ -329,12 +359,7 @@ function XiaohongshuPreview({
   fill?: boolean;
 }) {
   return (
-    <div
-      className={cn(
-        'w-full overflow-hidden',
-        fill && 'flex min-h-0 flex-1 flex-col'
-      )}
-    >
+    <PhoneFrame fill={fill}>
       <CoverArea
         coverUrl={coverUrl}
         coverText={coverText}
@@ -371,7 +396,7 @@ function XiaohongshuPreview({
           </div>
         </div>
       </div>
-    </div>
+    </PhoneFrame>
   );
 }
 
@@ -402,12 +427,7 @@ function WechatPreview({
   const hasArticleBody = Boolean(renderedHtml?.trim() || body.trim());
 
   return (
-    <div
-      className={cn(
-        'w-full overflow-hidden',
-        fill && 'flex min-h-0 flex-1 flex-col'
-      )}
-    >
+    <PhoneFrame fill={fill}>
       {/* 订阅号消息列表 */}
       <div className="shrink-0 bg-[#EDEDED] p-3">
         <p className="mb-2 text-[11px] text-[#888]">订阅号消息列表</p>
@@ -455,7 +475,7 @@ function WechatPreview({
           )}
         </div>
       )}
-    </div>
+    </PhoneFrame>
   );
 }
 
@@ -477,18 +497,8 @@ function DouyinPreview({
   fill?: boolean;
 }) {
   return (
-    <div
-      className={cn(
-        'w-full overflow-hidden rounded-xl bg-black',
-        fill && 'flex min-h-0 flex-1 items-center justify-center'
-      )}
-    >
-      <div
-        className={cn(
-          'relative aspect-[9/16]',
-          fill ? 'h-full max-h-full w-auto max-w-full' : 'w-full'
-        )}
-      >
+    <PhoneFrame fill={fill} className="!max-w-[375px] !bg-black">
+      <div className="relative aspect-[9/16] w-full">
         {coverUrl ? (
           <img
             src={coverUrl}
@@ -532,7 +542,7 @@ function DouyinPreview({
           <Share2 className="size-6" />
         </div>
       </div>
-    </div>
+    </PhoneFrame>
   );
 }
 
@@ -560,13 +570,8 @@ function GenericArticlePreview({
   fill?: boolean;
 }) {
   return (
-    <div
-      className={cn(
-        'w-full overflow-hidden',
-        fill && 'flex min-h-0 flex-1 flex-col'
-      )}
-    >
-      <div className="flex shrink-0 items-center gap-2 pb-3">
+    <PhoneFrame fill={fill}>
+      <div className="flex shrink-0 items-center gap-2 border-b border-[#F2F3F5] px-4 py-2.5">
         <PlatformBadge platform={platform} size="sm" />
         <span className="text-xs text-[#86909C]">
           {accountName ?? '平台账号'}
@@ -594,7 +599,7 @@ function GenericArticlePreview({
           <p className="mt-4 text-sm text-[#C9CDD4]">（正文待生成）</p>
         )}
       </div>
-    </div>
+    </PhoneFrame>
   );
 }
 

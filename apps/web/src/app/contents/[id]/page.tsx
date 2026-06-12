@@ -10,6 +10,8 @@ import {
   Save,
   Send,
   Trash2,
+  ListOrdered,
+  X,
 } from 'lucide-react';
 import { AiProductionPanel } from '@/components/studio/ai-production-panel';
 import { ContentRevisionHistory } from '@/components/studio/content-revision-history';
@@ -38,7 +40,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { api, ApiError } from '@/lib/api';
-import { getReviewUiState } from '@/lib/content-workflow';
+
 import {
   getPlatformCoverInfo,
   pickCoverUrl,
@@ -68,6 +70,24 @@ function normalizeTags(tags: string[] | string | null | undefined) {
     .map((tag) => tag.trim())
     .filter(Boolean);
 }
+
+type TopicOutlineArticle = {
+  order: number;
+  title: string;
+  summary: string;
+  keyPoints?: string[];
+};
+
+type TopicOutline = {
+  summary: string;
+  articles: TopicOutlineArticle[];
+};
+
+type TopicInfo = {
+  id: string;
+  title: string;
+  outline?: TopicOutline | null;
+};
 
 type ContentDetail = {
   id: string;
@@ -101,10 +121,11 @@ export default function ContentDetailPage() {
     'draft' | 'version'
   >('draft');
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [topic, setTopic] = useState<TopicInfo | null>(null);
+  const [outlineOpen, setOutlineOpen] = useState(false);
   const { notice, notify, dismiss } = useStudioNotice();
   const generateSectionRef = useRef<HTMLDivElement>(null);
   const editSectionRef = useRef<HTMLDivElement>(null);
-  const reviewSectionRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     const cRes = await api<ContentDetail>(`/api/contents/${id}`);
@@ -117,6 +138,17 @@ export default function ContentDetailPage() {
   useEffect(() => {
     load().catch(console.error);
   }, [load]);
+
+  // 加载系列大纲
+  useEffect(() => {
+    if (!content?.topicId) {
+      setTopic(null);
+      return;
+    }
+    api<TopicInfo>(`/api/topics/${content.topicId}`)
+      .then((r) => setTopic(r.data))
+      .catch(() => setTopic(null));
+  }, [content?.topicId]);
 
   useEffect(() => {
     if (!content) return;
@@ -140,12 +172,6 @@ export default function ContentDetailPage() {
     }
   }, [tab, content]);
 
-  const reviewVersion =
-    tab && tab !== 'draft'
-      ? content?.versions.find((v) => v.id === tab)
-      : undefined;
-  const reviewVersionId = reviewVersion?.id;
-
   const workflowInput = useMemo(
     () => ({
       contentStatus: content?.status ?? 'DRAFT',
@@ -153,44 +179,6 @@ export default function ContentDetailPage() {
     }),
     [content?.status, content?.versions]
   );
-
-  const reviewUiState = content
-    ? getReviewUiState(workflowInput, reviewVersion?.status)
-    : 'no_version';
-  const canSubmitReview =
-    reviewUiState === 'ready' || reviewUiState === 'rejected';
-
-  async function submitReview() {
-    if (!content || !reviewVersion || !canSubmitReview) return;
-    setSubmitting(true);
-    try {
-      await api('/api/reviews', {
-        method: 'POST',
-        body: JSON.stringify({
-          contentId: content.id,
-          versionId: reviewVersionId,
-        }),
-      });
-      await load();
-      notify(
-        'success',
-        '已提交审核，审核员将在审核中心处理。你可前往审核中心查看进度。'
-      );
-    } catch (e) {
-      if (e instanceof ApiError) {
-        notify(
-          'info',
-          e.message === '该版本已在审核中'
-            ? '该版本已在审核中，请前往审核中心查看。'
-            : e.message
-        );
-      } else {
-        notify('error', '提交审核失败，请稍后重试');
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  }
 
   async function saveContent() {
     setSaving(true);
@@ -269,8 +257,6 @@ export default function ContentDetailPage() {
       generateSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
     } else if (step === 'edit') {
       editSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
-    } else if (step === 'review') {
-      reviewSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }
 
@@ -370,94 +356,20 @@ export default function ContentDetailPage() {
               </div>
             </div>
 
-            {/* 审核操作 */}
-            <div ref={reviewSectionRef}>
-              <h3 className="text-xs font-semibold text-[#86909C] uppercase tracking-wider mb-3">
-                审核操作
-              </h3>
-              {reviewUiState === 'pending' && (
-                <p className="text-xs leading-relaxed text-[#FF6A00] mb-3">
-                  审核中，请等待审核员处理。{' '}
-                  <Link
-                    href="/reviews?status=pending"
-                    className="text-[#1664FF] hover:underline"
-                  >
-                    查看审核中心
-                  </Link>
-                </p>
-              )}
-              {reviewUiState === 'approved' && (
+            {/* 发布操作 */}
+            {(content.status === 'APPROVED' || content.status === 'PENDING_PUBLISH') && (
+              <div className="border-t border-[#E5E8EF] pt-4">
+                <h3 className="text-xs font-semibold text-[#86909C] uppercase tracking-wider mb-3">
+                  发布操作
+                </h3>
                 <p className="text-xs leading-relaxed text-[#00B42A] mb-3">
-                  已通过审核。请到发布管理查看。{' '}
-                  <Link
-                    href="/publishing?packages=1"
-                    className="text-[#1664FF] hover:underline"
-                  >
-                    前往发布包
-                  </Link>
+                  内容已确认，可以前往发布管理进行发布。
                 </p>
-              )}
-              {reviewUiState === 'rejected' && (
-                <p className="text-xs leading-relaxed text-[#F53F3F] mb-3">
-                  审核已驳回，请修改后重新提交。
-                </p>
-              )}
-              {(reviewUiState === 'ready' ||
-                reviewUiState === 'no_version') && (
-                <p className="text-xs leading-relaxed text-[#86909C] mb-3">
-                  将当前平台版本提交至审核中心。
-                </p>
-              )}
-              <div className="space-y-2">
-                {reviewVersion ? (
-                  <div className="rounded-lg bg-[#F7F8FA] px-3 py-2">
-                    <p className="text-xs text-[#86909C]">将提交</p>
-                    <p className="mt-0.5 truncate text-sm font-medium text-[#1D2129]">
-                      {getPlatformLabel(reviewVersion.platform)}
-                      {reviewVersion.title ? ` · ${reviewVersion.title}` : ''}
-                    </p>
-                  </div>
-                ) : tab === 'draft' && (content?.versions.length ?? 0) > 0 ? (
-                  <p className="text-xs text-[#86909C]">
-                    请切换到平台标签再提交审核。
-                  </p>
-                ) : (
-                  <p className="text-xs text-[#86909C]">
-                    请先生成平台版本，再提交审核。
-                  </p>
-                )}
-                {reviewUiState === 'approved' ? (
-                  <Button className="w-full" size="sm" asChild>
-                    <Link href="/publishing">去发布管理</Link>
-                  </Button>
-                ) : reviewUiState === 'pending' ? (
-                  <Button
-                    className="w-full"
-                    size="sm"
-                    variant="outline"
-                    asChild
-                  >
-                    <Link href="/reviews?status=pending">查看审核进度</Link>
-                  </Button>
-                ) : (
-                  <Button
-                    className="w-full bg-[#7B61FF] hover:bg-[#6A50E6]"
-                    size="sm"
-                    disabled={submitting || !reviewVersion || !canSubmitReview}
-                    onClick={submitReview}
-                  >
-                    <Send className="size-4 mr-1.5" />
-                    {submitting
-                      ? '提交中…'
-                      : reviewUiState === 'rejected'
-                        ? '重新提交审核'
-                        : reviewVersion
-                          ? `提交「${getPlatformLabel(reviewVersion.platform)}」审核`
-                          : '提交审核'}
-                  </Button>
-                )}
+                <Button className="w-full" size="sm" asChild>
+                  <Link href="/publishing">去发布管理</Link>
+                </Button>
               </div>
-            </div>
+            )}
 
             {/* 删除 */}
             <div className="border-t border-[#E5E8EF] pt-4">
@@ -495,7 +407,7 @@ export default function ContentDetailPage() {
             </div>
           </aside>
 
-          {/* ===== 右侧：AI 生成 + 编辑区 ===== */}
+          {/* ===== 中间：AI 生成 + 编辑区 ===== */}
           <div className="min-w-0 flex-1">
             <div ref={generateSectionRef} className="mb-6">
               <AiProductionPanel
@@ -657,6 +569,110 @@ export default function ContentDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* ===== 右侧：系列大纲侧边栏 ===== */}
+        {topic?.outline && (
+          <>
+            {/* 浮动按钮 */}
+            {!outlineOpen && (
+              <button
+                onClick={() => setOutlineOpen(true)}
+                className="fixed right-4 top-1/2 -translate-y-1/2 z-40 flex items-center gap-1.5 rounded-full bg-[#7B61FF] px-3 py-2 text-xs font-medium text-white shadow-lg hover:bg-[#6A50E6] transition-all"
+                title="系列大纲"
+              >
+                <ListOrdered className="size-4" />
+                <span>大纲</span>
+              </button>
+            )}
+
+            {/* 侧边栏面板 */}
+            {outlineOpen && (
+              <div className="fixed right-0 top-0 bottom-0 z-50 flex">
+                <div className="w-80 bg-white border-l border-[#E5E8EF] shadow-xl flex flex-col overflow-hidden">
+                  {/* 头部 */}
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-[#E5E8EF]">
+                    <div className="flex items-center gap-2">
+                      <ListOrdered className="size-4 text-[#7B61FF]" />
+                      <h3 className="text-sm font-semibold text-[#1D2129]">
+                        系列大纲
+                      </h3>
+                    </div>
+                    <button
+                      onClick={() => setOutlineOpen(false)}
+                      className="p-1 rounded hover:bg-[#F2F3F5] text-[#86909C] hover:text-[#4E5969]"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
+
+                  {/* 系列标题 */}
+                  <div className="px-4 py-3 border-b border-[#F2F3F5]">
+                    <Link
+                      href={`/topics/${topic.id}`}
+                      className="text-sm font-medium text-[#1664FF] hover:underline"
+                    >
+                      {topic.title}
+                    </Link>
+                    {topic.outline.summary && (
+                      <p className="mt-1.5 text-xs leading-relaxed text-[#86909C]">
+                        {topic.outline.summary}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* 文章列表 */}
+                  <div className="flex-1 overflow-y-auto px-4 py-3">
+                    <div className="space-y-3">
+                      {topic.outline.articles.map((article) => (
+                        <div
+                          key={article.order}
+                          className="group rounded-lg border border-[#E5E8EF] p-3 hover:border-[#7B61FF]/40 hover:shadow-sm transition-all"
+                        >
+                          <div className="flex items-start gap-2">
+                            <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-[#F0EDFF] text-[10px] font-bold text-[#7B61FF]">
+                              {article.order}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <h4 className="text-xs font-semibold text-[#1D2129] leading-snug group-hover:text-[#7B61FF] transition-colors">
+                                {article.title}
+                              </h4>
+                              <p className="mt-1 text-[11px] leading-relaxed text-[#86909C] line-clamp-3">
+                                {article.summary}
+                              </p>
+                              {article.keyPoints && article.keyPoints.length > 0 && (
+                                <div className="mt-1.5 flex flex-wrap gap-1">
+                                  {article.keyPoints.slice(0, 3).map((point, i) => (
+                                    <span
+                                      key={i}
+                                      className="rounded bg-[#F7F8FA] px-1.5 py-0.5 text-[10px] text-[#4E5969]"
+                                    >
+                                      {point}
+                                    </span>
+                                  ))}
+                                  {article.keyPoints.length > 3 && (
+                                    <span className="text-[10px] text-[#C9CDD4]">
+                                      +{article.keyPoints.length - 3}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 遮罩层 */}
+                <div
+                  className="flex-1 bg-black/20"
+                  onClick={() => setOutlineOpen(false)}
+                />
+              </div>
+            )}
+          </>
+        )}
       </PageContainer>
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>

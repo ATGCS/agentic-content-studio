@@ -1,12 +1,10 @@
 import type { ContentStatus } from '@acs/db';
 
 const TRANSITIONS: Partial<Record<ContentStatus, ContentStatus[]>> = {
-  DRAFT: ['PENDING_GENERATE', 'GENERATING', 'PENDING_REVIEW', 'ARCHIVED'],
+  DRAFT: ['PENDING_GENERATE', 'GENERATING', 'APPROVED', 'ARCHIVED'],
   PENDING_GENERATE: ['GENERATING', 'DRAFT'],
-  GENERATING: ['PENDING_REVIEW', 'FAILED', 'DRAFT'],
-  PENDING_REVIEW: ['APPROVED', 'REJECTED', 'DRAFT'],
-  REJECTED: ['PENDING_GENERATE', 'DRAFT', 'GENERATING', 'PENDING_REVIEW'],
-  APPROVED: ['PENDING_PUBLISH', 'PENDING_REVIEW', 'PUBLISHED', 'DRAFT'],
+  GENERATING: ['APPROVED', 'FAILED', 'DRAFT'],
+  APPROVED: ['PENDING_PUBLISH', 'PUBLISHED', 'DRAFT'],
   PENDING_PUBLISH: ['PUBLISHING', 'APPROVED'],
   PUBLISHING: ['PUBLISHED', 'FAILED'],
   PUBLISHED: ['REVIEWED', 'ARCHIVED'],
@@ -31,7 +29,7 @@ export function assertTransition(from: ContentStatus, to: ContentStatus): void {
 
 /**
  * 根据所有版本状态计算内容级聚合状态
- * 用于多版本独立审核场景
+ * 简化流程：生成完成 → 确认 → 发布
  */
 export function computeContentStatus(versionStatuses: string[]): ContentStatus {
   if (versionStatuses.length === 0) return 'DRAFT';
@@ -41,9 +39,7 @@ export function computeContentStatus(versionStatuses: string[]): ContentStatus {
 
   if (all('PUBLISHED')) return 'PUBLISHED';
   if (all('APPROVED')) return 'APPROVED';
-  if (has('PENDING_REVIEW')) return 'PENDING_REVIEW';
   if (has('GENERATING')) return 'GENERATING';
-  if (has('REJECTED') && !has('PENDING_REVIEW')) return 'REJECTED';
   if (has('APPROVED')) return 'APPROVED';
   return 'DRAFT';
 }

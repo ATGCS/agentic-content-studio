@@ -68,12 +68,13 @@ export async function submitReview(
     },
   });
   if (data.versionId) {
+    // 简化流程：直接设为 APPROVED，跳过审核
     await prisma.contentVersion.update({
       where: { id: data.versionId },
-      data: { status: 'PENDING_REVIEW' },
+      data: { status: 'APPROVED' },
     });
   }
-  // 基于所有版本状态计算内容级状态（支持多版本独立审核）
+  // 基于所有版本状态计算内容级状态
   const allVersions = await prisma.contentVersion.findMany({
     where: { contentId: data.contentId },
     select: { status: true },

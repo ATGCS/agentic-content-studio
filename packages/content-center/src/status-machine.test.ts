@@ -5,14 +5,13 @@ import { canTransitionContent } from './status-machine.js';
 
 const ALLOWED: [ContentStatus, ContentStatus][] = [
   ['DRAFT', 'PENDING_GENERATE'],
+  ['DRAFT', 'GENERATING'],
+  ['DRAFT', 'APPROVED'],
   ['DRAFT', 'ARCHIVED'],
   ['PENDING_GENERATE', 'GENERATING'],
   ['PENDING_GENERATE', 'DRAFT'],
-  ['GENERATING', 'PENDING_REVIEW'],
+  ['GENERATING', 'APPROVED'],
   ['GENERATING', 'FAILED'],
-  ['PENDING_REVIEW', 'APPROVED'],
-  ['PENDING_REVIEW', 'REJECTED'],
-  ['REJECTED', 'PENDING_GENERATE'],
   ['APPROVED', 'PENDING_PUBLISH'],
   ['PENDING_PUBLISH', 'PUBLISHING'],
   ['PUBLISHING', 'PUBLISHED'],
@@ -22,7 +21,6 @@ const ALLOWED: [ContentStatus, ContentStatus][] = [
 
 const DENIED: [ContentStatus, ContentStatus][] = [
   ['DRAFT', 'PUBLISHED'],
-  ['DRAFT', 'APPROVED'],
   ['ARCHIVED', 'DRAFT'],
   ['PUBLISHED', 'DRAFT'],
 ];

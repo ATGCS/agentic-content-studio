@@ -1,40 +1,17 @@
-export type WorkflowStepId = 'generate' | 'edit' | 'review' | 'publish';
-
-export type ReviewUiState =
-  | 'no_version'
-  | 'ready'
-  | 'pending'
-  | 'approved'
-  | 'rejected';
+export type WorkflowStepId = 'generate' | 'edit' | 'publish';
 
 export type ContentWorkflowInput = {
   contentStatus: string;
   versions: Array<{ id: string; status: string }>;
 };
 
-const STEP_ORDER: WorkflowStepId[] = ['generate', 'edit', 'review', 'publish'];
-
-export function getReviewUiState(
-  input: ContentWorkflowInput,
-  selectedVersionStatus?: string
-): ReviewUiState {
-  if (!input.versions.length) return 'no_version';
-  // 优先使用当前选中版本的状态（支持多版本独立审核）
-  const status = selectedVersionStatus ?? input.contentStatus;
-  if (status === 'APPROVED') return 'approved';
-  if (status === 'REJECTED') return 'rejected';
-  if (status === 'PENDING_REVIEW') return 'pending';
-  return 'ready';
-}
+const STEP_ORDER: WorkflowStepId[] = ['generate', 'edit', 'publish'];
 
 export function getActiveWorkflowStep(
   input: ContentWorkflowInput
 ): WorkflowStepId {
-  const reviewState = getReviewUiState(input);
-
-  if (reviewState === 'approved') return 'publish';
-  if (reviewState === 'pending') return 'review';
-  if (reviewState === 'rejected') return 'edit';
+  // 简化流程：生成完成 → 编辑确认 → 发布
+  if (input.contentStatus === 'APPROVED' || input.contentStatus === 'PENDING_PUBLISH') return 'publish';
   if (!input.versions.length) return 'generate';
   return 'edit';
 }
@@ -65,11 +42,6 @@ export const WORKFLOW_STEPS: Array<{
     id: 'edit',
     label: '编辑确认',
     description: '检查标题、正文与封面',
-  },
-  {
-    id: 'review',
-    label: '提交审核',
-    description: '提交至审核中心',
   },
   {
     id: 'publish',

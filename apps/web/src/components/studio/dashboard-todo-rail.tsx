@@ -1,12 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { ChevronRight, Clock, Send, Shield, Sparkles } from 'lucide-react';
+import { ChevronRight, Send, Sparkles, FileCheck } from 'lucide-react';
 import { PlatformBadge } from '@/components/studio/platform-badge';
 
 type DashboardStats = {
   pendingGenerate: number;
-  pendingReview: number;
   pendingPublish: number;
 };
 
@@ -24,12 +23,11 @@ export function DashboardTodoRail({
   stats: DashboardStats | null;
   items: ContentItem[];
 }) {
-  const draftWithVersions = items.filter(
+  // 生成完成待确认的内容（GENERATING 状态已完成，等待用户确认）
+  const readyToConfirm = items.filter(
     (item) =>
       item.versions.length > 0 &&
-      !['PENDING_REVIEW', 'APPROVED', 'PUBLISHED', 'PUBLISHING'].includes(
-        item.status
-      )
+      item.status === 'APPROVED'
   );
 
   const todos = [
@@ -42,22 +40,13 @@ export function DashboardTodoRail({
           tone: 'text-[#1664FF] bg-[#E8F3FF]',
         }
       : null,
-    draftWithVersions.length > 0
+    readyToConfirm.length > 0
       ? {
-          key: 'submit',
-          label: `${draftWithVersions.length} 篇待提交审核`,
-          href: `/contents/${draftWithVersions[0].id}`,
-          icon: Shield,
-          tone: 'text-[#FF6A00] bg-[#FFF7E6]',
-        }
-      : null,
-    stats && stats.pendingReview > 0
-      ? {
-          key: 'review',
-          label: `${stats.pendingReview} 条待审核`,
-          href: '/reviews?status=pending',
-          icon: Clock,
-          tone: 'text-[#FF6A00] bg-[#FFF7E6]',
+          key: 'confirm',
+          label: `${readyToConfirm.length} 篇待确认发布`,
+          href: `/contents/${readyToConfirm[0].id}`,
+          icon: FileCheck,
+          tone: 'text-[#00B42A] bg-[#E8FFEA]',
         }
       : null,
     stats && stats.pendingPublish > 0

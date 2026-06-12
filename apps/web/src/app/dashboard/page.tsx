@@ -9,7 +9,6 @@ import {
   Layers,
   Loader2,
   Send,
-  Shield,
   Sparkles,
 } from 'lucide-react';
 import { StudioLayout } from '@/components/StudioLayout';
@@ -43,7 +42,6 @@ import { api } from '@/lib/api';
 type DashboardStats = {
   pendingGenerate: number;
   generating: number;
-  pendingReview: number;
   pendingPublish: number;
   publishedTotal: number;
   reviewed: number;
@@ -52,7 +50,6 @@ type DashboardStats = {
 const metricLinks: Record<string, string> = {
   pendingGenerate: '/contents?status=DRAFT',
   generating: '/contents?status=GENERATING',
-  pendingReview: '/reviews?status=pending',
   pendingPublish: '/publishing',
   publishedTotal: '/contents?status=PUBLISHED',
 };
@@ -69,12 +66,6 @@ const metricConfig = [
     label: '生成中',
     icon: Loader2,
     tone: 'cyan' as const,
-  },
-  {
-    key: 'pendingReview' as const,
-    label: '待审核',
-    icon: Shield,
-    tone: 'orange' as const,
   },
   {
     key: 'pendingPublish' as const,
@@ -112,7 +103,6 @@ export default function DashboardPage() {
     ? {
         pendingGenerate: stats.pendingGenerate,
         generating: stats.generating,
-        pendingReview: stats.pendingReview,
         pendingPublish: stats.pendingPublish,
         published: stats.publishedTotal,
         reviewed: stats.reviewed,
@@ -121,11 +111,10 @@ export default function DashboardPage() {
 
   return (
     <StudioLayout>
+      <CreationWorkflowGuide />
       <PageContainer className="max-w-none -mt-2 gap-2 p-3 md:p-4">
         <div className="flex flex-col gap-2 xl:flex-row xl:items-start">
           <div className="min-w-0 flex-1 space-y-2">
-            <CreationWorkflowGuide dense />
-
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <QuickAction
                 href="/contents"
